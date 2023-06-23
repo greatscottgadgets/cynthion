@@ -1,0 +1,17 @@
+[target.riscv32i-unknown-none-elf]
+runner = ".cargo/flash.sh"
+rustflags = [
+  "-C", "link-arg=-Tmemory.x",
+  "-C", "link-arg=-Tlink.x",
+]
+
+[target.riscv32imac-unknown-none-elf]
+runner = ".cargo/flash.sh"
+rustflags = [
+  "-C", "link-arg=-Tmemory.x",
+  "-C", "link-arg=-Tlink.x",
+]
+
+[build]
+target = "riscv32i-unknown-none-elf"
+#target = "riscv32imac-unknown-none-elf"

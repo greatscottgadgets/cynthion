@@ -1,0 +1,25 @@
+[package]
+name = "smolusb"
+version = "0.1.0"
+authors = ["Antoine van Gelder <antoine@greatscottgadgets.com>"]
+license-file = "LICENSE.txt"
+description = "A lightweight library for implementing USB on embedded systems."
+categories = ["embedded", "hardware-support", "no-std"]
+keywords = ["luna", "usb", "hal", "embedded-hal"]
+repository = "https://github.com/greatscottgadgets/smolusb"
+documentation = "https://luna.readthedocs.io"
+edition = "2021"
+rust-version = "1.68"
+include = ["examples/**/*", "src/**/*", "README.md", "memory.x"]
+
+[lib]
+test = false
+bench = false
+
+[features]
+default = []
+
+[dependencies]
+heapless = { version = "=0.7.16" } # TODO 0.8.0 is en-route...
+log = "=0.4.17"
+zerocopy = { version = "=0.7.0-alpha.2", default-features = false }

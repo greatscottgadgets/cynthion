@@ -1,0 +1,2669 @@
+<?xml version="1.0" encoding="utf-8"?>
+<device xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.1" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd">
+  <vendor>amaranth-soc</vendor>
+  <name>SOC</name>
+  <description>TODO device.description</description>
+  <addressUnitBits>8</addressUnitBits>
+  <width>32</width>
+  <size>32</size>
+  <access>read-write</access>
+  <resetValue>0x00000000</resetValue>
+  <resetMask>0xFFFFFFFF</resetMask>
+  <peripherals>
+    <peripheral>
+      <name>TIMER</name>
+      <groupName>TIMER</groupName>
+      <baseAddress>0xf0000100</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x20</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>timer</name>
+        <value>0</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>reload</name>
+          <description>timer reload register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>reload</name>
+              <description>timer reload register field</description>
+              <bitRange>[31:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>en</name>
+          <description>timer en register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>en</name>
+              <description>timer en register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ctr</name>
+          <description>timer ctr register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>ctr</name>
+              <description>timer ctr register field</description>
+              <bitRange>[31:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>timer ev_status register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>timer status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>timer ev_pending register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>timer pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>timer ev_enable register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>timer enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>UART</name>
+      <groupName>UART</groupName>
+      <baseAddress>0xf0000200</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x40</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>uart</name>
+        <value>1</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>divisor</name>
+          <description>uart divisor register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>divisor</name>
+              <description>uart divisor register field</description>
+              <bitRange>[9:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx_data</name>
+          <description>uart rx_data register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>rx_data</name>
+              <description>uart rx_data register field</description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx_rdy</name>
+          <description>uart rx_rdy register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>rx_rdy</name>
+              <description>uart rx_rdy register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx_err</name>
+          <description>uart rx_err register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>rx_err</name>
+              <description>uart rx_err register field</description>
+              <bitRange>[2:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>tx_data</name>
+          <description>uart tx_data register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>tx_data</name>
+              <description>uart tx_data register field</description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>tx_rdy</name>
+          <description>uart tx_rdy register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>tx_rdy</name>
+              <description>uart tx_rdy register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>uart ev_status register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>uart status register field</description>
+              <bitRange>[2:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>uart ev_pending register</description>
+          <addressOffset>0x0024</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>uart pending register field</description>
+              <bitRange>[2:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>uart ev_enable register</description>
+          <addressOffset>0x0028</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>uart enable register field</description>
+              <bitRange>[2:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>LEDS</name>
+      <groupName>LEDS</groupName>
+      <baseAddress>0xf0001000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x08</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>output</name>
+          <description>leds output register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>output</name>
+              <description>leds output register field</description>
+              <bitRange>[5:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>GPIOA</name>
+      <groupName>GPIOA</groupName>
+      <baseAddress>0xf0002000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x20</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>gpioa</name>
+        <value>2</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>moder</name>
+          <description>gpioa moder register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>moder</name>
+              <description>gpioa moder register field</description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>odr</name>
+          <description>gpioa odr register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>odr</name>
+              <description>gpioa odr register field</description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>idr</name>
+          <description>gpioa idr register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>idr</name>
+              <description>gpioa idr register field</description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>gpioa ev_status register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>gpioa status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>gpioa ev_pending register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>gpioa pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>gpioa ev_enable register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>gpioa enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>GPIOB</name>
+      <groupName>GPIOB</groupName>
+      <baseAddress>0xf0002100</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x20</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>gpiob</name>
+        <value>3</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>moder</name>
+          <description>gpiob moder register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>moder</name>
+              <description>gpiob moder register field</description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>odr</name>
+          <description>gpiob odr register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>odr</name>
+              <description>gpiob odr register field</description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>idr</name>
+          <description>gpiob idr register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>idr</name>
+              <description>gpiob idr register field</description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>gpiob ev_status register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>gpiob status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>gpiob ev_pending register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>gpiob pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>gpiob ev_enable register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>gpiob enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB0</name>
+      <groupName>USB0</groupName>
+      <baseAddress>0xf0003000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x40</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb0</name>
+        <value>4</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>connect</name>
+          <description>usb0 connect register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>connect</name>
+              <description>
+            Set this bit to '1' to allow the associated USB device to connect to a host.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>speed</name>
+          <description>usb0 speed register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>speed</name>
+              <description>
+            Indicates the current speed of the USB device. 0 indicates High; 1 =&gt; Full,
+            2 =&gt; Low, and 3 =&gt; SuperSpeed (incl SuperSpeed+).
+        </description>
+              <bitRange>[1:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb0 ev_status register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb0 status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb0 ev_pending register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb0 pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb0 ev_enable register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb0 enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB0_EP_CONTROL</name>
+      <groupName>USB0_EP_CONTROL</groupName>
+      <baseAddress>0xf0003040</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x40</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb0_ep_control</name>
+        <value>5</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>data</name>
+          <description>usb0_ep_control data register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>
+            A FIFO that returns the bytes from the most recently captured SETUP packet.
+            Reading a byte from this register advances the FIFO. The first eight bytes read
+            from this conain the core SETUP packet.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>usb0_ep_control reset register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>reset</name>
+              <description>
+            Local reset control for the SETUP handler; writing a '1' to this register clears the handler state.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>epno</name>
+          <description>usb0_ep_control epno register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>The number of the endpoint associated with the current SETUP packet.</description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>have</name>
+          <description>usb0_ep_control have register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>have</name>
+              <description>`1` iff data is available in the FIFO.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pend</name>
+          <description>usb0_ep_control pend register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>pend</name>
+              <description>`1` iff an interrupt is pending</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>address</name>
+          <description>usb0_ep_control address register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>
+            Controls the current device's USB address. Should be written after a SET_ADDRESS request is
+            received. Automatically resets back to zero on a USB reset.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb0_ep_control ev_status register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb0_ep_control status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb0_ep_control ev_pending register</description>
+          <addressOffset>0x0024</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb0_ep_control pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb0_ep_control ev_enable register</description>
+          <addressOffset>0x0028</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb0_ep_control enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB0_EP_IN</name>
+      <groupName>USB0_EP_IN</groupName>
+      <baseAddress>0xf0003080</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x40</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb0_ep_in</name>
+        <value>6</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>data</name>
+          <description>usb0_ep_in data register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>
+            Write-only register. Each write enqueues a byte to be transmitted; gradually building
+            a single packet to be transmitted. This queue should only ever contain a single packet;
+            it is the software's responsibility to handle breaking requests down into packets.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>epno</name>
+          <description>usb0_ep_in epno register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>
+            Contains the endpoint the enqueued packet is to be transmitted on. Writing this register
+            marks the relevant packet as ready to transmit; and thus should only be written after a
+            full packet has been written into the FIFO. If no data has been placed into the DATA FIFO,
+            a zero-length packet is generated.
+
+            Note that any IN requests that do not match the endpoint number are automatically NAK'd.
+        </description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>usb0_ep_in reset register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>reset</name>
+              <description>A write to this register clears the FIFO without transmitting.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>usb0_ep_in stall register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>stall</name>
+              <description>
+            When this register contains '1', any IN tokens targeting `epno` will be responded to with a
+            STALL token, rather than DATA or a NAK.
+
+            For EP0, this register will automatically be cleared when a new SETUP token is received.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>idle</name>
+          <description>usb0_ep_in idle register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>idle</name>
+              <description>This value is `1` if no packet is actively being transmitted.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>have</name>
+          <description>usb0_ep_in have register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>have</name>
+              <description>This value is `1` if data is present in the transmit FIFO.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pend</name>
+          <description>usb0_ep_in pend register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>pend</name>
+              <description>`1` iff an interrupt is pending</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>usb0_ep_in pid register</description>
+          <addressOffset>0x001c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pid</name>
+              <description>Contains the current PID toggle bit for the given endpoint.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb0_ep_in ev_status register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb0_ep_in status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb0_ep_in ev_pending register</description>
+          <addressOffset>0x0024</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb0_ep_in pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb0_ep_in ev_enable register</description>
+          <addressOffset>0x0028</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb0_ep_in enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB0_EP_OUT</name>
+      <groupName>USB0_EP_OUT</groupName>
+      <baseAddress>0xf0003100</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x80</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb0_ep_out</name>
+        <value>7</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>data</name>
+          <description>usb0_ep_out data register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>
+            A FIFO that returns the bytes from the most recently captured OUT transaction.
+            Reading a byte from this register advances the FIFO.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data_ep</name>
+          <description>usb0_ep_out data_ep register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>data_ep</name>
+              <description>
+            Register that contains the endpoint number associated with the data in the FIFO -- that is,
+            the endpoint number on which the relevant data was received.
+        </description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>usb0_ep_out reset register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>reset</name>
+              <description>
+            Local reset for the OUT handler; clears the out FIFO.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>epno</name>
+          <description>usb0_ep_out epno register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>
+            Selects the endpoint number to prime. This interface only allows priming a single endpoint at once--
+            that is, only one endpoint can be ready to receive data at a time. See the `enable` bit for usage.
+        </description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>enable</name>
+          <description>usb0_ep_out enable register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>
+            Controls whether any data can be received on any primed OUT endpoint. This bit is automatically cleared
+            on receive in order to give the controller time to read data from the FIFO. It must be re-enabled once
+            the FIFO has been emptied.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>prime</name>
+          <description>usb0_ep_out prime register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>prime</name>
+              <description>
+            Controls &quot;priming&quot; an out endpoint. To receive data on any endpoint, the CPU must first select
+            the endpoint with the `epno` register; and then write a '1' into the prime and enable register.
+            This prepares our FIFO to receive data; and the next OUT transaction will be captured into the FIFO.
+
+            When a transaction is complete, the `enable` bit is reset; the `prime` is not. This effectively means
+            that `enable` controls receiving on _any_ of the primed endpoints; while `prime` can be used to build
+            a collection of endpoints willing to participate in receipt.
+
+            Only one transaction / data packet is captured per `enable` write; repeated enabling is necessary
+            to capture multiple packets.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>usb0_ep_out stall register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>stall</name>
+              <description>
+            Controls STALL'ing the active endpoint. Setting or clearing this bit will set or clear STALL on
+            the provided endpoint. Endpoint STALLs persist even after `epno` is changed; so multiple endpoints
+            can be stalled at once by writing their respective endpoint numbers into `epno` register and then
+            setting their `stall` bits.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>have</name>
+          <description>usb0_ep_out have register</description>
+          <addressOffset>0x001c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>have</name>
+              <description>`1` iff data is available in the FIFO.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pend</name>
+          <description>usb0_ep_out pend register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>pend</name>
+              <description>`1` iff an interrupt is pending</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>address</name>
+          <description>usb0_ep_out address register</description>
+          <addressOffset>0x0024</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>
+            Controls the current device's USB address. Should be written after a SET_ADDRESS request is
+            received. Automatically resets back to zero on a USB reset.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>usb0_ep_out pid register</description>
+          <addressOffset>0x0028</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pid</name>
+              <description>Contains the current PID toggle bit for the given endpoint.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb0_ep_out ev_status register</description>
+          <addressOffset>0x0040</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb0_ep_out status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb0_ep_out ev_pending register</description>
+          <addressOffset>0x0044</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb0_ep_out pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb0_ep_out ev_enable register</description>
+          <addressOffset>0x0048</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb0_ep_out enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB1</name>
+      <groupName>USB1</groupName>
+      <baseAddress>0xf0004000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x40</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb1</name>
+        <value>8</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>connect</name>
+          <description>usb1 connect register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>connect</name>
+              <description>
+            Set this bit to '1' to allow the associated USB device to connect to a host.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>speed</name>
+          <description>usb1 speed register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>speed</name>
+              <description>
+            Indicates the current speed of the USB device. 0 indicates High; 1 =&gt; Full,
+            2 =&gt; Low, and 3 =&gt; SuperSpeed (incl SuperSpeed+).
+        </description>
+              <bitRange>[1:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb1 ev_status register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb1 status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb1 ev_pending register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb1 pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb1 ev_enable register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb1 enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB1_EP_CONTROL</name>
+      <groupName>USB1_EP_CONTROL</groupName>
+      <baseAddress>0xf0004040</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x40</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb1_ep_control</name>
+        <value>9</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>data</name>
+          <description>usb1_ep_control data register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>
+            A FIFO that returns the bytes from the most recently captured SETUP packet.
+            Reading a byte from this register advances the FIFO. The first eight bytes read
+            from this conain the core SETUP packet.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>usb1_ep_control reset register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>reset</name>
+              <description>
+            Local reset control for the SETUP handler; writing a '1' to this register clears the handler state.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>epno</name>
+          <description>usb1_ep_control epno register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>The number of the endpoint associated with the current SETUP packet.</description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>have</name>
+          <description>usb1_ep_control have register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>have</name>
+              <description>`1` iff data is available in the FIFO.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pend</name>
+          <description>usb1_ep_control pend register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>pend</name>
+              <description>`1` iff an interrupt is pending</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>address</name>
+          <description>usb1_ep_control address register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>
+            Controls the current device's USB address. Should be written after a SET_ADDRESS request is
+            received. Automatically resets back to zero on a USB reset.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb1_ep_control ev_status register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb1_ep_control status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb1_ep_control ev_pending register</description>
+          <addressOffset>0x0024</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb1_ep_control pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb1_ep_control ev_enable register</description>
+          <addressOffset>0x0028</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb1_ep_control enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB1_EP_IN</name>
+      <groupName>USB1_EP_IN</groupName>
+      <baseAddress>0xf0004080</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x40</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb1_ep_in</name>
+        <value>10</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>data</name>
+          <description>usb1_ep_in data register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>
+            Write-only register. Each write enqueues a byte to be transmitted; gradually building
+            a single packet to be transmitted. This queue should only ever contain a single packet;
+            it is the software's responsibility to handle breaking requests down into packets.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>epno</name>
+          <description>usb1_ep_in epno register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>
+            Contains the endpoint the enqueued packet is to be transmitted on. Writing this register
+            marks the relevant packet as ready to transmit; and thus should only be written after a
+            full packet has been written into the FIFO. If no data has been placed into the DATA FIFO,
+            a zero-length packet is generated.
+
+            Note that any IN requests that do not match the endpoint number are automatically NAK'd.
+        </description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>usb1_ep_in reset register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>reset</name>
+              <description>A write to this register clears the FIFO without transmitting.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>usb1_ep_in stall register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>stall</name>
+              <description>
+            When this register contains '1', any IN tokens targeting `epno` will be responded to with a
+            STALL token, rather than DATA or a NAK.
+
+            For EP0, this register will automatically be cleared when a new SETUP token is received.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>idle</name>
+          <description>usb1_ep_in idle register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>idle</name>
+              <description>This value is `1` if no packet is actively being transmitted.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>have</name>
+          <description>usb1_ep_in have register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>have</name>
+              <description>This value is `1` if data is present in the transmit FIFO.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pend</name>
+          <description>usb1_ep_in pend register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>pend</name>
+              <description>`1` iff an interrupt is pending</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>usb1_ep_in pid register</description>
+          <addressOffset>0x001c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pid</name>
+              <description>Contains the current PID toggle bit for the given endpoint.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb1_ep_in ev_status register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb1_ep_in status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb1_ep_in ev_pending register</description>
+          <addressOffset>0x0024</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb1_ep_in pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb1_ep_in ev_enable register</description>
+          <addressOffset>0x0028</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb1_ep_in enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB1_EP_OUT</name>
+      <groupName>USB1_EP_OUT</groupName>
+      <baseAddress>0xf0004100</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x80</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb1_ep_out</name>
+        <value>11</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>data</name>
+          <description>usb1_ep_out data register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>
+            A FIFO that returns the bytes from the most recently captured OUT transaction.
+            Reading a byte from this register advances the FIFO.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data_ep</name>
+          <description>usb1_ep_out data_ep register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>data_ep</name>
+              <description>
+            Register that contains the endpoint number associated with the data in the FIFO -- that is,
+            the endpoint number on which the relevant data was received.
+        </description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>usb1_ep_out reset register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>reset</name>
+              <description>
+            Local reset for the OUT handler; clears the out FIFO.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>epno</name>
+          <description>usb1_ep_out epno register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>
+            Selects the endpoint number to prime. This interface only allows priming a single endpoint at once--
+            that is, only one endpoint can be ready to receive data at a time. See the `enable` bit for usage.
+        </description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>enable</name>
+          <description>usb1_ep_out enable register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>
+            Controls whether any data can be received on any primed OUT endpoint. This bit is automatically cleared
+            on receive in order to give the controller time to read data from the FIFO. It must be re-enabled once
+            the FIFO has been emptied.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>prime</name>
+          <description>usb1_ep_out prime register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>prime</name>
+              <description>
+            Controls &quot;priming&quot; an out endpoint. To receive data on any endpoint, the CPU must first select
+            the endpoint with the `epno` register; and then write a '1' into the prime and enable register.
+            This prepares our FIFO to receive data; and the next OUT transaction will be captured into the FIFO.
+
+            When a transaction is complete, the `enable` bit is reset; the `prime` is not. This effectively means
+            that `enable` controls receiving on _any_ of the primed endpoints; while `prime` can be used to build
+            a collection of endpoints willing to participate in receipt.
+
+            Only one transaction / data packet is captured per `enable` write; repeated enabling is necessary
+            to capture multiple packets.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>usb1_ep_out stall register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>stall</name>
+              <description>
+            Controls STALL'ing the active endpoint. Setting or clearing this bit will set or clear STALL on
+            the provided endpoint. Endpoint STALLs persist even after `epno` is changed; so multiple endpoints
+            can be stalled at once by writing their respective endpoint numbers into `epno` register and then
+            setting their `stall` bits.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>have</name>
+          <description>usb1_ep_out have register</description>
+          <addressOffset>0x001c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>have</name>
+              <description>`1` iff data is available in the FIFO.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pend</name>
+          <description>usb1_ep_out pend register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>pend</name>
+              <description>`1` iff an interrupt is pending</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>address</name>
+          <description>usb1_ep_out address register</description>
+          <addressOffset>0x0024</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>
+            Controls the current device's USB address. Should be written after a SET_ADDRESS request is
+            received. Automatically resets back to zero on a USB reset.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>usb1_ep_out pid register</description>
+          <addressOffset>0x0028</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pid</name>
+              <description>Contains the current PID toggle bit for the given endpoint.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb1_ep_out ev_status register</description>
+          <addressOffset>0x0040</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb1_ep_out status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb1_ep_out ev_pending register</description>
+          <addressOffset>0x0044</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb1_ep_out pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb1_ep_out ev_enable register</description>
+          <addressOffset>0x0048</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb1_ep_out enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB2</name>
+      <groupName>USB2</groupName>
+      <baseAddress>0xf0005000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x40</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb2</name>
+        <value>12</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>connect</name>
+          <description>usb2 connect register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>connect</name>
+              <description>
+            Set this bit to '1' to allow the associated USB device to connect to a host.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>speed</name>
+          <description>usb2 speed register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>speed</name>
+              <description>
+            Indicates the current speed of the USB device. 0 indicates High; 1 =&gt; Full,
+            2 =&gt; Low, and 3 =&gt; SuperSpeed (incl SuperSpeed+).
+        </description>
+              <bitRange>[1:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb2 ev_status register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb2 status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb2 ev_pending register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb2 pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb2 ev_enable register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb2 enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB2_EP_CONTROL</name>
+      <groupName>USB2_EP_CONTROL</groupName>
+      <baseAddress>0xf0005040</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x40</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb2_ep_control</name>
+        <value>13</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>data</name>
+          <description>usb2_ep_control data register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>
+            A FIFO that returns the bytes from the most recently captured SETUP packet.
+            Reading a byte from this register advances the FIFO. The first eight bytes read
+            from this conain the core SETUP packet.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>usb2_ep_control reset register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>reset</name>
+              <description>
+            Local reset control for the SETUP handler; writing a '1' to this register clears the handler state.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>epno</name>
+          <description>usb2_ep_control epno register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>The number of the endpoint associated with the current SETUP packet.</description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>have</name>
+          <description>usb2_ep_control have register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>have</name>
+              <description>`1` iff data is available in the FIFO.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pend</name>
+          <description>usb2_ep_control pend register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>pend</name>
+              <description>`1` iff an interrupt is pending</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>address</name>
+          <description>usb2_ep_control address register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>
+            Controls the current device's USB address. Should be written after a SET_ADDRESS request is
+            received. Automatically resets back to zero on a USB reset.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb2_ep_control ev_status register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb2_ep_control status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb2_ep_control ev_pending register</description>
+          <addressOffset>0x0024</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb2_ep_control pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb2_ep_control ev_enable register</description>
+          <addressOffset>0x0028</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb2_ep_control enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB2_EP_IN</name>
+      <groupName>USB2_EP_IN</groupName>
+      <baseAddress>0xf0005080</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x40</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb2_ep_in</name>
+        <value>14</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>data</name>
+          <description>usb2_ep_in data register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>
+            Write-only register. Each write enqueues a byte to be transmitted; gradually building
+            a single packet to be transmitted. This queue should only ever contain a single packet;
+            it is the software's responsibility to handle breaking requests down into packets.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>epno</name>
+          <description>usb2_ep_in epno register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>
+            Contains the endpoint the enqueued packet is to be transmitted on. Writing this register
+            marks the relevant packet as ready to transmit; and thus should only be written after a
+            full packet has been written into the FIFO. If no data has been placed into the DATA FIFO,
+            a zero-length packet is generated.
+
+            Note that any IN requests that do not match the endpoint number are automatically NAK'd.
+        </description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>usb2_ep_in reset register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>reset</name>
+              <description>A write to this register clears the FIFO without transmitting.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>usb2_ep_in stall register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>stall</name>
+              <description>
+            When this register contains '1', any IN tokens targeting `epno` will be responded to with a
+            STALL token, rather than DATA or a NAK.
+
+            For EP0, this register will automatically be cleared when a new SETUP token is received.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>idle</name>
+          <description>usb2_ep_in idle register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>idle</name>
+              <description>This value is `1` if no packet is actively being transmitted.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>have</name>
+          <description>usb2_ep_in have register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>have</name>
+              <description>This value is `1` if data is present in the transmit FIFO.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pend</name>
+          <description>usb2_ep_in pend register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>pend</name>
+              <description>`1` iff an interrupt is pending</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>usb2_ep_in pid register</description>
+          <addressOffset>0x001c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pid</name>
+              <description>Contains the current PID toggle bit for the given endpoint.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb2_ep_in ev_status register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb2_ep_in status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb2_ep_in ev_pending register</description>
+          <addressOffset>0x0024</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb2_ep_in pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb2_ep_in ev_enable register</description>
+          <addressOffset>0x0028</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb2_ep_in enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>USB2_EP_OUT</name>
+      <groupName>USB2_EP_OUT</groupName>
+      <baseAddress>0xf0005100</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x80</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb2_ep_out</name>
+        <value>15</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>data</name>
+          <description>usb2_ep_out data register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>
+            A FIFO that returns the bytes from the most recently captured OUT transaction.
+            Reading a byte from this register advances the FIFO.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data_ep</name>
+          <description>usb2_ep_out data_ep register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>data_ep</name>
+              <description>
+            Register that contains the endpoint number associated with the data in the FIFO -- that is,
+            the endpoint number on which the relevant data was received.
+        </description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>usb2_ep_out reset register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>reset</name>
+              <description>
+            Local reset for the OUT handler; clears the out FIFO.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>epno</name>
+          <description>usb2_ep_out epno register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>
+            Selects the endpoint number to prime. This interface only allows priming a single endpoint at once--
+            that is, only one endpoint can be ready to receive data at a time. See the `enable` bit for usage.
+        </description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>enable</name>
+          <description>usb2_ep_out enable register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>
+            Controls whether any data can be received on any primed OUT endpoint. This bit is automatically cleared
+            on receive in order to give the controller time to read data from the FIFO. It must be re-enabled once
+            the FIFO has been emptied.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>prime</name>
+          <description>usb2_ep_out prime register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>prime</name>
+              <description>
+            Controls &quot;priming&quot; an out endpoint. To receive data on any endpoint, the CPU must first select
+            the endpoint with the `epno` register; and then write a '1' into the prime and enable register.
+            This prepares our FIFO to receive data; and the next OUT transaction will be captured into the FIFO.
+
+            When a transaction is complete, the `enable` bit is reset; the `prime` is not. This effectively means
+            that `enable` controls receiving on _any_ of the primed endpoints; while `prime` can be used to build
+            a collection of endpoints willing to participate in receipt.
+
+            Only one transaction / data packet is captured per `enable` write; repeated enabling is necessary
+            to capture multiple packets.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>usb2_ep_out stall register</description>
+          <addressOffset>0x0018</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>stall</name>
+              <description>
+            Controls STALL'ing the active endpoint. Setting or clearing this bit will set or clear STALL on
+            the provided endpoint. Endpoint STALLs persist even after `epno` is changed; so multiple endpoints
+            can be stalled at once by writing their respective endpoint numbers into `epno` register and then
+            setting their `stall` bits.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>have</name>
+          <description>usb2_ep_out have register</description>
+          <addressOffset>0x001c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>have</name>
+              <description>`1` iff data is available in the FIFO.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pend</name>
+          <description>usb2_ep_out pend register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>pend</name>
+              <description>`1` iff an interrupt is pending</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>address</name>
+          <description>usb2_ep_out address register</description>
+          <addressOffset>0x0024</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>
+            Controls the current device's USB address. Should be written after a SET_ADDRESS request is
+            received. Automatically resets back to zero on a USB reset.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>usb2_ep_out pid register</description>
+          <addressOffset>0x0028</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pid</name>
+              <description>Contains the current PID toggle bit for the given endpoint.</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>usb2_ep_out ev_status register</description>
+          <addressOffset>0x0040</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>usb2_ep_out status register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>usb2_ep_out ev_pending register</description>
+          <addressOffset>0x0044</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>usb2_ep_out pending register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>usb2_ep_out ev_enable register</description>
+          <addressOffset>0x0048</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>usb2_ep_out enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+  </peripherals>
+  <vendorExtensions>
+    <memoryRegions>
+      <memoryRegion>
+        <name>BOOTROM</name>
+        <baseAddress>0x00000000</baseAddress>
+        <size>0x00004000</size>
+      </memoryRegion>
+      <memoryRegion>
+        <name>SCRATCHPAD</name>
+        <baseAddress>0x10000000</baseAddress>
+        <size>0x00001000</size>
+      </memoryRegion>
+      <memoryRegion>
+        <name>INTERNAL_SRAM</name>
+        <baseAddress>0x40000000</baseAddress>
+        <size>0x00010000</size>
+      </memoryRegion>
+    </memoryRegions>
+    <constants/>
+  </vendorExtensions>
+</device>

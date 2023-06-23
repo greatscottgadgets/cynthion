@@ -1,0 +1,38 @@
+[package]
+name = "lunasoc-pac"
+version = "0.1.0"
+authors = ["Antoine van Gelder <antoine@greatscottgadgets.com>"]
+license-file = "LICENSE.txt"
+description = "A peripheral access crate for LunaSoC cores"
+categories = ["embedded", "hardware-support", "no-std"]
+keywords = ["luna", "riscv", "register", "peripheral"]
+repository = "https://github.com/greatscottgadgets/libgreat"
+documentation = "https://luna.readthedocs.io"
+edition = "2021"
+rust-version = "1.68"
+include = ["src/**/*", "README.md", "device.x", "build.rs"]
+
+[package.metadata.docs.rs]
+default-target = "riscv32imac-unknown-none-elf"
+targets = [
+    "riscv32i-unknown-none-elf",
+    "riscv32imac-unknown-none-elf",
+]
+
+[lib]
+test = false
+bench = false
+
+[features]
+default = [
+    "vexriscv",
+]
+rt = ["riscv-rt"]
+minerva = []
+vexriscv = []
+
+[dependencies]
+critical-section = { version = "=1.1.1", optional = true }
+riscv = "=0.10.1"
+riscv-rt = { version = "=0.11.0", optional = true }
+vcell = "=0.1.3"

@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+dynamic = ["version"]
+
+name = "cynthion-gateware"
+authors = [
+    {name = "Great Scott Gadgets", email = "dev@greatscottgadgets.com"},
+]
+description = "Amaranth HDL gateware for Cynthion"
+readme = "README.md"
+license = { text = "BSD" }
+urls = { Source = "https://greatscottgadgets.com/cynthion" }
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Natural Language :: English",
+    "Environment :: Console",
+    "Environment :: Other Environment",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: System :: Hardware :: Universal Serial Bus (USB)",
+]
+
+dependencies = [
+    "amaranth @ git+https://github.com/amaranth-lang/amaranth",
+    "amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc",
+    "lambdasoc @ git+https://github.com/antoinevg/lambdasoc.git@antoinevg/support-vexriscv",
+    "luna @ git+https://github.com/greatscottgadgets/luna@main",
+    "luna-soc @ git+https://github.com/greatscottgadgets/luna-soc@main",
+]
+
+[tool.setuptools-git-versioning]
+enabled = true
+starting_version = "2023.06.26"

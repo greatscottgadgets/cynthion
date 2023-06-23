@@ -1,0 +1,96 @@
+[package]
+name = "lunasoc-hal"
+version = "0.0.1"
+authors = ["Antoine van Gelder <antoine@greatscottgadgets.com>"]
+license-file = "LICENSE.txt"
+description = "Hardware Abstraction Layer implementation for LunaSoC cores"
+categories = ["embedded", "hardware-support", "no-std"]
+keywords = ["luna", "riscv", "hal", "embedded-hal"]
+repository = "https://github.com/greatscottgadgets/libgreat"
+documentation = "https://luna.readthedocs.io"
+edition = "2021"
+rust-version = "1.68"
+include = ["examples/**/*", "src/**/*", "README.md", "memory.x"]
+
+[package.metadata.docs.rs]
+default-target = "riscv32imac-unknown-none-elf"
+targets = [
+    "riscv32i-unknown-none-elf",
+    "riscv32imac-unknown-none-elf",
+]
+
+[lib]
+test = false
+bench = false
+
+# - features ------------------------------------------------------------------
+
+[features]
+default = [
+    "vexriscv",
+    #"nightly",
+]
+# select softcore
+minerva = [
+    "lunasoc-pac/minerva",
+]
+vexriscv = [
+    "lunasoc-pac/vexriscv",
+]
+nightly = []
+usb = [
+    "log",
+    "smolusb",
+    "riscv",
+]
+
+
+# - dependencies --------------------------------------------------------------
+
+[dependencies]
+embedded-hal = "=1.0.0-alpha.9"
+embedded-hal-0 = { package = "embedded-hal", version = "=0.2.7", features = ["unproven"] }
+embedded-hal-nb = "=1.0.0-alpha.1"
+lunasoc-pac = { path = "../lunasoc-pac", default-features = false }
+nb = "=1.0.0"
+smolusb = { path = "../smolusb", optional = true }
+
+# TODO remove debug logging from usb driver and then lose these
+log = { version = "=0.4.17", optional = true }
+riscv = { version = "=0.10.1", optional = true }
+
+# - dev-dependencies ----------------------------------------------------------
+
+[dev-dependencies]
+log = "=0.4.17"
+lunasoc-pac = { path = "../lunasoc-pac", default-features = false, features = ["critical-section", "rt"]}
+panic-halt = "=0.2.0"
+riscv = { version = "=0.10.1", features = ["critical-section-single-hart"] }
+riscv-rt = { version = "=0.11.0" }
+
+
+# - examples ------------------------------------------------------------------
+
+[[example]]
+name = "blinky"
+required-features = ["lunasoc-pac/rt"]
+
+[[example]]
+name = "blinky_pac"
+required-features = ["lunasoc-pac/rt"]
+
+[[example]]
+name = "interrupts"
+required-features = ["lunasoc-pac/rt"]
+
+[[example]]
+name = "interrupts_pac"
+required-features = ["lunasoc-pac/rt"]
+
+[[example]]
+name = "uart"
+required-features = ["lunasoc-pac/rt"]
+
+[[example]]
+name = "uart_pac"
+required-features = ["lunasoc-pac/rt"]

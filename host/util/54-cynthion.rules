@@ -1,0 +1,4 @@
+ATTR{idVendor}=="16d0", ATTR{idProduct}=="05a5", SYMLINK+="cynthion%k", MODE="660", GROUP="plugdev"
+ATTR{idVendor}=="16d0", ATTR{idProduct}=="0f3b", SYMLINK+="cynthiontarget%k", MODE="660", GROUP="plugdev"
+ATTR{idVendor}=="1d50", ATTR{idProduct}=="615c", SYMLINK+="apollo%k", MODE="660", GROUP="plugdev"
+ATTR{idVendor}=="1d50", ATTR{idProduct}=="615b", SYMLINK+="cynthion%k", MODE="660", GROUP="plugdev"
