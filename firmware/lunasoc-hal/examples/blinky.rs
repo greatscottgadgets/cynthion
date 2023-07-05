@@ -20,7 +20,7 @@ fn main() -> ! {
     let mut led_state = 0b110000;
 
     loop {
-        timer.delay_ms(1000_u32).unwrap();
+        timer.delay_ms(100_u32).unwrap();
 
         if direction {
             led_state >>= 1;

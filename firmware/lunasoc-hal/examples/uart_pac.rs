@@ -6,7 +6,7 @@ use riscv_rt::entry;
 
 use lunasoc_pac as pac;
 
-const SYSTEM_CLOCK_FREQUENCY: u32 = 10_000_000;
+const SYSTEM_CLOCK_FREQUENCY: u32 = pac::clock::sysclk();
 
 #[entry]
 fn main() -> ! {
@@ -40,10 +40,11 @@ fn main() -> ! {
 }
 
 fn delay_ms(timer: &pac::TIMER, sys_clk: u32, ms: u32) {
-    let cycles: u32 = sys_clk / 1_000 * ms;
+    let ticks: u32 = sys_clk / 1_000 * ms;
 
+    timer.reload.write(|w| unsafe { w.reload().bits(0) });
+    timer.ctr.write(|w| unsafe { w.ctr().bits(ticks) });
     timer.en.write(|w| w.en().bit(true));
-    timer.reload.write(|w| unsafe { w.reload().bits(cycles) });
 
     while timer.ctr.read().ctr().bits() > 0 {
         unsafe {
@@ -52,7 +53,6 @@ fn delay_ms(timer: &pac::TIMER, sys_clk: u32, ms: u32) {
     }
 
     timer.en.write(|w| w.en().bit(false));
-    timer.reload.write(|w| unsafe { w.reload().bits(0) });
 }
 
 fn uart_tx(uart: &pac::UART, string: &str) {

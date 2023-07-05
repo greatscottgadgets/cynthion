@@ -37,7 +37,7 @@ fn main() -> ! {
     info!("Peripherals initialized, entering main loop.");
 
     loop {
-        timer.delay_ms(1000).unwrap();
+        timer.delay_ms(100).unwrap();
 
         if direction {
             led_state >>= 1;

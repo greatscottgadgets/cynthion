@@ -54,8 +54,6 @@ fn main() -> ! {
 
     // configure and enable timer
     let mut timer = Timer::new(peripherals.TIMER, pac::clock::sysclk());
-    timer.set_timeout_ticks(pac::clock::sysclk() / 2);
-    timer.enable();
 
     // enable interrupts
     unsafe {
@@ -65,7 +63,7 @@ fn main() -> ! {
         // set mie register: machine external interrupts enable
         riscv::register::mie::set_mext();
 
-        // write csr: enable timer interrupt
+        // write csr: enable gpioa interrupt
         pac::csr::interrupt::enable(pac::Interrupt::GPIOA)
     }
 
@@ -79,7 +77,7 @@ fn main() -> ! {
             .write(|w| unsafe { w.odr().bits(counter & 0b1111_0000) });
         leds.output.write(|w| unsafe { w.output().bits(counter) });
 
-        timer.delay_ms(1_000).unwrap();
+        timer.delay_ms(100).unwrap();
         counter += 1;
     }
 }

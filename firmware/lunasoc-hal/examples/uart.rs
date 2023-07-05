@@ -13,7 +13,7 @@ use hal::Timer;
 use core::fmt::Write;
 use hal::Serial;
 
-const SYSTEM_CLOCK_FREQUENCY: u32 = 10_000_000;
+const SYSTEM_CLOCK_FREQUENCY: u32 = pac::clock::sysclk();
 
 #[entry]
 fn main() -> ! {
