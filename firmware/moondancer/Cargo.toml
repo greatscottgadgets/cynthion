@@ -46,7 +46,7 @@ nightly = [
 # - dependencies --------------------------------------------------------------
 
 [dependencies]
-libgreat = { path = "../libgreat", features = [] }
+libgreat = { path = "../libgreat", features = ["errno_minimal"] }
 lunasoc-pac = { path = "../lunasoc-pac", default-features = false, features = ["critical-section"]}
 lunasoc-hal = { path = "../lunasoc-hal", default-features = false, features = ["usb"]}
 smolusb = { path = "../smolusb", default-features = false, features = []}

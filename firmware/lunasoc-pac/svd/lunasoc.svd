@@ -2659,7 +2659,7 @@
         <size>0x00001000</size>
       </memoryRegion>
       <memoryRegion>
-        <name>INTERNAL_SRAM</name>
+        <name>MAINRAM</name>
         <baseAddress>0x40000000</baseAddress>
         <size>0x00010000</size>
       </memoryRegion>

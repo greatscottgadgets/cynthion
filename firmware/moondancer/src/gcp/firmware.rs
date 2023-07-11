@@ -1,13 +1,9 @@
-#![allow(dead_code, unused_imports, unused_variables)] // TODO
-
 use libgreat::error::{GreatError, GreatResult};
 use libgreat::gcp::{self, Verb};
 
-use log::{debug, error};
-use zerocopy::{AsBytes, BigEndian, FromBytes, LittleEndian, Unaligned, U32};
+use zerocopy::{FromBytes, LittleEndian, Unaligned, U32};
 
 use core::any::Any;
-use core::slice;
 
 pub static CLASS: gcp::Class = gcp::Class {
     id: gcp::ClassId::firmware,
@@ -71,7 +67,7 @@ pub static VERBS: [Verb; 5] = [
 // - verb implementations -----------------------------------------------------
 
 pub fn initialize<'a>(
-    arguments: &[u8],
+    _arguments: &[u8],
     _context: &'a dyn Any,
 ) -> GreatResult<impl Iterator<Item = u8> + 'a> {
     let page_size: u32 = 256;
@@ -84,7 +80,7 @@ pub fn initialize<'a>(
 }
 
 pub fn full_erase<'a>(
-    arguments: &[u8],
+    _arguments: &[u8],
     _context: &'a dyn Any,
 ) -> GreatResult<impl Iterator<Item = u8> + 'a> {
     Ok([].into_iter())
@@ -99,7 +95,7 @@ pub fn page_erase<'a>(
     struct Args {
         address: U32<LittleEndian>,
     }
-    let _args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+    let _args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
     Ok([].into_iter())
 }
 
@@ -108,12 +104,12 @@ pub fn write_page<'a>(
     _context: &'a dyn Any,
 ) -> GreatResult<impl Iterator<Item = u8> + 'a> {
     struct Args<B: zerocopy::ByteSlice> {
-        address: zerocopy::LayoutVerified<B, U32<LittleEndian>>,
-        data: B,
+        _address: zerocopy::LayoutVerified<B, U32<LittleEndian>>,
+        _data: B,
     }
-    let (address, data) = zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
-        .ok_or(GreatError::BadMessage)?;
-    let _args = Args { address, data };
+    let (_address, _data) = zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
+        .ok_or(GreatError::InvalidArgument)?;
+    let _args = Args { _address, _data };
     Ok([].into_iter())
 }
 
@@ -126,7 +122,7 @@ pub fn read_page<'a>(
     struct Args {
         address: U32<LittleEndian>,
     }
-    let _args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+    let _args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
     let data: [u8; 8] = [0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0];
     Ok(data.into_iter())
 }
@@ -134,8 +130,6 @@ pub fn read_page<'a>(
 // - dispatch -----------------------------------------------------------------
 
 use libgreat::gcp::{iter_to_response, GcpResponse, GCP_MAX_RESPONSE_LENGTH};
-
-use core::{array, iter};
 
 pub fn dispatch(
     verb_number: u32,
@@ -176,9 +170,6 @@ pub fn dispatch(
             Ok(response)
         }
 
-        verb_number => Err(GreatError::GcpVerbNotFound(
-            gcp::class::ClassId::firmware,
-            verb_number,
-        )),
+        _verb_number => Err(GreatError::InvalidArgument),
     }
 }

@@ -98,6 +98,7 @@ impl core::convert::From<u8> for VerbDescriptor {
 pub enum ClassId {
     core = 0x0000,
     firmware = 0x0001,
+    selftest = 0x0011,
     gpio = 0x0103,
     greatdancer = 0x0104,
     moondancer = 0x0120,
@@ -109,6 +110,7 @@ impl core::convert::From<u32> for ClassId {
         match value {
             0x0000 => ClassId::core,
             0x0001 => ClassId::firmware,
+            0x0011 => ClassId::selftest,
             0x0103 => ClassId::gpio,
             0x0104 => ClassId::greatdancer,
             0x0120 => ClassId::moondancer,
@@ -122,6 +124,7 @@ impl ClassId {
         match self {
             ClassId::core => 0x0000,
             ClassId::firmware => 0x0001,
+            ClassId::selftest => 0x0011,
             ClassId::gpio => 0x0103,
             ClassId::greatdancer => 0x0104,
             ClassId::moondancer => 0x0120,

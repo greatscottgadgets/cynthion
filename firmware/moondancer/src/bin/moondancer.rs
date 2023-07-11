@@ -88,7 +88,7 @@ fn MachineExternal() {
         let endpoint = usb1.ep_in.epno.read().bits() as u8;
         usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
 
-        // TODO something a little bit safer would be nice
+        // TODO something a little safer would be nice
         unsafe {
             usb1.clear_tx_ack_active();
         }
@@ -187,6 +187,7 @@ struct Firmware<'a> {
 
     // state
     gcp_response: Option<GcpResponse<'a>>,
+    gcp_response_last_error: Option<GreatError>,
 
     // classes
     core: libgreat::gcp::class_core::Core,
@@ -225,9 +226,10 @@ impl<'a> Firmware<'a> {
         );
 
         // initialize class registry
-        static CLASSES: [libgreat::gcp::Class; 3] = [
+        static CLASSES: [libgreat::gcp::Class; 4] = [
             libgreat::gcp::class_core::CLASS,
             moondancer::gcp::firmware::CLASS,
+            moondancer::gcp::selftest::CLASS,
             moondancer::gcp::moondancer::CLASS,
         ];
         let classes = libgreat::gcp::Classes(&CLASSES);
@@ -240,6 +242,7 @@ impl<'a> Firmware<'a> {
             leds: peripherals.LEDS,
             usb1,
             gcp_response: None,
+            gcp_response_last_error: None,
             core,
             moondancer,
         }
@@ -279,14 +282,13 @@ impl<'a> Firmware<'a> {
 
         info!("Peripherals initialized, entering main loop");
 
-        let mut counter: usize = 0;
+        let mut counter: usize = 1;
 
         loop {
-            // leds: main loop is responsive
+            // leds: main loop is responsive, interrupts are firing
             self.leds
                 .output
                 .write(|w| unsafe { w.output().bits((counter % 256) as u8) });
-            counter += 1;
 
             if queue_length > max_queue_length {
                 max_queue_length = queue_length;
@@ -295,7 +297,9 @@ impl<'a> Firmware<'a> {
             queue_length = 0;
 
             while let Some(message) = MESSAGE_QUEUE.dequeue() {
+
                 //debug!("MachineExternal: {:?}", message);
+                counter += 1;
 
                 // leds: message loop is active
                 self.leds
@@ -468,9 +472,8 @@ impl<'a> Firmware<'a> {
             _ => match self.usb1.handle_setup_request(&setup_packet) {
                 Ok(()) => (),
                 Err(e) => {
-                    error!("  handle_setup_request: {:?}: {:?}", e, setup_packet);
-                    //panic!("  handle_setup_request: {:?}: {:?}", e, setup_packet)
-                    GreatError::Message("FATAL: failed to handle setup request");
+                    error!("Failed to handle setup request: {:?}: {:?}", e, setup_packet);
+                    return Err(GreatError::BadMessage);
                 }
             },
         }
@@ -586,13 +589,20 @@ impl<'a> Firmware<'a> {
             libgreat::gcp::ClassId::firmware => {
                 moondancer::gcp::firmware::dispatch(verb_number, arguments, response_buffer)
             }
+            // class: selftest
+            libgreat::gcp::ClassId::selftest => {
+                moondancer::gcp::selftest::dispatch(verb_number, arguments, response_buffer)
+            }
             // class: moondancer
             libgreat::gcp::ClassId::moondancer => {
                 self.moondancer
                     .dispatch(verb_number, arguments, response_buffer)
             }
             // class: unsupported
-            _ => Err(GreatError::Message("class or verb not found")),
+            _ => {
+                error!("GCP dispatch request error: Class id '{:?}' not found", class_id);
+                Err(GreatError::InvalidArgument)
+            },
         };
 
         // queue response
@@ -604,13 +614,17 @@ impl<'a> Firmware<'a> {
                 //      vendor_request telling us we can send it ???
                 //debug!("GCP queueing response");
                 self.gcp_response = Some(response);
+                self.gcp_response_last_error = None;
             }
             Err(e) => {
                 error!("GCP error: failed to dispatch command {}", e);
+                self.gcp_response = None;
+                self.gcp_response_last_error = Some(e);
                 // TODO set a proper errno
-                self.usb1
+                /*self.usb1
                     .hal_driver
-                    .write(0, [0xde, 0xad, 0xde, 0xad].into_iter());
+                    .write(0, [0xde, 0xad, 0xde, 0xad].into_iter());*/
+                self.usb1.hal_driver.stall_endpoint_in(0);
             }
         }
 
@@ -627,9 +641,17 @@ impl<'a> Firmware<'a> {
                 .hal_driver
                 .write(0, response.take(moondancer::EP_MAX_PACKET_SIZE));
             self.gcp_response = None;
+
+        } else if let Some(error) = self.gcp_response_last_error {
+            warn!("dispatch_gcp_response error result: {:?}", error);
+            self.usb1
+                    .hal_driver
+                    .write(0, (error as u32).to_le_bytes().into_iter());
+            self.gcp_response_last_error = None;
+
         } else {
-            // TODO figure out what to do if we don't have a response
-            error!("GCP stall: gcp response requested but no response queued");
+            // TODO figure out what to do if we don't have a response or error
+            error!("GCP stall: gcp response requested but no response or error queued");
             self.usb1.hal_driver.stall_endpoint_in(0);
         }
 
@@ -641,11 +663,12 @@ impl<'a> Firmware<'a> {
 
         // cancel any queued response
         self.gcp_response = None;
+        self.gcp_response_last_error = None;
 
-        // TODO figure out what response host is expecting
-        self.usb1
+        // TODO figure out if the host is expecting a response
+        /*self.usb1
             .hal_driver
-            .write(0, [0xde, 0xad, 0xde, 0xad].into_iter());
+            .write(0, [].into_iter());*/
 
         Ok(())
     }

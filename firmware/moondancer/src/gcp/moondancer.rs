@@ -192,7 +192,7 @@ impl TryFrom<u8> for RegisterType {
             2 => Ok(EndpointComplete),
             3 => Ok(EndpointStatus),
             4 => Ok(EndpointNak),
-            _ => Err(GreatError::InvalidArgument),
+            _ => Err(GreatError::InvalidRequestCode),
         }
     }
 }
@@ -460,7 +460,7 @@ impl Moondancer {
             ep0_max_packet_size: U16<LittleEndian>,
             quirk_flags: U16<LittleEndian>,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
         self.ep0_max_packet_size = args.ep0_max_packet_size.into();
         self.quirk_flags = args.quirk_flags.into();
@@ -511,7 +511,7 @@ impl Moondancer {
             address: u8,
             deferred: u8,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         debug!(
             "MD Moondancer::set_address(address:{}, deferred:{})",
             args.address, args.deferred
@@ -586,7 +586,7 @@ impl Moondancer {
         struct Args {
             register_type: u8,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let register_type = RegisterType::try_from(args.register_type)?;
         let register_value = self.state.get(&register_type);
 
@@ -627,7 +627,7 @@ impl Moondancer {
         struct Args {
             endpoint_number: u8,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
         // TODO handle endpoint numbers other than 0
         let result = match self.state.usb0_setup_pending.take() {
@@ -650,7 +650,7 @@ impl Moondancer {
         struct Args {
             endpoint_number: u8,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
         self.usb0.stall_endpoint_address(args.endpoint_number, true);
 
@@ -674,7 +674,7 @@ impl Moondancer {
         }
         let (endpoint_number, data_to_send) =
             zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
-                .ok_or(GreatError::BadMessage)?;
+                .ok_or(GreatError::InvalidArgument)?;
         let args = Args {
             endpoint_number,
             data_to_send,
@@ -702,7 +702,7 @@ impl Moondancer {
         struct Args {
             endpoint_address: u8,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let endpoint_number = args.endpoint_address & 0x7f;
         debug!(
             "MD Moondancer::clean_up_transfer({} / 0x{:x})",
@@ -727,7 +727,7 @@ impl Moondancer {
         struct Args {
             endpoint_number: u8,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         debug!(
             "MD Moondancer::start_nonblocking_read({})",
             args.endpoint_number
@@ -755,7 +755,7 @@ impl Moondancer {
         struct Args {
             endpoint_number: u8,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
         let endpoint = args.endpoint_number as usize;
         let data = self.state.receive_buffers[endpoint];
@@ -790,7 +790,7 @@ impl Moondancer {
         struct Args {
             endpoint_number: u8,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         debug!(
             "MD Moondancer::get_nonblocking_data_length({})",
             args.endpoint_number
@@ -893,10 +893,7 @@ impl Moondancer {
                 Ok(response)
             }
 
-            verb_number => Err(GreatError::GcpVerbNotFound(
-                gcp::class::ClassId::moondancer,
-                verb_number,
-            )),
+            verb_number => Err(GreatError::InvalidArgument),
         }
     }
 }

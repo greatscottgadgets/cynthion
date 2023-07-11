@@ -5,13 +5,12 @@ edition = "2021"
 
 [features]
 default = [
-    #"unstable"
 ]
 nightly = []
 
-[dependencies]
-zerocopy = { version = "=0.7.0-alpha.2", default-features = false }
+# selects a minimal subset of error codes in order to reduce binary size
+errno_minimal = []
 
-# https://github.com/rust-lang/log/issues/526
+[dependencies]
 log = "=0.4.17"
-#log = { path = "../toolchain/log.git" }
+zerocopy = { version = "=0.7.0-alpha.2", default-features = false }

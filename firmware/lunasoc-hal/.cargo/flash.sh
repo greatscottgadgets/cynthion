@@ -1,9 +1,9 @@
 #!/usr/bin/env zsh
 
 # configuration
-${UART:=/dev/ttyACM0}
-${BASE_MEM:=0x40000000}
-${BITSTREAM:=../../gateware/moondancer_soc/build/top.bit}
+: ${UART:=/dev/ttyACM0}
+: ${BASE_MEM:=0x40000000}
+: ${BITSTREAM:=../../gateware/moondancer_soc/build/top.bit}
 
 echo "Using SoC uart: UART=$UART"
 echo "Using SoC base memory address: BASE_MEM=$BASE_MEM"

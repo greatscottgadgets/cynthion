@@ -188,12 +188,12 @@ impl Core {
         struct Args {
             class_number: U32<LittleEndian>,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let class_id = args.class_number.into();
         let class = self
             .classes
             .class(class_id)
-            .ok_or(GreatError::GcpClassNotFound(class_id))?;
+            .ok_or(GreatError::InvalidArgument)?;
         let verbs = class.verbs.iter().flat_map(|verb| verb.id.to_le_bytes());
         Ok(verbs)
     }
@@ -205,18 +205,15 @@ impl Core {
             class_number: U32<LittleEndian>,
             verb_number: U32<LittleEndian>,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let class_id = args.class_number.into();
         let class = self
             .classes
             .class(class_id)
-            .ok_or(GreatError::GcpClassNotFound(class_id))?;
+            .ok_or(GreatError::InvalidArgument)?;
         let verb = class
             .verb(args.verb_number.into())
-            .ok_or(GreatError::GcpVerbNotFound(
-                class_id,
-                args.verb_number.into(),
-            ))?;
+            .ok_or(GreatError::InvalidArgument)?;
         Ok(verb.name.as_bytes().into_iter().copied())
     }
 
@@ -228,18 +225,15 @@ impl Core {
             verb_number: U32<LittleEndian>,
             descriptor: u8,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let class_id = args.class_number.into();
         let class = self
             .classes
             .class(class_id)
-            .ok_or(GreatError::GcpClassNotFound(class_id))?;
+            .ok_or(GreatError::InvalidArgument)?;
         let verb = class
             .verb(args.verb_number.into())
-            .ok_or(GreatError::GcpVerbNotFound(
-                class_id,
-                args.verb_number.into(),
-            ))?;
+            .ok_or(GreatError::InvalidArgument)?;
         match args.descriptor.into() {
             VerbDescriptor::InSignature => Ok(verb.in_signature.as_bytes().into_iter().copied()),
             VerbDescriptor::InParamNames => Ok(verb.in_param_names.as_bytes().into_iter().copied()),
@@ -248,7 +242,7 @@ impl Core {
                 Ok(verb.out_param_names.as_bytes().into_iter().copied())
             }
             VerbDescriptor::Doc => Ok(verb.doc.as_bytes().into_iter().copied()),
-            VerbDescriptor::Unknown(value) => Err(GreatError::GcpUnknownVerbDescriptor(value)),
+            VerbDescriptor::Unknown(value) => Err(GreatError::InvalidRequestDescriptor),
         }
     }
 
@@ -259,12 +253,12 @@ impl Core {
         struct Args {
             class_number: U32<LittleEndian>,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let class_id = args.class_number.into();
         let class = self
             .classes
             .class(class_id)
-            .ok_or(GreatError::GcpClassNotFound(class_id))?;
+            .ok_or(GreatError::InvalidArgument)?;
         Ok(class.name.as_bytes().iter().copied())
     }
 
@@ -274,12 +268,12 @@ impl Core {
         struct Args {
             class_number: U32<LittleEndian>,
         }
-        let args = Args::read_from(arguments).ok_or(GreatError::BadMessage)?;
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let class_id = args.class_number.into();
         let class = self
             .classes
             .class(class_id)
-            .ok_or(GreatError::GcpClassNotFound(class_id))?;
+            .ok_or(GreatError::InvalidArgument)?;
         Ok(class.docs.as_bytes().into_iter().copied())
     }
 }
@@ -359,10 +353,7 @@ impl Core {
                 Ok(response)
             }
 
-            verb_number => Err(GreatError::GcpVerbNotFound(
-                gcp::class::ClassId::core,
-                verb_number,
-            )),
+            verb_number => Err(GreatError::InvalidArgument),
         }
     }
 }
