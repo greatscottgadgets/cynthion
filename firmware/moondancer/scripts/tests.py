@@ -2,30 +2,30 @@
 
 # Test GCP protocol
 
-import greatfet
+import cynthion
 import sys, traceback, unittest
 
 class TestGcp(unittest.TestCase):
     def setUp(self):
-        self.gf = greatfet.GreatFET()
+        self.board = cynthion.Cynthion()
 
     def test_connectivity(self):
-        result = self.gf.board_name()
+        result = self.board.board_name()
         print(f"test_connectivity: {result}")
-        self.assertEqual(result, "GreatFET One") # TODO change board name
+        self.assertEqual(result, "Cynthion in Moondancer mode")
 
     def test_class_firmware(self):
-        result = self.gf.supports_api("firmware")
+        result = self.board.supports_api("firmware")
         self.assertTrue(result)
 
-        api = self.gf.apis.firmware
+        api = self.board.apis.firmware
         result = api.initialize()
         print(f"test_class_firmware: {result}")
 
         self.assertEqual(result, (256, 2097152))
 
     def test_error_no_function(self):
-        api = self.gf.apis.firmware
+        api = self.board.apis.firmware
         result = api.supports_verb("test_error_no_function")
         self.assertFalse(result)
 
@@ -38,7 +38,7 @@ class TestGcp(unittest.TestCase):
         def get_error_code(name):
             return [n for n in LIBGREAT_ERROR_NAMES if LIBGREAT_ERROR_NAMES[n] == name][0]
 
-        api = self.gf.apis.selftest
+        api = self.board.apis.selftest
 
         result = api.supports_verb("test_error_return_code")
         self.assertTrue(result)
