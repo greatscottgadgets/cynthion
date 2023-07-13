@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=41", "wheel", "setuptools-git-versioning<2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cynthion"
+dynamic = ["version"]
+authors = [
+    {name = "Great Scott Gadgets", email = "dev@greatscottgadgets.com"},
+]
+license = { text = "BSD" }
+description = "Python library for the Great Scott Gadgets Cynthion USB Test Instrument"
+urls = { Source = "https://greatscottgadgets.com/cynthion" }
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python",
+    "Development Status :: 5 - Production/Stable",
+    "Natural Language :: English",
+    "Environment :: Console",
+    "Environment :: Plugins",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Security",
+]
+dependencies = [
+    "pyusb",
+    "future",
+    "pyfwup>=0.2",
+    "tqdm",
+    "tabulate",
+    "prompt_toolkit",
+    "pygreat",
+]
+
+[project.scripts]
+cynthion = "cynthion.commands.cli:main"
+cynthion_info = "cynthion.commands.cynthion_info:main"
+
+[tool.setuptools-git-versioning]
+enabled = true
+starting_version = "2023.07.12"

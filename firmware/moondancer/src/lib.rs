@@ -26,7 +26,7 @@ pub use libgreat::firmware::BoardInformation;
 
 pub const SYSTEM_CLOCK_FREQUENCY: u32 = pac::clock::sysclk();
 pub const BOARD_INFORMATION: BoardInformation = BoardInformation {
-    board_id: [0x00, 0x00, 0x00, 0x00],
+    board_id: 0x10_u32.to_le_bytes(),
     version_string: "v2023.0.1\0",
     part_id: [0x30, 0xa, 0x00, 0xa0, 0x5e, 0x4f, 0x60, 0x00],
     serial_number: [

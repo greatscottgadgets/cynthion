@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 
-# Test GreatFET connection
+# Test Cynthion Moondancer connection
 
+import cynthion
 import sys, traceback
-import greatfet
 
 def main():
-    gf = greatfet.GreatFET()
+    board = cynthion.Cynthion()
 
-    print("Found a {}!".format(gf.board_name()))
-    print("  Board ID: {}".format(gf.board_id()))
-    print("  Firmware version: {}".format(gf.firmware_version()))
-    print("  Part ID: {}".format(gf.part_id()))
-    print("  Serial number: {}".format(gf.serial_number()))
+    print("Found a {}!".format(board.board_name()))
+    print("  Board ID: {}".format(board.board_id()))
+    print("  Firmware version: {}".format(board.firmware_version()))
+    print("  Part ID: {}".format(board.part_id()))
+    print("  Serial number: {}".format(board.serial_number()))
 
 if __name__ == "__main__":
     try:
