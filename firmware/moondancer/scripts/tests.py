@@ -1,17 +1,27 @@
 #!/usr/bin/env python3
+#
+# This file is part of Cynthion.
+#
+# Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
 
-# Test GCP protocol
+import logging, os, sys, traceback, unittest
+
+from luna import configure_default_logging
 
 import cynthion
-import sys, traceback, unittest
 
-class TestGcp(unittest.TestCase):
+
+class TestGcpProtocol(unittest.TestCase):
+    """Tests for GCP protocol implementation."""
+
     def setUp(self):
+        configure_default_logging(level=os.getenv("LOG_LEVEL", "INFO").upper())
         self.board = cynthion.Cynthion()
 
     def test_connectivity(self):
         result = self.board.board_name()
-        print(f"test_connectivity: {result}")
+        logging.debug(f"test_connectivity: {result}")
         self.assertEqual(result, "Cynthion in Moondancer mode")
 
     def test_class_firmware(self):
@@ -20,7 +30,7 @@ class TestGcp(unittest.TestCase):
 
         api = self.board.apis.firmware
         result = api.initialize()
-        print(f"test_class_firmware: {result}")
+        logging.debug(f"test_class_firmware: {result}")
 
         self.assertEqual(result, (256, 2097152))
 
@@ -45,7 +55,7 @@ class TestGcp(unittest.TestCase):
 
         result = api.test_error_return_code(0)
         self.assertEqual(result, "ok")
-        print(f"test_error_return_code: {result}")
+        logging.debug(f"test_error_return_code: {result}")
 
         code = get_error_code("EBUSY")
         with self.assertRaises(Exception) as context:

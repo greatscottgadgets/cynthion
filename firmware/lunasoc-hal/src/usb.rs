@@ -218,10 +218,7 @@ macro_rules! impl_usb {
                     self.controller.connect.write(|w| w.connect().bit(false));
 
                     // disable endpoint events
-                    self.disable_interrupt(Interrupt::$USBX_CONTROLLER);
-                    self.disable_interrupt(Interrupt::$USBX_EP_CONTROL);
-                    self.disable_interrupt(Interrupt::$USBX_EP_IN);
-                    self.disable_interrupt(Interrupt::$USBX_EP_OUT);
+                    self.disable_interrupts();
 
                     // reset FIFOs
                     self.ep_control.reset.write(|w| w.reset().bit(true));
@@ -236,37 +233,34 @@ macro_rules! impl_usb {
                 }
 
                 fn disconnect(&self) {
-                    // disconnect device controller
-                    self.controller.connect.write(|w| w.connect().bit(false));
-
                     // disable endpoint events
-                    self.disable_interrupt(Interrupt::$USBX_CONTROLLER);
-                    self.disable_interrupt(Interrupt::$USBX_EP_CONTROL);
-                    self.disable_interrupt(Interrupt::$USBX_EP_IN);
-                    self.disable_interrupt(Interrupt::$USBX_EP_OUT);
+                    self.disable_interrupts();
+
+                    // reset device address to 0
+                    self.set_address(0);
 
                     // reset FIFOs
                     self.ep_control.reset.write(|w| w.reset().bit(true));
                     self.ep_in.reset.write(|w| w.reset().bit(true));
                     self.ep_out.reset.write(|w| w.reset().bit(true));
+
+                    // disconnect device controller
+                    self.controller.connect.write(|w| w.connect().bit(false));
                 }
 
                 fn reset(&self) -> u8 {
                     // disable endpoint events
-                    self.disable_interrupt(Interrupt::$USBX_EP_CONTROL);
-                    self.disable_interrupt(Interrupt::$USBX_EP_IN);
-                    self.disable_interrupt(Interrupt::$USBX_EP_OUT);
+                    self.disable_interrupts();
 
                     // reset device address to 0
-                    self.ep_control
-                        .address
-                        .write(|w| unsafe { w.address().bits(0) });
+                    self.set_address(0);
 
                     // reset FIFOs
                     self.ep_control.reset.write(|w| w.reset().bit(true));
                     self.ep_in.reset.write(|w| w.reset().bit(true));
                     self.ep_out.reset.write(|w| w.reset().bit(true));
 
+                    // re-enable endpoint events
                     self.enable_interrupts();
 
                     // 0: High, 1: Full, 2: Low, 3:SuperSpeed (incl SuperSpeed+)
@@ -277,30 +271,22 @@ macro_rules! impl_usb {
 
                 fn bus_reset(&self) -> u8 {
                     // disable events
-                    self.ep_control.ev_enable.write(|w| w.enable().bit(false));
-                    self.ep_in.ev_enable.write(|w| w.enable().bit(false));
-                    self.ep_out.ev_enable.write(|w| w.enable().bit(false));
+                    self.disable_interrupt(Interrupt::$USBX_CONTROLLER);
+                    self.disable_interrupt(Interrupt::$USBX_EP_CONTROL);
+                    self.disable_interrupt(Interrupt::$USBX_EP_IN);
 
                     // reset device address to 0
-                    self.ep_control.address.write(|w| unsafe { w.address().bits(0) });
-                    self.ep_out.address.write(|w| unsafe { w.address().bits(0) });
+                    self.set_address(0);
 
                     // reset fifo handlers
                     self.ep_control.reset.write(|w| w.reset().bit(true));
                     self.ep_in.reset.write(|w| w.reset().bit(true));
                     self.ep_out.reset.write(|w| w.reset().bit(true));
 
-                    // clear any pending interrupts
-                    self.controller.ev_pending.write(|w| w.pending().bit(true));
-                    self.ep_control.ev_pending.write(|w| w.pending().bit(true));
-                    self.ep_in.ev_pending.write(|w| w.pending().bit(true));
-                    self.ep_out.ev_pending.write(|w| w.pending().bit(true));
-
                     // re-enable events
-                    self.ep_control.ev_enable.write(|w| w.enable().bit(true));
-                    self.ep_in.ev_enable.write(|w| w.enable().bit(true));
-                    self.ep_out.ev_enable.write(|w| w.enable().bit(true));
-                    self.controller.ev_enable.write(|w| w.enable().bit(true));
+                    self.enable_interrupt(Interrupt::$USBX_CONTROLLER);
+                    self.enable_interrupt(Interrupt::$USBX_EP_CONTROL);
+                    self.enable_interrupt(Interrupt::$USBX_EP_IN);
 
                     // 0: High, 1: Full, 2: Low, 3:SuperSpeed (incl SuperSpeed+)
                     let speed = self.controller.speed.read().speed().bits();

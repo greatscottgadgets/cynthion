@@ -319,19 +319,15 @@ impl<'a> Firmware<'a> {
                     // Usb1 received USB bus reset
                     UsbBusReset(Aux) => {
                         // handled in MachineExternal
-                        //warn!("ME Usb1BusReset");
                     }
 
                     // Usb1 received setup packet
                     UsbReceiveSetupPacket(Aux, packet) => {
-                        //warn!("");
-                        //warn!("ME Usb1ReceiveSetupPacket");
                         self.handle_receive_setup_packet(packet)?;
                     }
 
                     // Usb1 received data on control endpoint
                     UsbReceivePacket(Aux, 0, _) => {
-                        //warn!("ME Usb1ReceivePacket 0");
                         let bytes_read = self.usb1.hal_driver.read(0, &mut rx_buffer);
                         self.handle_receive_control_data(bytes_read, rx_buffer)?;
                         self.usb1.hal_driver.ep_out_prime_receive(0);
@@ -339,7 +335,6 @@ impl<'a> Firmware<'a> {
 
                     // Usb1 received data on endpoint - shouldn't ever be called
                     UsbReceivePacket(Aux, endpoint, _) => {
-                        //warn!("ME Usb1ReceivePacket {}", endpoint);
                         let bytes_read = self.usb1.hal_driver.read(endpoint, &mut rx_buffer);
                         self.handle_receive_data(endpoint, bytes_read, rx_buffer)?;
                         self.usb1.hal_driver.ep_out_prime_receive(endpoint);
@@ -347,7 +342,6 @@ impl<'a> Firmware<'a> {
 
                     // Usb1 transfer complete
                     UsbTransferComplete(Aux, endpoint) => {
-                        //warn!("ME Usb1TransferComplete");
                         self.handle_transfer_complete(endpoint)?;
                     }
 
@@ -355,19 +349,19 @@ impl<'a> Firmware<'a> {
 
                     // Usb0 received USB bus reset
                     UsbBusReset(Target) => {
-                        warn!("ME Usb0BusReset");
+                        warn!("IRQ Usb0BusReset");
                         self.moondancer.handle_bus_reset()?;
                     }
 
                     // Usb0 received setup packet
                     UsbReceiveSetupPacket(Target, packet) => {
-                        warn!("ME Usb0ReceiveSetupPacket");
+                        //warn!("IRQ Usb0ReceiveSetupPacket");
                         self.moondancer.handle_receive_setup_packet(packet)?;
                     }
 
                     // Usb0 received data on control endpoint
                     UsbReceivePacket(Target, 0, _) => {
-                        warn!("ME Usb0ReceivePacket 0");
+                        //warn!("IRQ Usb0ReceivePacket 0");
                         let bytes_read = self.moondancer.usb0.read(0, &mut rx_buffer);
                         self.moondancer
                             .handle_receive_control_data(bytes_read, rx_buffer)?;
@@ -376,7 +370,7 @@ impl<'a> Firmware<'a> {
 
                     // Usb0 received data on endpoint
                     UsbReceivePacket(Target, endpoint, _) => {
-                        warn!("ME Usb0ReceivePacket {}", endpoint);
+                        //warn!("IRQ Usb0ReceivePacket {}", endpoint);
                         let bytes_read = self.moondancer.usb0.read(endpoint, &mut rx_buffer);
                         self.moondancer
                             .handle_receive_data(endpoint, bytes_read, rx_buffer)?;
@@ -385,7 +379,7 @@ impl<'a> Firmware<'a> {
 
                     // Usb0 transfer complete
                     UsbTransferComplete(Target, endpoint) => {
-                        warn!("ME Usb0TransferComplete");
+                        //warn!("IRQ Usb0TransferComplete");
                         self.moondancer.handle_transfer_complete(endpoint)?;
                     }
 
