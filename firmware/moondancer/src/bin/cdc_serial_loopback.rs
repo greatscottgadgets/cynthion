@@ -16,10 +16,21 @@ use smolusb::traits::{
 
 use log::{debug, error, info, trace};
 
+// - types --------------------------------------------------------------------
+
+/// The UsbDataPacket struct represents a single packet of data
+/// received from a USB port.
+pub struct UsbDataPacket {
+    pub interface: moondancer::UsbInterface,
+    pub endpoint: u8,
+    pub bytes_read: usize,
+    pub buffer: [u8; moondancer::EP_MAX_PACKET_SIZE],
+}
+
 // - global static state ------------------------------------------------------
 
 use heapless::mpmc::MpMcQueue as Queue;
-use moondancer::{Message, UsbDataPacket};
+use moondancer::Message;
 
 static MESSAGE_QUEUE: Queue<Message, { moondancer::EP_MAX_ENDPOINTS }> = Queue::new();
 static USB_RECEIVE_PACKET_QUEUE: Queue<UsbDataPacket, { moondancer::EP_MAX_ENDPOINTS }> =
@@ -69,6 +80,7 @@ fn MachineExternal() {
         usb0.bus_reset();
         dispatch_message(Message::HandleInterrupt(pac::Interrupt::USB0));
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
+        let endpoint = usb0.ep_control.epno.read().bits() as u8;
         let mut buffer = [0_u8; 8];
         usb0.read_control(&mut buffer);
         let setup_packet = match SetupPacket::try_from(buffer) {
@@ -79,7 +91,7 @@ fn MachineExternal() {
             }
         };
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-        dispatch_message(Message::UsbReceiveSetupPacket(Target, setup_packet));
+        dispatch_message(Message::UsbReceiveSetupPacket(Target, endpoint, setup_packet));
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
         usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
         // TODO something a little bit safer would be nice
@@ -110,6 +122,7 @@ fn MachineExternal() {
         usb1.bus_reset();
         dispatch_message(Message::HandleInterrupt(pac::Interrupt::USB1));
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
+        let endpoint = usb1.ep_control.epno.read().bits() as u8;
         let mut buffer = [0_u8; 8];
         usb1.read_control(&mut buffer);
         let setup_packet = match SetupPacket::try_from(buffer) {
@@ -120,7 +133,7 @@ fn MachineExternal() {
             }
         };
         usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
-        dispatch_message(Message::UsbReceiveSetupPacket(Aux, setup_packet));
+        dispatch_message(Message::UsbReceiveSetupPacket(Aux, endpoint, setup_packet));
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
         usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
         // TODO something a little bit safer would be nice
@@ -294,15 +307,15 @@ fn main() -> ! {
 
             match message {
                 // usb0 message handlers
-                Message::UsbReceiveSetupPacket(Target, packet) => {
-                    match usb0.handle_setup_request(&packet) {
+                Message::UsbReceiveSetupPacket(Target, endpoint_number, packet) => {
+                    match usb0.handle_setup_request(endpoint_number, &packet) {
                         Ok(()) => (),
                         Err(e) => error!("  usb0 handle_setup_request: {:?}: {:?}", e, packet),
                     }
                 }
                 // usb1 message handlers
-                Message::UsbReceiveSetupPacket(Aux, packet) => {
-                    match usb1.handle_setup_request(&packet) {
+                Message::UsbReceiveSetupPacket(Aux, endpoint_number, packet) => {
+                    match usb1.handle_setup_request(endpoint_number, &packet) {
                         Ok(()) => (),
                         Err(e) => error!("  usb1 handle_setup_request: {:?}: {:?}", e, packet),
                     }

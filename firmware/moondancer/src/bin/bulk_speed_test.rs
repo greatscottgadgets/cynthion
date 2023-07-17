@@ -48,12 +48,13 @@ fn MachineExternal() {
 
     // USB0_EP_CONTROL UsbReceiveSetupPacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
+        let endpoint = usb0.ep_control.epno.read().bits() as u8;
         let mut setup_packet_buffer = [0_u8; 8];
         usb0.read_control(&mut setup_packet_buffer);
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
 
         let message = match SetupPacket::try_from(setup_packet_buffer) {
-            Ok(setup_packet) => Message::UsbReceiveSetupPacket(Target, setup_packet),
+            Ok(setup_packet) => Message::UsbReceiveSetupPacket(Target, endpoint, setup_packet),
             Err(_e) => Message::ErrorMessage("USB0_EP_CONTROL failed to read setup packet"),
         };
         dispatch_message(message);
@@ -89,7 +90,7 @@ fn MachineExternal() {
             usb0.clear_tx_ack_active();
         }
 
-        dispatch_message(Message::UsbTransferComplete(Target, endpoint));
+        dispatch_message(Message::UsbSendComplete(Target, endpoint));
 
     // - Unknown Interrupt --
     } else {
@@ -203,9 +204,9 @@ fn main_loop() -> GreatResult<()> {
                 UsbBusReset(Target) => (),
 
                 // Usb0 received setup packet
-                UsbReceiveSetupPacket(Target, setup_packet) => {
+                UsbReceiveSetupPacket(Target, endpoint_number, setup_packet) => {
                     test_command = TestCommand::Stop;
-                    usb0.handle_setup_request(&setup_packet)
+                    usb0.handle_setup_request(endpoint_number, &setup_packet)
                         .map_err(|_| GreatError::BadMessage)?;
                 }
 
@@ -261,7 +262,7 @@ fn main_loop() -> GreatResult<()> {
                 }
 
                 // Usb0 transfer complete
-                UsbTransferComplete(Target, _endpoint) => {
+                UsbSendComplete(Target, _endpoint) => {
                     leds.output.write(|w| unsafe { w.output().bits(0b00_0111) });
                 }
 

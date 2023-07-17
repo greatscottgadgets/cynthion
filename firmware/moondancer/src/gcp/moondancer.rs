@@ -21,6 +21,599 @@ use core::any::Any;
 use core::cell::RefCell;
 use core::slice;
 
+// - types --------------------------------------------------------------------
+
+/// QuirkFlags
+#[allow(non_snake_case, non_upper_case_globals)]
+pub mod QuirkFlag {
+    pub const SetAddressManually: u16 = 0x0001;
+}
+
+/// StatusRegister for status requests
+#[derive(Debug, PartialEq)]
+#[repr(u8)]
+pub enum StatusRegister {
+    Interrupts = 0,
+    QueuedSetupPackets = 1, // endpoints that have received a setup packet
+    EndpointComplete = 2,   // endpoints that have completed a receive or transfer
+}
+
+impl TryFrom<u8> for StatusRegister {
+    type Error = GreatError;
+    fn try_from(value: u8) -> GreatResult<Self> {
+        use StatusRegister::*;
+        match value {
+            0 => Ok(Interrupts),
+            1 => Ok(QueuedSetupPackets),
+            2 => Ok(EndpointComplete),
+            _ => Err(GreatError::InvalidRequestCode),
+        }
+    }
+}
+
+#[allow(non_snake_case, non_upper_case_globals)]
+pub mod UsbInterruptFlag {
+    pub const USB0_BUS_RESET: u32            = 1 << 0; // USB0
+    pub const USB0_RECEIVE_SETUP_PACKET: u32 = 1 << 1; // USB0_EP_CONTROL
+    pub const USB0_RECEIVE_CONTROL_DATA: u32 = 1 << 2; // USB0_EP_OUT (endpoint=0)
+    pub const USB0_RECEIVE_DATA: u32         = 1 << 3; // USB0_EP_OUT
+    pub const USB0_TRANSFER_COMPLETE: u32    = 1 << 4; // USB0_EP_IN
+}
+
+// - State --------------------------------------------------------------------
+
+type ReceiveBuffer = [u8; crate::EP_MAX_PACKET_SIZE];
+
+static mut SELF_STATE_RECEIVE_BUFFERS: [ReceiveBuffer; crate::EP_MAX_ENDPOINTS] = [[0; crate::EP_MAX_PACKET_SIZE]; crate::EP_MAX_ENDPOINTS];
+
+/// State
+struct State {
+    /// an interrupt is pending
+    usb0_interrupts_pending: u32, // 0x0 USBSTS
+
+    /// bitmap: a setup packet awaits
+    usb0_setup_pending: [Option<SetupPacket>; crate::EP_MAX_ENDPOINTS],
+
+    /// bitmap: endpoints that have completed a transaction
+    ///
+    /// 00-15  receive complete
+    /// 16-31  send complete
+    usb0_endpoint_complete_pending: u32, // 0x2 ENDPTCOMPLETE
+
+
+    //receive_buffers: [ReceiveBuffer; crate::EP_MAX_ENDPOINTS],
+    bytes_read: [usize; crate::EP_MAX_ENDPOINTS],
+}
+
+impl Default for State {
+    fn default() -> Self {
+        Self {
+            usb0_interrupts_pending: 0,
+            usb0_setup_pending: [None; crate::EP_MAX_ENDPOINTS],
+            usb0_endpoint_complete_pending: 0,
+            //receive_buffers: [[0; crate::EP_MAX_PACKET_SIZE]; crate::EP_MAX_ENDPOINTS],
+            bytes_read: [0; crate::EP_MAX_ENDPOINTS],
+        }
+    }
+}
+
+impl State {
+    pub fn get(&mut self, register_type: &StatusRegister) -> u32 {
+        let status: u32 = match register_type {
+            StatusRegister::Interrupts => self.get_interrupts(),
+            StatusRegister::QueuedSetupPackets => self.get_endpoint_setup_status(),
+            StatusRegister::EndpointComplete => self.get_endpoint_complete(),
+        };
+        status
+    }
+}
+
+impl State {
+    // 0x0
+    fn get_interrupts(&mut self) -> u32 {
+        let status = self.usb0_interrupts_pending;
+        self.usb0_interrupts_pending = 0;
+        status
+    }
+
+    // 0x1
+    fn get_endpoint_setup_status(&mut self) -> u32 {
+        let bits = self.usb0_setup_pending.iter().enumerate().fold(0_u32, |bits, (endpoint_number, &bit)| {
+            bits | (bit.is_some() as u32) << endpoint_number
+        });
+
+        debug!("MD Moondancer::State::get_endpoint_setup_status() -> 0b{:b}", bits);
+
+        bits
+    }
+
+    // 0x2 - is there data waiting from a handle_receive or handle_transfer_complete?
+    fn get_endpoint_complete(&mut self) -> u32 {
+        let endpoint_complete_receive = self.usb0_endpoint_complete_pending;
+        self.usb0_endpoint_complete_pending = 0;
+        endpoint_complete_receive
+    }
+}
+
+// - Moondancer --------------------------------------------------------------
+
+/// Moondancer
+pub struct Moondancer {
+    pub usb0: hal::Usb0, // TODO needs to be private
+    state: State,
+    ep0_max_packet_size: u16,
+    quirk_flags: u16,
+}
+
+impl Moondancer {
+    pub fn new(usb0: hal::Usb0) -> Self {
+        Self {
+            usb0,
+            state: State::default().into(),
+            ep0_max_packet_size: 0,
+            quirk_flags: 0,
+        }
+    }
+}
+
+// - usb0 interrupt handlers --------------------------------------------------
+
+impl Moondancer {
+    pub unsafe fn enable_usb_interrupts(&self) {
+        interrupt::enable(pac::Interrupt::USB0);
+        interrupt::enable(pac::Interrupt::USB0_EP_CONTROL);
+        interrupt::enable(pac::Interrupt::USB0_EP_IN);
+        interrupt::enable(pac::Interrupt::USB0_EP_OUT);
+
+        // enable all usb events
+        self.usb0.enable_interrupts();
+    }
+
+    pub unsafe fn disable_usb_interrupts(&self) {
+        // disable all usb events
+        self.usb0.disable_interrupts();
+
+        interrupt::disable(pac::Interrupt::USB0);
+        interrupt::disable(pac::Interrupt::USB0_EP_CONTROL);
+        interrupt::disable(pac::Interrupt::USB0_EP_IN);
+        interrupt::disable(pac::Interrupt::USB0_EP_OUT);
+    }
+
+    pub fn handle_bus_reset(&mut self) -> GreatResult<()> {
+        self.state.usb0_interrupts_pending |= UsbInterruptFlag::USB0_BUS_RESET; // URI: USB reset received
+
+        trace!(
+            "MD => IRQ handle_bus_reset -> 0b{:b}",
+            self.state.usb0_interrupts_pending
+        );
+
+        Ok(())
+    }
+
+    pub fn handle_receive_setup_packet(&mut self, endpoint_number: u8, setup_packet: SetupPacket) -> GreatResult<()> {
+        trace!(
+            "MD => IRQ handle_receive_setup_packet -> {} -> {:?} -> 0b{:b}",
+            endpoint_number, setup_packet, self.state.usb0_interrupts_pending,
+        );
+
+        // TODO shouldn't clear_feature rather be handled in Facedancer?
+        /*let request_type = setup_packet.request_type();
+        let request = setup_packet.request();
+        if request_type == RequestType::Standard && request == smolusb::control::Request::SetFeature {
+            debug!("USB0 SETUP possible clear feature endpoint halt");
+            let recipient = setup_packet.recipient();
+            let feature_bits = setup_packet.value;
+            let feature = match smolusb::control::Feature::try_from(feature_bits) {
+                Ok(feature) => feature,
+                Err(e) => {
+                    warn!("SETUP stall: invalid clear feature type: {}", feature_bits);
+                    self.usb0.stall_request();
+                    return Ok(());
+                }
+            };
+            if recipient == smolusb::control::Recipient::Endpoint && feature == smolusb::control::Feature::EndpointHalt {
+                let endpoint_address = setup_packet.index as u8;
+                self.usb0
+                    .clear_feature_endpoint_halt(endpoint_address);
+                self.usb0.ack_status_stage(&setup_packet);
+                debug!(
+                    "USB0 SETUP handle_clear_feature EndpointHalt: 0x{:x}",
+                    endpoint_address
+                );
+            }
+            return Ok(());
+        }*/
+
+        // TODO not sure yet whether this will be a problem in practice
+        // TODO handle out of range
+        if self.state.usb0_setup_pending[endpoint_number as usize].is_some() {
+            warn!("MD queued setup packet for endpoint {} has not yet been transmitted", endpoint_number);
+            //return Err(GreatError::DeviceOrResourceBusy);
+        }
+
+        self.state.usb0_interrupts_pending |= UsbInterruptFlag::USB0_RECEIVE_SETUP_PACKET;
+        // TODO handle out of range
+        self.state.usb0_setup_pending[endpoint_number as usize] = Some(setup_packet.clone());
+
+        Ok(())
+    }
+
+    pub fn handle_receive_control_data(
+        &mut self,
+        bytes_read: usize,
+        buffer: [u8; crate::EP_MAX_PACKET_SIZE],
+    ) -> GreatResult<()> {
+        self.state.usb0_interrupts_pending |= UsbInterruptFlag::USB0_RECEIVE_CONTROL_DATA;
+        self.state.usb0_endpoint_complete_pending |= 1 << 0;
+
+        trace!(
+            "MD => IRQ handle_receive_control_data -> {} -> 0b{:b} -> 0b{:b}",
+            bytes_read, self.state.usb0_interrupts_pending, self.state.usb0_endpoint_complete_pending,
+        );
+
+        self.state.bytes_read[0] = bytes_read;
+        unsafe {
+            //SELF_STATE_RECEIVE_BUFFERS[0] = buffer
+            SELF_STATE_RECEIVE_BUFFERS[0].copy_from_slice(&buffer);
+        };
+
+        Ok(())
+    }
+
+    pub fn handle_receive_data(
+        &mut self,
+        endpoint: u8,
+        bytes_read: usize,
+        buffer: [u8; crate::EP_MAX_PACKET_SIZE],
+    ) -> GreatResult<()> {
+        self.state.usb0_interrupts_pending |= UsbInterruptFlag::USB0_RECEIVE_DATA;
+        self.state.usb0_endpoint_complete_pending |= 1 << endpoint;
+
+        trace!(
+            "MD => IRQ handle_receive_data -> {} -> {} -> 0b{:b} -> 0b{:b}",
+            endpoint,
+            bytes_read,
+            self.state.usb0_interrupts_pending,
+            self.state.usb0_endpoint_complete_pending,
+        );
+
+        // TODO if endpoint > crate::EP_MAX_ENDPOINTS
+        self.state.bytes_read[endpoint as usize] = bytes_read;
+        unsafe {
+            //SELF_STATE_RECEIVE_BUFFERS[endpoint as usize] = buffer
+            SELF_STATE_RECEIVE_BUFFERS[endpoint as usize].copy_from_slice(&buffer);
+        };
+
+        Ok(())
+    }
+
+    pub fn handle_transfer_complete(&mut self, endpoint: u8) -> GreatResult<()> {
+        self.state.usb0_interrupts_pending |= UsbInterruptFlag::USB0_TRANSFER_COMPLETE;
+        self.state.usb0_endpoint_complete_pending |= 1 << (endpoint + 16);
+
+        trace!(
+            "MD => IRQ handle_transfer_complete -> {} -> 0b{:b}",
+            endpoint, self.state.usb0_interrupts_pending
+        );
+
+        Ok(())
+    }
+}
+
+// - verb implementations: connection / disconnection -------------------------
+
+impl Moondancer {
+    /// Connect the USB interface.
+    pub fn connect(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        #[repr(C)]
+        #[derive(FromBytes, Unaligned)]
+        struct Args {
+            ep0_max_packet_size: U16<LittleEndian>,
+            quirk_flags: U16<LittleEndian>,
+        }
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
+
+        self.ep0_max_packet_size = args.ep0_max_packet_size.into();
+        self.quirk_flags = args.quirk_flags.into();
+
+        self.state = State::default();
+        let speed = self.usb0.connect();
+
+        unsafe { self.enable_usb_interrupts() };
+
+        debug!(
+            "MD Moondancer::connect(ep0_max_packet_size:{}, quirk_flags:{}) -> {:?}",
+            args.ep0_max_packet_size, args.quirk_flags, speed
+        );
+
+        Ok([].into_iter())
+    }
+
+    /// Terminate all existing communication and disconnects the USB interface.
+    pub fn disconnect(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        self.usb0.disconnect();
+        self.state = State::default();
+
+        debug!("MD Moondancer::disconnect()");
+
+        Ok([].into_iter())
+    }
+
+    /// Perform a USB bus reset.
+    pub fn bus_reset(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        self.state = State::default();
+        self.usb0.bus_reset();
+
+        debug!("MD Moondancer::bus_reset()");
+
+        Ok([].into_iter())
+    }
+}
+
+// - verb implementations: enumeration / setup --------------------------------
+
+impl Moondancer {
+    pub fn set_address(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        #[repr(C)]
+        #[derive(FromBytes, Unaligned)]
+        struct Args {
+            address: u8,
+            deferred: u8,
+        }
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
+
+        // activate new address
+        let address = args.address & 0x7f;
+        self.usb0.set_address(address);
+
+        debug!(
+            "MD Moondancer::set_address(address:{}, deferred:{})",
+            args.address, args.deferred
+        );
+
+        Ok([].into_iter())
+    }
+
+    pub fn set_up_endpoints(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        #[repr(C)]
+        #[derive(Debug, FromBytes, Unaligned)]
+        struct ArgEndpoint {
+            address: u8,
+            max_packet_size: U16<LittleEndian>,
+            transfer_type: u8,
+        }
+
+        // while we have endpoint triplets to handle
+        let mut byte_slice = arguments;
+        while let Some((endpoint, next)) =
+            zerocopy::LayoutVerified::<_, ArgEndpoint>::new_from_prefix(byte_slice)
+        {
+            debug!("TODO MD Moondancer::set_up_endpoint(0x{:x}) -> 0x{:x} -> {}", endpoint.address, endpoint.address & 0x7f, endpoint.max_packet_size);
+            byte_slice = next;
+
+            // endpoint zero is always the control endpoint, and can't be configured
+            if endpoint.address & 0x7f == 0x00 {
+                warn!("MD ignoring request to reconfigure control endpoint");
+                continue;
+            }
+
+            // prime any OUT endpoints
+            if Direction::from_endpoint_address(endpoint.address) == Direction::HostToDevice {
+                debug!("MD priming HostToDevice (OUT) endpoint address: {}", endpoint.address);
+                self.usb0.ep_out_prime_receive(endpoint.address);
+            }
+
+            // ignore endpoint configurations we won't be able to handle
+            if endpoint.max_packet_size.get() as usize > crate::EP_MAX_PACKET_SIZE {
+                error!(
+                    "MD failed to setup endpoint with max packet size {} > {}",
+                    endpoint.max_packet_size,
+                    crate::EP_MAX_PACKET_SIZE,
+                );
+                return Err(GreatError::InvalidArgument);
+            }
+
+            // TODO configure endpoint
+        }
+
+        let iter = [].into_iter();
+        Ok(iter)
+    }
+}
+
+// - verb implementations: status & control -----------------------------------
+
+impl Moondancer {
+    /// Query the Moondancer for any events that need to be processed.
+    /// FIXME: should this actually use an interrupt pipe?
+    ///
+    /// The index value is used to select which status section we're looking for:
+    ///
+    ///	0 = pending interrupts (USBSTS register)
+    ///	1 = setup status for all endpoints (ENDPTSETUPSTAT)
+    ///	2 = endpoint completion status (ENDPTCOMPLETE)
+    ///	3 = endpoint primed status (ENDPTSTATUS)
+    ///
+    ///	Returns: register_value: u32
+    pub fn get_status(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        #[repr(C)]
+        #[derive(FromBytes, Unaligned)]
+        struct Args {
+            register_type: u8,
+        }
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
+        let register_type = StatusRegister::try_from(args.register_type)?;
+        let register_value = self.state.get(&register_type);
+
+        // throttle log output some
+        let mut is_repeat = false;
+        unsafe {
+            static mut LAST_TYPE: u8 = 0;
+            static mut LAST_VALUE: u32 = 0;
+            if args.register_type == LAST_TYPE && register_value == LAST_VALUE {
+                is_repeat = true;
+            }
+            LAST_TYPE = args.register_type;
+            LAST_VALUE = register_value;
+        }
+
+        if !is_repeat {
+            trace!(
+                "MD Moondancer::get_status(Args {{ register_type: {:?} }}) -> 0x{:x}",
+                register_type, register_value
+            );
+        }
+
+        let iter = register_value.to_le_bytes().into_iter();
+        Ok(iter)
+    }
+
+    /// Read a setup packet from the Moondancer port and relays it to the host.
+    ///
+    /// The endpoint_number parameter specifies which endpoint we should be reading from.
+    ///
+    /// Always transmits an 8-byte setup packet back to the host. If no setup packet
+    /// is waiting, the results of this vendor request are unspecified.
+    ///
+    /// Returns: raw_setup_packet: [u8; 8]
+    pub fn read_setup(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        #[repr(C)]
+        #[derive(FromBytes, Unaligned)]
+        struct Args {
+            endpoint_number: u8,
+        }
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
+
+        // TODO handle out of range
+        let result = match self.state.usb0_setup_pending[args.endpoint_number as usize].take() {
+            Some(setup_packet) => Ok(SetupPacket::as_bytes(setup_packet).into_iter()),
+            None => {
+                error!("MD Moondancer::read_setup(endpoint_numger:{}) - no setup packet for endpoint",
+                       args.endpoint_number);
+                Err(GreatError::NoMessageOfType)
+            },
+        };
+
+        trace!(
+            "MD Moondancer::read_setup(endpoint_numger:{}) -> {:?}",
+            args.endpoint_number, result
+        );
+
+        result
+    }
+
+    /// Temporarily stalls the given USB endpoint.
+    pub fn stall_endpoint(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        #[repr(C)]
+        #[derive(FromBytes, Unaligned)]
+        struct Args {
+            endpoint_address: u8, // TODO consider using either endpoint_number or making _all_ api calls use address
+        }
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
+
+        self.usb0.stall_endpoint_address(args.endpoint_address, true);
+
+        debug!("MD Moondancer::stall_endpoint({})", args.endpoint_address);
+
+        Ok([].into_iter())
+    }
+}
+
+// - verb implementations: data transfer --------------------------------------
+
+impl Moondancer {
+    /// Read data from the host and sends on the provided Moondancer endpoint.
+    ///
+    /// The OUT request should contain a data stage containing all data to be sent.
+    pub fn send_on_endpoint(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        struct Args<B: zerocopy::ByteSlice> {
+            endpoint_number: zerocopy::LayoutVerified<B, u8>,
+            data_to_send: B,
+        }
+        let (endpoint_number, data_to_send) =
+            zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
+                .ok_or(GreatError::InvalidArgument)?;
+        let args = Args {
+            endpoint_number,
+            data_to_send,
+        };
+
+        let endpoint: u8 = args.endpoint_number.read();
+
+        let iter = args.data_to_send.into_iter();
+        self.usb0.write_ref(endpoint, iter);
+
+        trace!(
+            "MD Moondancer::send_on_endpoint(endpoint_number:{}, data_to_send.len:{})",
+            endpoint,
+            args.data_to_send.len()
+        );
+
+        Ok([].into_iter())
+    }
+
+    /// Prime the USB controller to recieve data on a particular endpoint.
+    ///
+    /// Does not wait for a transfer to complete. The transfer's
+    /// status can be checked with `get_transfer_status` and then read
+    /// with `finish_nonblocking_read`.
+    ///
+    /// TODO we might be able to drop this api call entirely
+    pub fn start_nonblocking_read(
+        &mut self,
+        arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
+        #[repr(C)]
+        #[derive(FromBytes, Unaligned)]
+        struct Args {
+            endpoint_number: u8,
+        }
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
+
+        self.usb0.ep_out_prime_receive(args.endpoint_number);
+
+        trace!(
+            "MD Moondancer::start_nonblocking_read({})",
+            args.endpoint_number
+        );
+
+        Ok([].into_iter())
+    }
+
+    /// Finish a non-blocking read by returning the read data back to the host.
+    ///
+    /// Returns: read_data: [u8]
+    pub fn finish_nonblocking_read(
+        &mut self,
+        arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
+        #[repr(C)]
+        #[derive(FromBytes, Unaligned)]
+        struct Args {
+            endpoint_number: u8,
+        }
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
+
+        // TODO range check
+        let endpoint_number = args.endpoint_number as usize;
+        let data = unsafe { SELF_STATE_RECEIVE_BUFFERS[endpoint_number] };
+        let bytes_read = self.state.bytes_read[endpoint_number];
+        if bytes_read == 0 {
+            error!("MD Moondancer::finish_nonblocking_read({}) no data available on endpoint", endpoint_number);
+            // TODO error ?
+        }
+        self.state.bytes_read[endpoint_number] = 0;
+
+        trace!(
+            "MD Moondancer::finish_nonblocking_read({}) -> {}",
+            endpoint_number, bytes_read,
+        );
+
+        let iter = data.into_iter().take(bytes_read);
+        Ok(iter)
+    }
+}
+
 // - class information --------------------------------------------------------
 
 pub static CLASS: gcp::Class = gcp::Class {
@@ -126,15 +719,6 @@ pub static VERBS: [Verb; 13] = [
         out_param_names: "*\0",
     },
     Verb {
-        id: 0x9,
-        name: "clean_up_transfer\0",
-        doc: "\0", //"Clean up any complete transfers on the given endpoint.\0",
-        in_signature: "<B\0",
-        in_param_names: "endpoint_address\0",
-        out_signature: "\0",
-        out_param_names: "*\0",
-    },
-    Verb {
         id: 0xa,
         name: "start_nonblocking_read\0",
         doc: "\0", //"Begin listening for data on the given OUT endpoint.\0",
@@ -152,655 +736,91 @@ pub static VERBS: [Verb; 13] = [
         out_signature: "<*X\0",
         out_param_names: "read_data\0",
     },
+
     Verb {
-        id: 0xc,
-        name: "get_nonblocking_data_length\0",
-        doc: "\0", //"Return the amount of data read after a given non-blocking read.\0",
-        in_signature: "<B\0",
-        in_param_names: "endpoint_number\0",
-        out_signature: "<I\0",
-        out_param_names: "length\0",
+        id: 0x10,
+        name: "get_event\0",
+        doc: "\0", //"Return the most recent driver event. Returns TODO if there are none.\0",
+        in_signature: "\0",
+        in_param_names: "*\0",
+        out_signature: "<BB*X\0",
+        out_param_names: "interface, type, data\0",
+    },
+    Verb {
+        id: 0x11,
+        name: "get_events\0",
+        doc: "\0", //"Return the most recent driver events. Returns TODO if there are none.\0",
+        in_signature: "\0",
+        in_param_names: "*\0",
+        out_signature: "<*(BBB)\0",
+        out_param_names: "interface, type, endpoint\0",
     },
 ];
 
-// - types --------------------------------------------------------------------
+// - verb implementations: new APIs -------------------------------------------
 
-/// QuirkFlags
-#[allow(non_snake_case, non_upper_case_globals)]
-pub mod QuirkFlag {
-    pub const SetAddressManually: u16 = 0x0001;
-}
-
-/// RegisterType for status requests
-#[derive(Debug, PartialEq)]
-#[repr(u8)]
-pub enum RegisterType {
-    UsbStatus = 0,
-    EndpointSetupStatus = 1,
-    EndpointComplete = 2,
-    EndpointStatus = 3,
-    EndpointNak = 4,
-}
-
-impl TryFrom<u8> for RegisterType {
-    type Error = GreatError;
-    fn try_from(value: u8) -> GreatResult<Self> {
-        use RegisterType::*;
-        match value {
-            0 => Ok(UsbStatus),
-            1 => Ok(EndpointSetupStatus),
-            2 => Ok(EndpointComplete),
-            3 => Ok(EndpointStatus),
-            4 => Ok(EndpointNak),
-            _ => Err(GreatError::InvalidRequestCode),
-        }
-    }
-}
-
-// - State --------------------------------------------------------------------
-
-type ReceiveBuffer = [u8; crate::EP_MAX_PACKET_SIZE];
-
-/// State
-struct State {
-    /// an interrupt is pending
-    usb0_status_pending: u32, // 0x0 USBSTS
-
-    /// bitmap: a setup packet awaits
+impl Moondancer {
+    /// Get the most recent USB driver event.
     ///
-    /// TODO Option<(endpoint, SetupPacket)>
-    /// TODO multiple queued packets?
-    usb0_setup_pending: Option<SetupPacket>, // 0x1 ENDPTSETUPSTATE
+    /// Returns: (type: u8, interface: u8, data: [u8])
+    /// - interface: u8 -- interface number from 0 to 255
+    /// - type: u8      -- where:
+    ///     - None                  = 0x00
+    ///     - UsbBusReset           = 0x10
+    ///     - UsbReceiveSetupPacket = 0x11 (endpoint_number: u8, SetupPacket: [u8; 8])
+    ///     - UsbReceivePacket      = 0x12 (endpoint_number: u8, bytes_read: u32, data: [u8])
+    ///     - UsbSendComplete       = 0x13 (endpoint_number: u8)
+    /// - data: [u8]    -- event data, parsed according to event type
+    pub fn get_event(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        let response = [
+            0x00,                                           // interface  = 0
+            0x11,                                           // type       = UsbReceiveSetupPacket
+            0x00,                                           // data[0]    = endpoint_number
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, // data[1..8] = SetupPacket
+        ];
 
-    /// bitmap: endpoints that have completed a transaction
+        debug!("MD Moondancer::get_event() -> {:?}", response);
+
+        Ok(response.into_iter())
+    }
+
+    /// Get the most recent USB driver events.
     ///
-    /// 00-15  receive complete
-    /// 16-31  send complete
-    usb0_endpoint_complete_pending: u32, // 0x2 ENDPTCOMPLETE
+    /// Returns: [(interface, type, endpoint)]
+    pub fn get_events(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
 
-    usb0_endpoint_prime_pending: u32, // 0x3 ENDPTSTATUS
-    usb0_endpoint_nak_pending: u32,   // 0x4 ENDPTNAK
+        let response = [
+            0x01_u8,                              // interface  = 0
+            0x02_u8,                              // type       = UsbReceiveSetupPacket
+            0x03_u8,                              // endpoint   = 0
+        ].into_iter().chain([
+        //    4_u32.to_le_bytes().into_iter()    // bytes_read = 8
+        //).chain([
+        //    0x0_u8, // pad
+        //]).chain([
+            0x5_u8,                               // interface  = 0
+            0x6_u8,                               // type       = UsbReceivePacket
+            0x7_u8,                               // endpoint   = 0
+        //]).chain(
+        //    8_u32.to_le_bytes().into_iter(), // bytes_read = 512
+        //).chain([
+        //    0x00_u8 // pad
+        ]);
 
-    receive_buffers: [ReceiveBuffer; crate::EP_MAX_ENDPOINTS],
-    bytes_read: [usize; crate::EP_MAX_ENDPOINTS],
-}
+        debug!("MD Moondancer::get_events() -> {:?}", response);
 
-impl Default for State {
-    fn default() -> Self {
-        Self {
-            usb0_status_pending: 0,
-            usb0_setup_pending: None,
-            usb0_endpoint_complete_pending: 0,
-            usb0_endpoint_prime_pending: 0,
-            usb0_endpoint_nak_pending: 0,
-            receive_buffers: [[0; crate::EP_MAX_PACKET_SIZE]; crate::EP_MAX_ENDPOINTS],
-            bytes_read: [0; crate::EP_MAX_ENDPOINTS],
-        }
-    }
-}
-
-impl State {
-    pub fn get(&mut self, register_type: &RegisterType) -> u32 {
-        let status: u32 = match register_type {
-            RegisterType::UsbStatus => self.get_usb_status(),
-            RegisterType::EndpointSetupStatus => self.get_endpoint_setup_status(),
-            RegisterType::EndpointComplete => self.get_endpoint_complete(),
-            RegisterType::EndpointStatus => self.get_endpoint_status(),
-            RegisterType::EndpointNak => self.get_endpoint_nak(),
-        };
-        status
-    }
-}
-
-impl State {
-    // 0x0
-    fn get_usb_status(&mut self) -> u32 {
-        let status = self.usb0_status_pending;
-        self.usb0_status_pending = 0;
-        status
+        Ok(response)
     }
 
-    // 0x1
-    fn get_endpoint_setup_status(&mut self) -> u32 {
-        match self.usb0_setup_pending.is_some() {
-            true => 1,
-            false => 0,
-        }
-    }
-
-    // 0x2 - is there data waiting from a handle_receive ?
-    fn get_endpoint_complete(&mut self) -> u32 {
-        let endpoint_complete_receive = self.usb0_endpoint_complete_pending;
-        self.usb0_endpoint_complete_pending = 0;
-        endpoint_complete_receive
-    }
-
-    // 0x3
-    // aka usb_endpoint_is_ready - which queries Moondancer for a
-    // bitmap describing the endpoints that are not currently primed,
-    // and thus ready to be primed again
-    fn get_endpoint_status(&mut self) -> u32 {
-        let endpoint_prime = self.usb0_endpoint_prime_pending;
-        self.usb0_endpoint_prime_pending = 0;
-        endpoint_prime
-    }
-
-    // 0x4
-    fn get_endpoint_nak(&mut self) -> u32 {
-        let endpoint_nak = self.usb0_endpoint_nak_pending;
-        self.usb0_endpoint_nak_pending = 0;
-        endpoint_nak
-    }
-}
-
-#[allow(non_snake_case, non_upper_case_globals)]
-pub mod UsbStatusFlag {
-    /// UI: USB interrupt
-    pub const USBSTS_D_UI: u32 = 1 << 0;
-
-    pub const USBSTS_D_RECEIVE_SETUP_PACKET: u32 = 1 << 1;
-    pub const USBSTS_D_RECEIVE_CONTROL_DATA: u32 = 1 << 2;
-    pub const USBSTS_D_RECEIVE_DATA: u32 = 1 << 3;
-    pub const USBSTS_D_SEND_COMPLETE: u32 = 1 << 4;
-
-    /*
-    /// UEI: USB error interrupt
-    pub const USBSTS_D_UEI: u32 = 1 << 1;
-    /// PCI: Port change detect
-    pub const USBSTS_D_PCI: u32 = 1 << 2;
-     */
-    /// URI: USB reset received
-    pub const USBSTS_D_URI: u32 = 1 << 6;
-    /*
-    /// SRRI: SOF received
-    pub const USBSTS_D_SRI: u32 = 1 << 7;
-    /// SLI: DCSuspend
-    pub const USBSTS_D_SLI: u32 = 1 << 8;
-    */
-    /// NAKI: NAK interrupt bit
-    pub const USBSTS_D_NAKI: u32 = 1 << 16;
-}
-
-// - Moondancer --------------------------------------------------------------
-
-/// Moondancer
-pub struct Moondancer {
-    pub usb0: hal::Usb0, // TODO needs to be private
-    state: State,
-    ep0_max_packet_size: u16,
-    quirk_flags: u16,
-}
-
-impl Moondancer {
-    pub fn new(usb0: hal::Usb0) -> Self {
-        Self {
-            usb0,
-            state: State::default().into(),
-            ep0_max_packet_size: 0,
-            quirk_flags: 0,
-        }
-    }
-}
-
-// - usb0 interrupt handlers --------------------------------------------------
-
-impl Moondancer {
-    pub unsafe fn enable_usb_interrupts(&self) {
-        interrupt::enable(pac::Interrupt::USB0);
-        interrupt::enable(pac::Interrupt::USB0_EP_CONTROL);
-        interrupt::enable(pac::Interrupt::USB0_EP_IN);
-        interrupt::enable(pac::Interrupt::USB0_EP_OUT);
-
-        // enable all usb events
-        self.usb0.enable_interrupts();
-    }
-
-    pub unsafe fn disable_usb_interrupts(&self) {
-        // disable all usb events
-        self.usb0.disable_interrupts();
-
-        interrupt::disable(pac::Interrupt::USB0);
-        interrupt::disable(pac::Interrupt::USB0_EP_CONTROL);
-        interrupt::disable(pac::Interrupt::USB0_EP_IN);
-        interrupt::disable(pac::Interrupt::USB0_EP_OUT);
-    }
-
-    pub fn handle_bus_reset(&mut self) -> GreatResult<()> {
-        self.state.usb0_status_pending |= UsbStatusFlag::USBSTS_D_URI; // URI: USB reset received
-
-        trace!(
-            "MD => IRQ handle_bus_reset -> 0b{:b}",
-            self.state.usb0_status_pending
-        );
-
-        Ok(())
-    }
-
-    pub fn handle_receive_setup_packet(&mut self, setup_packet: SetupPacket) -> GreatResult<()> {
-        trace!(
-            "MD => IRQ handle_receive_setup_packet -> {:?} -> 0b{:b}",
-            setup_packet, self.state.usb0_status_pending,
-        );
-
-        // TODO not sure yet whether this will be a problem in practice
-        if self.state.usb0_setup_pending.is_some() {
-            error!("MD =>     queued setup packet has not yet been transmitted");
-            //return Err(GreatError::DeviceOrResourceBusy);
-        }
-
-        self.state.usb0_status_pending |= UsbStatusFlag::USBSTS_D_RECEIVE_SETUP_PACKET;
-        self.state.usb0_setup_pending = Some(setup_packet.clone());
-
-        Ok(())
-    }
-
-    pub fn handle_receive_control_data(
-        &mut self,
-        bytes_read: usize,
-        buffer: [u8; crate::EP_MAX_PACKET_SIZE],
-    ) -> GreatResult<()> {
-        self.state.usb0_status_pending |= UsbStatusFlag::USBSTS_D_RECEIVE_CONTROL_DATA;
-        self.state.usb0_endpoint_complete_pending |= 1 << 0;
-
-        trace!(
-            "MD => IRQ handle_receive_control_data -> {} -> 0b{:b} -> 0b{:b}",
-            bytes_read, self.state.usb0_status_pending, self.state.usb0_endpoint_nak_pending,
-        );
-
-        self.state.bytes_read[0] = bytes_read;
-        self.state.receive_buffers[0] = buffer;
-
-        Ok(())
-    }
-
-    pub fn handle_receive_data(
-        &mut self,
-        endpoint: u8,
-        bytes_read: usize,
-        buffer: [u8; crate::EP_MAX_PACKET_SIZE],
-    ) -> GreatResult<()> {
-        self.state.usb0_status_pending |= UsbStatusFlag::USBSTS_D_RECEIVE_DATA;
-        self.state.usb0_endpoint_complete_pending |= 1 << endpoint;
-
-        debug!(
-            "MD => IRQ handle_receive_data -> {} -> {} -> 0b{:b} -> 0b{:b}",
-            endpoint,
-            bytes_read,
-            self.state.usb0_status_pending,
-            self.state.usb0_endpoint_nak_pending,
-        );
-
-        // TODO if endpoint > crate::EP_MAX_ENDPOINTS
-        self.state.bytes_read[endpoint as usize] = bytes_read;
-        self.state.receive_buffers[endpoint as usize] = buffer;
-
-        Ok(())
-    }
-
-    pub fn handle_transfer_complete(&mut self, endpoint: u8) -> GreatResult<()> {
-        self.state.usb0_status_pending |= UsbStatusFlag::USBSTS_D_SEND_COMPLETE;
-        self.state.usb0_endpoint_complete_pending |= 1 << (endpoint + 16);
-
-        trace!(
-            "MD => IRQ handle_transfer_complete -> {} -> 0b{:b}",
-            endpoint, self.state.usb0_status_pending
-        );
-
-        Ok(())
-    }
-}
-
-// - verb implementations: connection / disconnection -------------------------
-
-impl Moondancer {
-    /// Connect the USB interface.
-    pub fn connect(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
-        struct Args {
-            ep0_max_packet_size: U16<LittleEndian>,
-            quirk_flags: U16<LittleEndian>,
-        }
-        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-
-        self.ep0_max_packet_size = args.ep0_max_packet_size.into();
-        self.quirk_flags = args.quirk_flags.into();
-
-        self.state = State::default();
-        let speed = self.usb0.connect();
-
-        debug!(
-            "MD Moondancer::connect(ep0_max_packet_size:{}, quirk_flags:{}) -> {:?}",
-            args.ep0_max_packet_size, args.quirk_flags, speed
-        );
-
-        unsafe { self.enable_usb_interrupts() };
-
+    pub fn read_endpoint(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         Ok([].into_iter())
     }
 
-    /// Terminate all existing communication and disconnects the USB interface.
-    pub fn disconnect(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        debug!("MD Moondancer::disconnect()");
-
-        self.state = State::default();
-
-        self.usb0.disconnect();
-
-        let iter = [].into_iter();
-        Ok(iter)
-    }
-
-    /// Perform a USB bus reset.
-    pub fn bus_reset(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        trace!("MD Moondancer::bus_reset()");
-
-        self.state = State::default();
-        self.usb0.bus_reset();
-
+    pub fn write_endpoint(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         Ok([].into_iter())
     }
 }
 
-// - verb implementations: enumeration / setup --------------------------------
-
-impl Moondancer {
-    pub fn set_address(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
-        struct Args {
-            address: u8,
-            deferred: u8,
-        }
-        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-        trace!(
-            "MD Moondancer::set_address(address:{}, deferred:{})",
-            args.address, args.deferred
-        );
-
-        // activate new address
-        let address = args.address & 0x7f;
-        self.usb0.set_address(address);
-
-        let iter = [].into_iter();
-        Ok(iter)
-    }
-
-    pub fn set_up_endpoints(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        #[repr(C)]
-        #[derive(Debug, FromBytes, Unaligned)]
-        struct ArgEndpoint {
-            address: u8,
-            max_packet_size: U16<LittleEndian>,
-            transfer_type: u8,
-        }
-
-        // while we have endpoint triplets to handle
-        let mut byte_slice = arguments;
-        while let Some((endpoint, next)) =
-            zerocopy::LayoutVerified::<_, ArgEndpoint>::new_from_prefix(byte_slice)
-        {
-            trace!("TODO MD Moondancer::set_up_endpoint({:?})", endpoint);
-            byte_slice = next;
-
-            // endpoint zero is always the control endpoint, and can't be configured
-            if endpoint.address & 0x7f == 0x00 {
-                warn!("MD ignoring request to reconfigure control endpoint");
-                continue;
-            }
-
-            // ignore endpoint configurations we won't be able to handle
-            if endpoint.max_packet_size.get() as usize > self.state.receive_buffers[0].len() {
-                error!(
-                    "MD failed to setup endpoint with max packet size {} > {}",
-                    endpoint.max_packet_size,
-                    self.state.receive_buffers[0].len(),
-                );
-                return Err(GreatError::InvalidArgument);
-            }
-
-            // TODO configure endpoint
-        }
-
-        let iter = [].into_iter();
-        Ok(iter)
-    }
-}
-
-// - verb implementations: status & control -----------------------------------
-
-impl Moondancer {
-    /// Query the Moondancer for any events that need to be processed.
-    /// FIXME: should this actually use an interrupt pipe?
-    ///
-    /// The index value is used to select which status section we're looking for:
-    ///
-    ///	0 = pending interrupts (USBSTS register)
-    ///	1 = setup status for all endpoints (ENDPTSETUPSTAT)
-    ///	2 = endpoint completion status (ENDPTCOMPLETE)
-    ///	3 = endpoint primed status (ENDPTSTATUS)
-    ///
-    ///	Returns: register_value: u32
-    pub fn get_status(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
-        struct Args {
-            register_type: u8,
-        }
-        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-        let register_type = RegisterType::try_from(args.register_type)?;
-        let register_value = self.state.get(&register_type);
-
-        // throttle log output some
-        let mut is_repeat = false;
-        unsafe {
-            static mut LAST_TYPE: u8 = 0;
-            static mut LAST_VALUE: u32 = 0;
-            if args.register_type == LAST_TYPE && register_value == LAST_VALUE {
-                is_repeat = true;
-            }
-            LAST_TYPE = args.register_type;
-            LAST_VALUE = register_value;
-        }
-
-        if !is_repeat {
-            trace!(
-                "MD Moondancer::get_status(Args {{ register_type: {:?} }}) -> 0x{:x}",
-                register_type, register_value
-            );
-        }
-
-        let iter = register_value.to_le_bytes().into_iter();
-        Ok(iter)
-    }
-
-    /// Read a setup packet from the Moondancer port and relays it to the host.
-    ///
-    /// The endpoint_number parameter specifies which endpoint we should be reading from.
-    ///
-    /// Always transmits an 8-byte setup packet back to the host. If no setup packet
-    /// is waiting, the results of this vendor request are unspecified.
-    ///
-    /// Returns: raw_setup_packet: [u8; 8]
-    pub fn read_setup(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
-        struct Args {
-            endpoint_number: u8,
-        }
-        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-
-        // TODO handle endpoint numbers other than 0
-        let result = match self.state.usb0_setup_pending.take() {
-            Some(setup_packet) => Ok(SetupPacket::as_bytes(setup_packet).into_iter()),
-            None => Err(GreatError::NoMessageOfType),
-        };
-
-        trace!(
-            "MD Moondancer::read_setup(endpoint_numger:{}) -> {:?}",
-            args.endpoint_number, result
-        );
-
-        result
-    }
-
-    /// Temporarily stalls the given USB endpoint.
-    pub fn stall_endpoint(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
-        struct Args {
-            endpoint_number: u8,
-        }
-        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-
-        self.usb0.stall_endpoint_address(args.endpoint_number, true);
-
-        trace!("MD Moondancer::stall_endpoint({})", args.endpoint_number);
-
-        let iter = [].into_iter();
-        Ok(iter)
-    }
-}
-
-// - verb implementations: data transfer --------------------------------------
-
-impl Moondancer {
-    /// Read data from the GreatFET host and sends on the provided Moondancer endpoint.
-    ///
-    /// The OUT request should contain a data stage containing all data to be sent.
-    pub fn send_on_endpoint(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        struct Args<B: zerocopy::ByteSlice> {
-            endpoint_number: zerocopy::LayoutVerified<B, u8>,
-            data_to_send: B,
-        }
-        let (endpoint_number, data_to_send) =
-            zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
-                .ok_or(GreatError::InvalidArgument)?;
-        let args = Args {
-            endpoint_number,
-            data_to_send,
-        };
-
-        let endpoint: u8 = args.endpoint_number.read();
-
-        let iter = args.data_to_send.into_iter();
-        self.usb0.write_ref(endpoint, iter);
-
-        trace!(
-            "MD Moondancer::send_on_endpoint(endpoint_number:{}, data_to_send.len:{})",
-            endpoint,
-            args.data_to_send.len()
-        );
-
-        Ok([].into_iter())
-    }
-
-    /// Should be called whenever a transfer is complete; cleans up any transfer
-    /// descriptors associated with that transfer.
-    pub fn clean_up_transfer(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
-        struct Args {
-            endpoint_address: u8,
-        }
-        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-        let endpoint_number = args.endpoint_address & 0x7f;
-        trace!(
-            "MD Moondancer::clean_up_transfer({} / 0x{:x})",
-            args.endpoint_address, endpoint_number
-        );
-
-        let iter = [].into_iter();
-        Ok(iter)
-    }
-
-    /// Prime the USB controller to recieve data on a particular endpoint.
-    ///
-    /// Does not wait for a transfer to complete. The transfer's
-    /// status can be checked with `get_transfer_status` and then read
-    /// with `finish_nonblocking_read`.
-    pub fn start_nonblocking_read(
-        &mut self,
-        arguments: &[u8],
-    ) -> GreatResult<impl Iterator<Item = u8>> {
-        #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
-        struct Args {
-            endpoint_number: u8,
-        }
-        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-
-        self.usb0.ep_out_prime_receive(args.endpoint_number);
-
-        debug!(
-            "MD Moondancer::start_nonblocking_read({})",
-            args.endpoint_number
-        );
-
-        let iter = [].into_iter();
-        Ok(iter)
-    }
-
-    /// Finish a non-blocking read by returning the read data back to the host.
-    ///
-    /// This should only be used after determining that a transfer is
-    /// complete with the `get_transfer_status` request and reading
-    /// the relevant length with `get_nonblocking_data_length`.
-    ///
-    /// Returns: read_data: [u8]
-    pub fn finish_nonblocking_read(
-        &mut self,
-        arguments: &[u8],
-    ) -> GreatResult<impl Iterator<Item = u8>> {
-        #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
-        struct Args {
-            endpoint_number: u8,
-        }
-        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-
-        let endpoint = args.endpoint_number as usize;
-        let data = self.state.receive_buffers[endpoint];
-        let bytes_read = self.state.bytes_read[endpoint];
-        self.state.bytes_read[endpoint] = 0;
-
-        debug!(
-            "MD Moondancer::finish_nonblocking_read({}) -> {}",
-            endpoint, bytes_read,
-        );
-
-        let iter = data.into_iter().take(bytes_read);
-        Ok(iter)
-    }
-
-    /// Query an endpoint to determine how much data is available.
-    ///
-    /// This should only be used after a nonblocking read was primed
-    /// with `start_nonblocking_read` and completed by the USB
-    /// hardware.
-    ///
-    /// Response is invalid unless a transfer has been initiated with
-    /// `start_nonblocking_read` and completed.
-    ///
-    /// Returns: length: u32
-    pub fn get_nonblocking_data_length(
-        &self,
-        arguments: &[u8],
-    ) -> GreatResult<impl Iterator<Item = u8>> {
-        #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
-        struct Args {
-            endpoint_number: u8,
-        }
-        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-        debug!(
-            "MD Moondancer::get_nonblocking_data_length({})",
-            args.endpoint_number
-        );
-        let iter = [].into_iter();
-        Ok(iter)
-    }
-}
 
 // - dispatch -----------------------------------------------------------------
 
@@ -870,12 +890,6 @@ impl Moondancer {
                 let response = unsafe { iter_to_response(iter, response_buffer) };
                 Ok(response)
             }
-            0x9 => {
-                // moondancer::clean_up_transfer
-                let iter = self.clean_up_transfer(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
-                Ok(response)
-            }
             0xa => {
                 // moondancer::start_nonblocking_read
                 let iter = self.start_nonblocking_read(arguments)?;
@@ -888,12 +902,21 @@ impl Moondancer {
                 let response = unsafe { iter_to_response(iter, response_buffer) };
                 Ok(response)
             }
-            0xc => {
-                // moondancer::get_nonblocking_data_length
-                let iter = self.get_nonblocking_data_length(arguments)?;
+
+            // new APIs
+            0x10 => {
+                // moondancer::get_event
+                let iter = self.get_event(arguments)?;
                 let response = unsafe { iter_to_response(iter, response_buffer) };
                 Ok(response)
             }
+            0x11 => {
+                // moondancer::get_events
+                let iter = self.get_events(arguments)?;
+                let response = unsafe { iter_to_response(iter, response_buffer) };
+                Ok(response)
+            }
+
 
             verb_number => Err(GreatError::InvalidArgument),
         }

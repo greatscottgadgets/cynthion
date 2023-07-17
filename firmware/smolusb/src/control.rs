@@ -4,7 +4,7 @@ use crate::error::SmolError;
 // - SetupPacket --------------------------------------------------------------
 
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct SetupPacket {
     // 0..4 Recipient: 0=Device, 1=Interface, 2=Endpoint, 3=Other, 4-31=Reserved
     // 5..6 Type: 0=Standard, 1=Class, 2=Vendor, 3=Reserved

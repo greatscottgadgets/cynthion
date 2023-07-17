@@ -68,11 +68,12 @@ fn MachineExternal() {
 
     // USB1_EP_CONTROL UsbReceiveSetupPacket
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
+        let endpoint = usb1.ep_control.epno.read().bits() as u8;
         let mut setup_packet_buffer = [0_u8; 8];
         usb1.read_control(&mut setup_packet_buffer);
         usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
         let message = match SetupPacket::try_from(setup_packet_buffer) {
-            Ok(setup_packet) => Message::UsbReceiveSetupPacket(Aux, setup_packet),
+            Ok(setup_packet) => Message::UsbReceiveSetupPacket(Aux, endpoint, setup_packet),
             Err(e) => Message::ErrorMessage("USB1_EP_CONTROL failed to read setup packet"),
         };
         dispatch_message(message);
@@ -93,7 +94,7 @@ fn MachineExternal() {
             usb1.clear_tx_ack_active();
         }
 
-        dispatch_message(Message::UsbTransferComplete(Aux, endpoint));
+        dispatch_message(Message::UsbSendComplete(Aux, endpoint));
 
     // - usb0 interrupts - "target_phy" --
 
@@ -104,11 +105,12 @@ fn MachineExternal() {
 
     // USB0_EP_CONTROL UsbReceiveSetupPacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
+        let endpoint = usb0.ep_control.epno.read().bits() as u8;
         let mut setup_packet_buffer = [0_u8; 8];
         usb0.read_control(&mut setup_packet_buffer);
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
         let message = match SetupPacket::try_from(setup_packet_buffer) {
-            Ok(setup_packet) => Message::UsbReceiveSetupPacket(Target, setup_packet),
+            Ok(setup_packet) => Message::UsbReceiveSetupPacket(Target, endpoint, setup_packet),
             Err(e) => Message::ErrorMessage("USB0_EP_CONTROL failed to read setup packet"),
         };
         dispatch_message(message);
@@ -129,7 +131,7 @@ fn MachineExternal() {
             usb0.clear_tx_ack_active();
         }
 
-        dispatch_message(Message::UsbTransferComplete(Target, endpoint));
+        dispatch_message(Message::UsbSendComplete(Target, endpoint));
 
     // - Unknown Interrupt --
     } else {
@@ -322,8 +324,8 @@ impl<'a> Firmware<'a> {
                     }
 
                     // Usb1 received setup packet
-                    UsbReceiveSetupPacket(Aux, packet) => {
-                        self.handle_receive_setup_packet(packet)?;
+                    UsbReceiveSetupPacket(Aux, endpoint_number, packet) => {
+                        self.handle_receive_setup_packet(endpoint_number, packet)?;
                     }
 
                     // Usb1 received data on control endpoint
@@ -334,53 +336,55 @@ impl<'a> Firmware<'a> {
                     }
 
                     // Usb1 received data on endpoint - shouldn't ever be called
-                    UsbReceivePacket(Aux, endpoint, _) => {
-                        let bytes_read = self.usb1.hal_driver.read(endpoint, &mut rx_buffer);
-                        self.handle_receive_data(endpoint, bytes_read, rx_buffer)?;
-                        self.usb1.hal_driver.ep_out_prime_receive(endpoint);
+                    UsbReceivePacket(Aux, endpoint_number, _) => {
+                        let bytes_read = self.usb1.hal_driver.read(endpoint_number, &mut rx_buffer);
+                        self.handle_receive_data(endpoint_number, bytes_read, rx_buffer)?;
+                        self.usb1.hal_driver.ep_out_prime_receive(endpoint_number);
                     }
 
                     // Usb1 transfer complete
-                    UsbTransferComplete(Aux, endpoint) => {
-                        self.handle_transfer_complete(endpoint)?;
+                    UsbSendComplete(Aux, endpoint_number) => {
+                        self.handle_transfer_complete(endpoint_number)?;
                     }
 
                     // - usb0 message handlers --
 
                     // Usb0 received USB bus reset
                     UsbBusReset(Target) => {
-                        warn!("IRQ Usb0BusReset");
+                        warn!("USB0 UsbBusReset");
                         self.moondancer.handle_bus_reset()?;
                     }
 
                     // Usb0 received setup packet
-                    UsbReceiveSetupPacket(Target, packet) => {
-                        //warn!("IRQ Usb0ReceiveSetupPacket");
-                        self.moondancer.handle_receive_setup_packet(packet)?;
+                    UsbReceiveSetupPacket(Target, endpoint_number, packet) => {
+                        warn!("USB0_EP_CONTROL UsbReceiveSetupPacket({})", endpoint_number);
+                        self.moondancer.handle_receive_setup_packet(endpoint_number, packet)?;
                     }
 
                     // Usb0 received data on control endpoint
                     UsbReceivePacket(Target, 0, _) => {
-                        //warn!("IRQ Usb0ReceivePacket 0");
+                        warn!("USB0_EP_OUT UsbReceivePacket(control)");
                         let bytes_read = self.moondancer.usb0.read(0, &mut rx_buffer);
                         self.moondancer
                             .handle_receive_control_data(bytes_read, rx_buffer)?;
+                        // TODO maybe we want to do this _after_ facedancer is done
                         self.moondancer.usb0.ep_out_prime_receive(0);
                     }
 
                     // Usb0 received data on endpoint
-                    UsbReceivePacket(Target, endpoint, _) => {
-                        //warn!("IRQ Usb0ReceivePacket {}", endpoint);
-                        let bytes_read = self.moondancer.usb0.read(endpoint, &mut rx_buffer);
+                    UsbReceivePacket(Target, endpoint_number, _) => {
+                        warn!("USB0_EP_OUT UsbReceivePacket({})", endpoint_number);
+                        let bytes_read = self.moondancer.usb0.read(endpoint_number, &mut rx_buffer);
                         self.moondancer
-                            .handle_receive_data(endpoint, bytes_read, rx_buffer)?;
-                        self.moondancer.usb0.ep_out_prime_receive(endpoint);
+                            .handle_receive_data(endpoint_number, bytes_read, rx_buffer)?;
+                        // TODO maybe we want to do this _after_ facedancer is done
+                        self.moondancer.usb0.ep_out_prime_receive(endpoint_number);
                     }
 
                     // Usb0 transfer complete
-                    UsbTransferComplete(Target, endpoint) => {
-                        //warn!("IRQ Usb0TransferComplete");
-                        self.moondancer.handle_transfer_complete(endpoint)?;
+                    UsbSendComplete(Target, endpoint_number) => {
+                        warn!("USB0_EP_IN UsbTransferComplete({})", endpoint_number);
+                        self.moondancer.handle_transfer_complete(endpoint_number)?;
                     }
 
                     // Error Message
@@ -414,7 +418,7 @@ impl<'a> Firmware<'a> {
         self.usb1.hal_driver.enable_interrupts();
     }
 
-    fn handle_receive_setup_packet(&mut self, setup_packet: SetupPacket) -> GreatResult<()> {
+    fn handle_receive_setup_packet(&mut self, endpoint_number: u8, setup_packet: SetupPacket) -> GreatResult<()> {
         let request_type = setup_packet.request_type();
         let vendor_request = VendorRequest::from(setup_packet.request);
 
@@ -463,7 +467,7 @@ impl<'a> Firmware<'a> {
                     }
                 }*/
             }
-            _ => match self.usb1.handle_setup_request(&setup_packet) {
+            _ => match self.usb1.handle_setup_request(endpoint_number, &setup_packet) {
                 Ok(()) => (),
                 Err(e) => {
                     error!("Failed to handle setup request: {:?}: {:?}", e, setup_packet);

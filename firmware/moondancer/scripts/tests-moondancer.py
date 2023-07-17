@@ -16,7 +16,7 @@ class TestMoondancer(unittest.TestCase):
     """Tests for GCP class: Moondancer"""
 
     def setUp(self):
-        configure_default_logging(level=os.getenv("LOG_LEVEL", "INFO").upper())
+        configure_default_logging(level=os.getenv("LOG_LEVEL", "DEBUG").upper())
 
         self.board = cynthion.Cynthion()
 
@@ -28,6 +28,15 @@ class TestMoondancer(unittest.TestCase):
     def test_class_moondancer(self):
         result = self.board.supports_api("moondancer")
         self.assertTrue(result)
+
+    def test_get_event(self):
+        api = self.board.apis.moondancer
+
+        result = api.get_event()
+        logging.debug(f"get_event() -> {result}")
+
+        result = api.get_events()
+        logging.debug(f"get_events() -> {result}")
 
 
 if __name__ == "__main__":

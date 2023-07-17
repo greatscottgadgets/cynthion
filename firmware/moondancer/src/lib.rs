@@ -47,17 +47,9 @@ pub enum UsbInterface {
     Control, // Usb2 (Sideband on r0.4)
 }
 
-/// The UsbDataPacket struct represents a single packet of data
-/// received from a USB port.
-pub struct UsbDataPacket {
-    pub interface: UsbInterface,
-    pub endpoint: u8,
-    pub bytes_read: usize,
-    pub buffer: [u8; EP_MAX_PACKET_SIZE],
-}
-
 /// Message is used to notify the main loop of events received in the
 /// `MachineExternal` interrupt handler.
+#[repr(u8)]
 pub enum Message {
     // interrupts
     HandleInterrupt(pac::Interrupt),
@@ -70,22 +62,22 @@ pub enum Message {
     /// Received a USB bus reset
     ///
     /// Contents is (UsbInterface)
-    UsbBusReset(UsbInterface),
+    UsbBusReset(UsbInterface) = 0x10,
 
     /// Received a SETUP packet on USBx_EP_CONTROL
     ///
-    /// Contents is (UsbInterface, SetupPacket)
-    UsbReceiveSetupPacket(UsbInterface, smolusb::control::SetupPacket),
+    /// Contents is (UsbInterface, endpoint_number, SetupPacket)
+    UsbReceiveSetupPacket(UsbInterface, u8, smolusb::control::SetupPacket) = 0x11,
 
     /// Received a data packet on USBx_EP_OUT
     ///
-    /// Contents is (UsbInterface, endpoint, bytes_read)
-    UsbReceivePacket(UsbInterface, u8, usize),
+    /// Contents is (UsbInterface, endpoint_number, bytes_read)
+    UsbReceivePacket(UsbInterface, u8, usize) = 0x12,
 
-    /// Transfer is complete on USBx_EP_IN
+    /// Send is complete on USBx_EP_IN
     ///
-    /// Contents is (UsbInterface, endpoint)
-    UsbTransferComplete(UsbInterface, u8),
+    /// Contents is (UsbInterface, endpoint_number)
+    UsbSendComplete(UsbInterface, u8) = 0x13,
 
     // misc
     ErrorMessage(&'static str),
@@ -108,15 +100,15 @@ impl core::fmt::Debug for Message {
             Message::UsbBusReset(interface) => {
                 write!(f, "UsbBusReset({:?})", interface)
             }
-            Message::UsbReceiveSetupPacket(interface, _setup_packet) => {
-                write!(f, "UsbReceiveSetupPacket({:?})", interface)
+            Message::UsbReceiveSetupPacket(interface, endpoint, _setup_packet) => {
+                write!(f, "UsbReceiveSetupPacket({:?}, {})", interface, endpoint)
             }
             Message::UsbReceivePacket(interface, endpoint, bytes_read) => write!(
                 f,
                 "UsbReceiveData({:?}, {}, {})",
                 interface, endpoint, bytes_read
             ),
-            Message::UsbTransferComplete(interface, endpoint) => {
+            Message::UsbSendComplete(interface, endpoint) => {
                 write!(f, "UsbTransferComplete({:?}, {})", interface, endpoint)
             }
 
