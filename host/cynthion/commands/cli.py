@@ -1,8 +1,11 @@
 #!/usr/bin/env python
 #
-# Root command that delegates to all Cynthion subcommands.
-
 # This file is part of Cynthion.
+#
+# Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
+
+""" Root command that delegates to all Cynthion subcommands. """
 
 from __future__ import print_function
 
