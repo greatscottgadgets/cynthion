@@ -37,7 +37,10 @@ dependencies = [
 
 [project.scripts]
 cynthion = "cynthion.commands.cli:main"
+cynthion_analyzer = "cynthion.commands.cynthion_analyzer:main"
 cynthion_info = "cynthion.commands.cynthion_info:main"
+cynthion_program = "cynthion.commands.cynthion_program:main"
+
 
 [tool.setuptools-git-versioning]
 enabled = true
