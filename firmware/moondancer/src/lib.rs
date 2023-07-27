@@ -40,83 +40,107 @@ pub const EP_MAX_PACKET_SIZE: usize = 512;
 
 // - messages -----------------------------------------------------------------
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
+#[repr(u8)]
 pub enum UsbInterface {
-    Target,  // Usb0
-    Aux,     // Usb1 (Host on r0.4)
-    Control, // Usb2 (Sideband on r0.4)
+    Target  = 0, // Usb0
+    Aux     = 1, // Usb1 (Host on r0.4)
+    Control = 2, // Usb2 (Sideband on r0.4)
 }
 
-/// Message is used to notify the main loop of events received in the
+/// InterruptEvent is used to notify the main loop of events received in the
 /// `MachineExternal` interrupt handler.
-#[repr(u8)]
-pub enum Message {
+#[derive(Copy, Clone)]
+pub enum InterruptEvent {
     // interrupts
-    HandleInterrupt(pac::Interrupt),
-    HandleUnknownInterrupt(usize),
+    Event(pac::Interrupt),
+    UnknownInterrupt(usize),
 
     // timer events
-    TimerEvent(usize),
+    Timer(usize),
 
     // usb events
     /// Received a USB bus reset
     ///
     /// Contents is (UsbInterface)
-    UsbBusReset(UsbInterface) = 0x10,
+    UsbBusReset(UsbInterface),
 
     /// Received a SETUP packet on USBx_EP_CONTROL
     ///
     /// Contents is (UsbInterface, endpoint_number, SetupPacket)
-    UsbReceiveSetupPacket(UsbInterface, u8, smolusb::control::SetupPacket) = 0x11,
+    ///
+    /// TODO lose SetupPacket
+    UsbReceiveSetupPacket(UsbInterface, u8, smolusb::control::SetupPacket),
 
     /// Received a data packet on USBx_EP_OUT
     ///
     /// Contents is (UsbInterface, endpoint_number, bytes_read)
-    UsbReceivePacket(UsbInterface, u8, usize) = 0x12,
+    ///
+    /// TODO lose bytes_read
+    UsbReceivePacket(UsbInterface, u8, usize),
 
     /// Send is complete on USBx_EP_IN
     ///
     /// Contents is (UsbInterface, endpoint_number)
-    UsbSendComplete(UsbInterface, u8) = 0x13,
+    UsbSendComplete(UsbInterface, u8),
 
-    // misc
+    // diagnostic events
     ErrorMessage(&'static str),
     DebugMessage(&'static str),
 }
 
-impl core::fmt::Debug for Message {
+impl core::convert::From<InterruptEvent> for [u8; 3] {
+    fn from(message: InterruptEvent) -> Self {
+        match message {
+            InterruptEvent::UsbBusReset(interface) => [10, interface as u8, 0],
+            InterruptEvent::UsbReceiveSetupPacket(interface, endpoint_number, _) => [11, interface as u8, endpoint_number],
+            InterruptEvent::UsbReceivePacket(interface, endpoint_number, _) => [12, interface as u8, endpoint_number],
+            InterruptEvent::UsbSendComplete(interface, endpoint_number) => [13, interface as u8, endpoint_number],
+            _ => [0, 0, 0]
+        }
+    }
+}
+
+impl InterruptEvent {
+    pub fn into_bytes(self) -> [u8; 3] {
+        self.into()
+    }
+}
+
+
+impl core::fmt::Debug for InterruptEvent {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             // interrupts
-            Message::HandleInterrupt(interrupt) => write!(f, "HandleInterrupt({:?})", interrupt),
-            Message::HandleUnknownInterrupt(interrupt) => {
+            InterruptEvent::Event(interrupt) => write!(f, "HandleInterrupt({:?})", interrupt),
+            InterruptEvent::UnknownInterrupt(interrupt) => {
                 write!(f, "HandleUnknownInterrupt({})", interrupt)
             }
 
             // timer events
-            Message::TimerEvent(n) => write!(f, "TimerEvent({})", n),
+            InterruptEvent::Timer(n) => write!(f, "TimerEvent({})", n),
 
             // usb events
-            Message::UsbBusReset(interface) => {
+            InterruptEvent::UsbBusReset(interface) => {
                 write!(f, "UsbBusReset({:?})", interface)
             }
-            Message::UsbReceiveSetupPacket(interface, endpoint, _setup_packet) => {
+            InterruptEvent::UsbReceiveSetupPacket(interface, endpoint, _setup_packet) => {
                 write!(f, "UsbReceiveSetupPacket({:?}, {})", interface, endpoint)
             }
-            Message::UsbReceivePacket(interface, endpoint, bytes_read) => write!(
+            InterruptEvent::UsbReceivePacket(interface, endpoint, bytes_read) => write!(
                 f,
                 "UsbReceiveData({:?}, {}, {})",
                 interface, endpoint, bytes_read
             ),
-            Message::UsbSendComplete(interface, endpoint) => {
+            InterruptEvent::UsbSendComplete(interface, endpoint) => {
                 write!(f, "UsbTransferComplete({:?}, {})", interface, endpoint)
             }
 
             // misc
-            Message::ErrorMessage(message) => {
+            InterruptEvent::ErrorMessage(message) => {
                 write!(f, "ErrorMessage({})", message)
             }
-            Message::DebugMessage(message) => {
+            InterruptEvent::DebugMessage(message) => {
                 write!(f, "DebugMessage({})", message)
             }
         }

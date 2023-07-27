@@ -560,7 +560,9 @@ macro_rules! impl_usb {
                         .epno
                         .write(|w| unsafe { w.epno().bits(endpoint_number) });
 
-                    trace!("  TX {} bytes", bytes_written);
+                    if bytes_written > 60 {
+                        log::debug!("  TX {} bytes", bytes_written);
+                    }
                 }
             }
 

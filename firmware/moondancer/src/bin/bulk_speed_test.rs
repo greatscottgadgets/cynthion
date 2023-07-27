@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use moondancer::{hal, pac, Message};
+use moondancer::{hal, pac, InterruptEvent};
 
 use smolusb::control::SetupPacket;
 use smolusb::descriptor::*;
@@ -16,10 +16,10 @@ use log::{debug, error, info};
 
 // - global static state ------------------------------------------------------
 
-static MESSAGE_QUEUE: Queue<Message, 32> = Queue::new();
+static MESSAGE_QUEUE: Queue<InterruptEvent, 32> = Queue::new();
 
 #[inline(always)]
-fn dispatch_message(message: Message) {
+fn dispatch_message(message: InterruptEvent) {
     match MESSAGE_QUEUE.enqueue(message) {
         Ok(()) => (),
         Err(_) => {
@@ -44,7 +44,7 @@ fn MachineExternal() {
     if usb0.is_pending(pac::Interrupt::USB0) {
         usb0.clear_pending(pac::Interrupt::USB0);
         usb0.bus_reset();
-        dispatch_message(Message::UsbBusReset(Target))
+        dispatch_message(InterruptEvent::UsbBusReset(Target))
 
     // USB0_EP_CONTROL UsbReceiveSetupPacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
@@ -54,8 +54,8 @@ fn MachineExternal() {
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
 
         let message = match SetupPacket::try_from(setup_packet_buffer) {
-            Ok(setup_packet) => Message::UsbReceiveSetupPacket(Target, endpoint, setup_packet),
-            Err(_e) => Message::ErrorMessage("USB0_EP_CONTROL failed to read setup packet"),
+            Ok(setup_packet) => InterruptEvent::UsbReceiveSetupPacket(Target, endpoint, setup_packet),
+            Err(_e) => InterruptEvent::ErrorMessage("USB0_EP_CONTROL failed to read setup packet"),
         };
         dispatch_message(message);
 
@@ -74,7 +74,7 @@ fn MachineExternal() {
         }*/
 
         usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
-        dispatch_message(Message::UsbReceivePacket(
+        dispatch_message(InterruptEvent::UsbReceivePacket(
             moondancer::UsbInterface::Target,
             endpoint,
             0,
@@ -90,12 +90,12 @@ fn MachineExternal() {
             usb0.clear_tx_ack_active();
         }
 
-        dispatch_message(Message::UsbSendComplete(Target, endpoint));
+        dispatch_message(InterruptEvent::UsbSendComplete(Target, endpoint));
 
     // - Unknown Interrupt --
     } else {
         let pending = pac::csr::interrupt::reg_pending();
-        dispatch_message(Message::HandleUnknownInterrupt(pending));
+        dispatch_message(InterruptEvent::UnknownInterrupt(pending));
     }
 }
 
@@ -193,7 +193,7 @@ fn main_loop() -> GreatResult<()> {
         let mut queue_length = 0;
 
         while let Some(message) = MESSAGE_QUEUE.dequeue() {
-            use moondancer::{Message::*, UsbInterface::Target};
+            use moondancer::{InterruptEvent::*, UsbInterface::Target};
 
             leds.output.write(|w| unsafe { w.output().bits(0) });
 
