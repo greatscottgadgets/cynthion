@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # pylint: disable=no-member
 #
-# This file is part of LUNA.
+# This file is part of Cynthion.
 #
 # Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
@@ -205,7 +205,7 @@ def run_speed_test(direction=usb1.ENDPOINT_IN):
 # - main entry point ----------------------------------------------------------
 
 if __name__ == "__main__":
-    configure_default_logging()
+    configure_default_logging(level=os.getenv("LOG_LEVEL", "INFO").upper())
 
     logging.info(f"Total data transmitted for each test: {TEST_DATA_SIZE} bytes")
     logging.info(f"Individual transfer size: {TEST_TRANSFER_SIZE} bytes")

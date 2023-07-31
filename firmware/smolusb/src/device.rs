@@ -161,7 +161,7 @@ where
         + UsbDriverOperations
         + UnsafeUsbDriverOperations,
 {
-    pub fn handle_setup_request(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
+    pub fn handle_setup_request(&self, _endpoint_number: u8, setup_packet: &SetupPacket) -> SmolResult<()> {
         let request_type = setup_packet.request_type();
         let request = setup_packet.request();
 

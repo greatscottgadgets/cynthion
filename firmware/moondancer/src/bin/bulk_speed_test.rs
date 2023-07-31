@@ -1,7 +1,7 @@
 #![no_std]
 #![no_main]
 
-use moondancer::{hal, pac, Message};
+use moondancer::{hal, pac, InterruptEvent};
 
 use smolusb::control::SetupPacket;
 use smolusb::descriptor::*;
@@ -16,10 +16,10 @@ use log::{debug, error, info};
 
 // - global static state ------------------------------------------------------
 
-static MESSAGE_QUEUE: Queue<Message, 32> = Queue::new();
+static MESSAGE_QUEUE: Queue<InterruptEvent, 32> = Queue::new();
 
 #[inline(always)]
-fn dispatch_message(message: Message) {
+fn dispatch_message(message: InterruptEvent) {
     match MESSAGE_QUEUE.enqueue(message) {
         Ok(()) => (),
         Err(_) => {
@@ -44,17 +44,18 @@ fn MachineExternal() {
     if usb0.is_pending(pac::Interrupt::USB0) {
         usb0.clear_pending(pac::Interrupt::USB0);
         usb0.bus_reset();
-        dispatch_message(Message::UsbBusReset(Target))
+        dispatch_message(InterruptEvent::UsbBusReset(Target))
 
     // USB0_EP_CONTROL UsbReceiveSetupPacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
+        let endpoint = usb0.ep_control.epno.read().bits() as u8;
         let mut setup_packet_buffer = [0_u8; 8];
         usb0.read_control(&mut setup_packet_buffer);
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
 
         let message = match SetupPacket::try_from(setup_packet_buffer) {
-            Ok(setup_packet) => Message::UsbReceiveSetupPacket(Target, setup_packet),
-            Err(_e) => Message::ErrorMessage("USB0_EP_CONTROL failed to read setup packet"),
+            Ok(setup_packet) => InterruptEvent::UsbReceiveSetupPacket(Target, endpoint, setup_packet),
+            Err(_e) => InterruptEvent::ErrorMessage("USB0_EP_CONTROL failed to read setup packet"),
         };
         dispatch_message(message);
 
@@ -73,7 +74,7 @@ fn MachineExternal() {
         }*/
 
         usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
-        dispatch_message(Message::UsbReceivePacket(
+        dispatch_message(InterruptEvent::UsbReceivePacket(
             moondancer::UsbInterface::Target,
             endpoint,
             0,
@@ -89,12 +90,12 @@ fn MachineExternal() {
             usb0.clear_tx_ack_active();
         }
 
-        dispatch_message(Message::UsbTransferComplete(Target, endpoint));
+        dispatch_message(InterruptEvent::UsbSendComplete(Target, endpoint));
 
     // - Unknown Interrupt --
     } else {
         let pending = pac::csr::interrupt::reg_pending();
-        dispatch_message(Message::HandleUnknownInterrupt(pending));
+        dispatch_message(InterruptEvent::UnknownInterrupt(pending));
     }
 }
 
@@ -192,7 +193,7 @@ fn main_loop() -> GreatResult<()> {
         let mut queue_length = 0;
 
         while let Some(message) = MESSAGE_QUEUE.dequeue() {
-            use moondancer::{Message::*, UsbInterface::Target};
+            use moondancer::{InterruptEvent::*, UsbInterface::Target};
 
             leds.output.write(|w| unsafe { w.output().bits(0) });
 
@@ -203,9 +204,9 @@ fn main_loop() -> GreatResult<()> {
                 UsbBusReset(Target) => (),
 
                 // Usb0 received setup packet
-                UsbReceiveSetupPacket(Target, setup_packet) => {
+                UsbReceiveSetupPacket(Target, endpoint_number, setup_packet) => {
                     test_command = TestCommand::Stop;
-                    usb0.handle_setup_request(&setup_packet)
+                    usb0.handle_setup_request(endpoint_number, &setup_packet)
                         .map_err(|_| GreatError::BadMessage)?;
                 }
 
@@ -261,7 +262,7 @@ fn main_loop() -> GreatResult<()> {
                 }
 
                 // Usb0 transfer complete
-                UsbTransferComplete(Target, _endpoint) => {
+                UsbSendComplete(Target, _endpoint) => {
                     leds.output.write(|w| unsafe { w.output().bits(0b00_0111) });
                 }
 
