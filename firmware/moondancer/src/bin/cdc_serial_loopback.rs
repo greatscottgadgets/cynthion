@@ -193,13 +193,13 @@ fn main() -> ! {
             peripherals.USB0_EP_IN,
             peripherals.USB0_EP_OUT,
         ),
-        &cdc::DEVICE_DESCRIPTOR,
-        &cdc::CONFIGURATION_DESCRIPTOR_0,
-        &cdc::USB_STRING_DESCRIPTOR_0,
-        &cdc::USB_STRING_DESCRIPTORS,
+        cdc::DEVICE_DESCRIPTOR,
+        cdc::CONFIGURATION_DESCRIPTOR_0,
+        cdc::USB_STRING_DESCRIPTOR_0,
+        cdc::USB_STRING_DESCRIPTORS,
     );
-    usb0.device_qualifier_descriptor = Some(&cdc::DEVICE_QUALIFIER_DESCRIPTOR);
-    usb0.other_speed_configuration_descriptor = Some(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
+    usb0.set_device_qualifier_descriptor(cdc::DEVICE_QUALIFIER_DESCRIPTOR);
+    usb0.set_other_speed_configuration_descriptor(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
     usb0.cb_vendor_request = Some(handle_vendor_request);
     usb0.cb_string_request = Some(handle_string_request);
     let speed = usb0.connect();
@@ -213,13 +213,13 @@ fn main() -> ! {
             peripherals.USB1_EP_IN,
             peripherals.USB1_EP_OUT,
         ),
-        &cdc::DEVICE_DESCRIPTOR,
-        &cdc::CONFIGURATION_DESCRIPTOR_0,
-        &cdc::USB_STRING_DESCRIPTOR_0,
-        &cdc::USB_STRING_DESCRIPTORS,
+        cdc::DEVICE_DESCRIPTOR,
+        cdc::CONFIGURATION_DESCRIPTOR_0,
+        cdc::USB_STRING_DESCRIPTOR_0,
+        cdc::USB_STRING_DESCRIPTORS,
     );
-    usb1.device_qualifier_descriptor = Some(&cdc::DEVICE_QUALIFIER_DESCRIPTOR);
-    usb1.other_speed_configuration_descriptor = Some(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
+    usb1.set_device_qualifier_descriptor(cdc::DEVICE_QUALIFIER_DESCRIPTOR);
+    usb1.set_other_speed_configuration_descriptor(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
     usb1.cb_vendor_request = Some(handle_vendor_request);
     usb1.cb_string_request = Some(handle_string_request);
     let speed = usb1.connect();

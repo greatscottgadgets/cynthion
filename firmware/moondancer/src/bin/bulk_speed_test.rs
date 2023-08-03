@@ -141,13 +141,13 @@ fn main_loop() -> GreatResult<()> {
             peripherals.USB0_EP_IN,
             peripherals.USB0_EP_OUT,
         ),
-        &USB_DEVICE_DESCRIPTOR,
-        &USB_CONFIGURATION_DESCRIPTOR_0,
-        &USB_STRING_DESCRIPTOR_0,
-        &USB_STRING_DESCRIPTORS,
+        USB_DEVICE_DESCRIPTOR,
+        USB_CONFIGURATION_DESCRIPTOR_0,
+        USB_STRING_DESCRIPTOR_0,
+        USB_STRING_DESCRIPTORS,
     );
-    usb0.device_qualifier_descriptor = Some(&USB_DEVICE_QUALIFIER_DESCRIPTOR);
-    usb0.other_speed_configuration_descriptor = Some(USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
+    usb0.set_device_qualifier_descriptor(USB_DEVICE_QUALIFIER_DESCRIPTOR);
+    usb0.set_other_speed_configuration_descriptor(USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
     let speed = usb0.connect();
     debug!("Connected usb0 device: {:?}", speed);
 
@@ -424,7 +424,7 @@ impl TestStats {
 
 // - usb descriptors ----------------------------------------------------------
 
-static USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
+const USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     descriptor_version: 0x0200,
     device_class: 0x00,
     device_subclass: 0x00,
@@ -440,7 +440,7 @@ static USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     ..DeviceDescriptor::new()
 };
 
-static USB_DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualifierDescriptor {
+const USB_DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualifierDescriptor {
     descriptor_version: 0x0200,
     device_class: 0x00,
     device_subclass: 0x00,
@@ -451,7 +451,7 @@ static USB_DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualif
     ..DeviceQualifierDescriptor::new()
 };
 
-static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDescriptor::new(
+const USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDescriptor::new(
     ConfigurationDescriptorHeader {
         configuration_value: 1,
         configuration_string_index: 1,
@@ -495,7 +495,7 @@ static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDe
     )],
 );
 
-static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
+const USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
     ConfigurationDescriptor::new(
         ConfigurationDescriptorHeader {
             descriptor_type: DescriptorType::OtherSpeedConfiguration as u8,
@@ -541,14 +541,14 @@ static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
         )],
     );
 
-static USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
+const USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
     StringDescriptorZero::new(&[LanguageId::EnglishUnitedStates]);
 
-static USB_STRING_DESCRIPTOR_1: StringDescriptor = StringDescriptor::new("LUNA");
-static USB_STRING_DESCRIPTOR_2: StringDescriptor = StringDescriptor::new("IN speed test");
-static USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("no serial");
+const USB_STRING_DESCRIPTOR_1: StringDescriptor = StringDescriptor::new("LUNA");
+const USB_STRING_DESCRIPTOR_2: StringDescriptor = StringDescriptor::new("IN speed test");
+const USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("no serial");
 
-static USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
+const USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &USB_STRING_DESCRIPTOR_1,
     &USB_STRING_DESCRIPTOR_2,
     &USB_STRING_DESCRIPTOR_3,

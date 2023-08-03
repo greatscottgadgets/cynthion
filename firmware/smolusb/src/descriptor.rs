@@ -163,36 +163,6 @@ impl Default for DeviceQualifierDescriptor {
 
 // - ConfigurationDescriptor --------------------------------------------------
 
-/// USB configuration descriptor
-#[derive(Clone, Copy)]
-pub struct ConfigurationDescriptor<'a> {
-    head: ConfigurationDescriptorHeader,
-    tail: &'a [InterfaceDescriptor<'a>],
-}
-
-impl<'a> ConfigurationDescriptor<'a> {
-    pub const fn new(
-        mut head: ConfigurationDescriptorHeader,
-        tail: &'a [InterfaceDescriptor],
-    ) -> Self {
-        head._length = size_of::<ConfigurationDescriptorHeader>() as u8;
-        head._num_interfaces = tail.len() as u8;
-
-        Self { head, tail }
-    }
-
-    /// Calculate and update the descriptor total length field
-    pub fn set_total_length(&mut self) -> usize {
-        let total_length = self.iter().count();
-        self.head._total_length = total_length as u16;
-        total_length
-    }
-
-    pub fn iter(&self) -> ConfigurationDescriptorIterator {
-        ConfigurationDescriptorIterator::new(self)
-    }
-}
-
 /// USB configuration descriptor header
 #[derive(AsBytes, FromBytes, Clone, Copy)]
 #[repr(C, packed)]
@@ -224,6 +194,36 @@ impl ConfigurationDescriptorHeader {
     }
 }
 
+/// USB configuration descriptor
+#[derive(Clone, Copy)]
+pub struct ConfigurationDescriptor<'a> {
+    pub head: ConfigurationDescriptorHeader,
+    pub tail: &'a [InterfaceDescriptor<'a>],
+}
+
+impl<'a> ConfigurationDescriptor<'a> {
+    pub const fn new(
+        mut head: ConfigurationDescriptorHeader,
+        tail: &'a [InterfaceDescriptor],
+    ) -> Self {
+        head._length = size_of::<ConfigurationDescriptorHeader>() as u8;
+        head._num_interfaces = tail.len() as u8;
+
+        Self { head, tail }
+    }
+
+    /// Calculate and update the descriptor total length field
+    pub fn set_total_length(&mut self) -> usize {
+        let total_length = self.iter().count();
+        self.head._total_length = total_length as u16;
+        total_length
+    }
+
+    pub fn iter(&self) -> ConfigurationDescriptorIterator {
+        ConfigurationDescriptorIterator::new(self)
+    }
+}
+
 /// USB configuration descriptor iterator
 pub struct ConfigurationDescriptorIterator<'a> {
     chain: iter::Chain<slice::Iter<'a, u8>, ConfigurationDescriptorTailIterator<'a>>,
@@ -251,34 +251,15 @@ impl<'a> Iterator for ConfigurationDescriptorIterator<'a> {
 }
 
 // type aliases for sanity
-type InterfaceDescriptorIterator<'a> =
+pub type InterfaceDescriptorIterator<'a> =
     CompositeIterator<'a, InterfaceDescriptorHeader, EndpointDescriptor>;
-type ConfigurationDescriptorTailIterator<'a> = iter::FlatMap<
+pub type ConfigurationDescriptorTailIterator<'a> = iter::FlatMap<
     slice::Iter<'a, InterfaceDescriptor<'a>>,
     InterfaceDescriptorIterator<'a>,
     &'a dyn Fn(&'a InterfaceDescriptor<'a>) -> InterfaceDescriptorIterator<'a>,
 >;
 
 // - InterfaceDescriptor ------------------------------------------------------
-
-/// USB interface descriptor
-pub struct InterfaceDescriptor<'a> {
-    head: InterfaceDescriptorHeader,
-    tail: &'a [EndpointDescriptor],
-}
-
-impl<'a> InterfaceDescriptor<'a> {
-    pub const fn new(mut head: InterfaceDescriptorHeader, tail: &'a [EndpointDescriptor]) -> Self {
-        head._length = size_of::<InterfaceDescriptorHeader>() as u8;
-        head._num_endpoints = tail.len() as u8;
-        Self { head, tail }
-    }
-
-    pub fn iter(&'a self) -> CompositeIterator<'a, InterfaceDescriptorHeader, EndpointDescriptor> {
-        let iter = CompositeIterator::new(&self.head, self.tail);
-        iter
-    }
-}
 
 /// USB interface descriptor header
 #[derive(AsBytes, FromBytes)]
@@ -310,6 +291,25 @@ impl InterfaceDescriptorHeader {
             interface_protocol: 0,
             interface_string_index: 0,
         }
+    }
+}
+
+/// USB interface descriptor
+pub struct InterfaceDescriptor<'a> {
+    head: InterfaceDescriptorHeader,
+    tail: &'a [EndpointDescriptor],
+}
+
+impl<'a> InterfaceDescriptor<'a> {
+    pub const fn new(mut head: InterfaceDescriptorHeader, tail: &'a [EndpointDescriptor]) -> Self {
+        head._length = size_of::<InterfaceDescriptorHeader>() as u8;
+        head._num_endpoints = tail.len() as u8;
+        Self { head, tail }
+    }
+
+    pub fn iter(&'a self) -> CompositeIterator<'a, InterfaceDescriptorHeader, EndpointDescriptor> {
+        let iter = CompositeIterator::new(&self.head, self.tail);
+        iter
     }
 }
 
@@ -348,7 +348,7 @@ impl Default for EndpointDescriptor {
     }
 }
 
-// - LanguageId ---------------------------------------------------------------
+// - StringDescriptorZero -----------------------------------------------------
 
 /// USB string descriptor language id
 #[derive(AsBytes, Copy, Clone, Debug)]
@@ -361,8 +361,6 @@ pub enum LanguageId {
 }
 
 impl AsByteSliceIterator for LanguageId {}
-
-// - StringDescriptorZero -----------------------------------------------------
 
 /// USB string zero descriptor
 pub struct StringDescriptorZero<'a> {
@@ -389,6 +387,8 @@ impl<'a> StringDescriptorZero<'a> {
     }
 }
 
+// - StringDescriptor ---------------------------------------------------------
+
 /// USB string zero descriptor header
 #[derive(AsBytes, FromBytes, Clone, Copy, Debug)]
 #[repr(C, packed)]
@@ -408,18 +408,16 @@ impl StringDescriptorHeader {
 
 impl AsByteSliceIterator for StringDescriptorHeader {}
 
-// - StringDescriptor ---------------------------------------------------------
-
 /// USB String Descriptor
 #[derive(Clone, Copy)]
 pub struct StringDescriptor<'a> {
-    head: StringDescriptorHeader,
-    tail: &'a str,
+    pub head: StringDescriptorHeader,
+    pub tail: &'a str,
 }
 
 impl<'a> StringDescriptor<'a> {
     pub const fn new(string: &'a str) -> Self {
-        let head_length = size_of::<Self>();
+        let head_length = size_of::<StringDescriptorHeader>();
         // TODO this may not be accurate
         let tail_length = string.len() * 2;
 

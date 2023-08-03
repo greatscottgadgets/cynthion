@@ -66,13 +66,16 @@ pub enum DeviceState {
 ///
 pub struct UsbDevice<'a, D> {
     pub hal_driver: D,
-    device_descriptor: &'a DeviceDescriptor,
+
+    device_descriptor: DeviceDescriptor,
     configuration_descriptor: ConfigurationDescriptor<'a>,
-    pub device_qualifier_descriptor: Option<&'a DeviceQualifierDescriptor>,
-    pub other_speed_configuration_descriptor: Option<ConfigurationDescriptor<'a>>,
-    string_descriptor_zero: &'a StringDescriptorZero<'a>,
+    device_qualifier_descriptor: Option<DeviceQualifierDescriptor>,
+    other_speed_configuration_descriptor: Option<ConfigurationDescriptor<'a>>,
+    string_descriptor_zero: StringDescriptorZero<'a>,
     string_descriptors: &'a [&'a StringDescriptor<'a>],
+
     pub state: RefCell<DeviceState>,
+    pub current_configuration: u8,
     pub reset_count: usize,
     pub feature_remote_wakeup: bool,
 
@@ -90,25 +93,28 @@ where
 {
     pub fn new(
         hal_driver: D,
-        device_descriptor: &'a DeviceDescriptor,
-        configuration_descriptor: &'a ConfigurationDescriptor<'a>,
-        string_descriptor_zero: &'a StringDescriptorZero<'a>,
+        device_descriptor: DeviceDescriptor,
+        configuration_descriptor: ConfigurationDescriptor<'a>,
+        string_descriptor_zero: StringDescriptorZero<'a>,
         string_descriptors: &'a [&'a StringDescriptor<'a>],
     ) -> Self {
-        // Calculate and update descriptor length fields
+        // calculate and update descriptor length fields
         // TODO this ain't great but it will do for now
         let mut configuration_descriptor = configuration_descriptor.clone();
         let total_length = configuration_descriptor.set_total_length();
 
         Self {
             hal_driver,
+
             device_descriptor,
             configuration_descriptor,
             device_qualifier_descriptor: None,
             other_speed_configuration_descriptor: None,
             string_descriptor_zero,
             string_descriptors,
+
             state: DeviceState::Reset.into(),
+            current_configuration: 0,
             reset_count: 0,
             feature_remote_wakeup: false,
 
@@ -120,6 +126,24 @@ where
 
     pub fn state(&self) -> DeviceState {
         *self.state.borrow()
+    }
+
+    pub fn set_device_qualifier_descriptor(
+        &mut self,
+        device_qualifier_descriptor: DeviceQualifierDescriptor,
+    ) {
+        self.device_qualifier_descriptor = Some(device_qualifier_descriptor);
+    }
+
+    pub fn set_other_speed_configuration_descriptor(
+        &mut self,
+        other_speed_configuration_descriptor: ConfigurationDescriptor<'a>,
+    ) {
+        // calculate and update descriptor length fields
+        // TODO this ain't great but it will do for now
+        let mut other_speed_configuration_descriptor = other_speed_configuration_descriptor.clone();
+        other_speed_configuration_descriptor.set_total_length();
+        self.other_speed_configuration_descriptor = Some(other_speed_configuration_descriptor);
     }
 }
 
@@ -161,9 +185,24 @@ where
         + UsbDriverOperations
         + UnsafeUsbDriverOperations,
 {
-    pub fn handle_setup_request(&self, _endpoint_number: u8, setup_packet: &SetupPacket) -> SmolResult<()> {
+    pub fn handle_setup_request(
+        &mut self,
+        _endpoint_number: u8,
+        setup_packet: &SetupPacket,
+    ) -> SmolResult<()> {
         let request_type = setup_packet.request_type();
         let request = setup_packet.request();
+
+        debug!(
+            "SETUP {:?} {:?} {:?} {:?} 0x{:x} 0x{:x} {}",
+            setup_packet.recipient(),
+            setup_packet.direction(),
+            request_type,
+            request,
+            setup_packet.value,
+            setup_packet.index,
+            setup_packet.length
+        );
 
         match (&request_type, &request) {
             (RequestType::Standard, Request::SetAddress) => {
@@ -215,17 +254,6 @@ where
             }
         }
 
-        debug!(
-            "SETUP {:?} {:?} {:?} {:?} 0x{:x} 0x{:x} {}",
-            setup_packet.recipient(),
-            setup_packet.direction(),
-            request_type,
-            request,
-            setup_packet.value,
-            setup_packet.index,
-            setup_packet.length
-        );
-
         Ok(())
     }
 
@@ -255,6 +283,12 @@ where
         self.hal_driver.set_address(address);
         self.state.replace(DeviceState::Address.into());
 
+        trace!(
+            "SETUP handle_set_address() address:{} ({})",
+            setup_packet.value,
+            address
+        );
+
         Ok(())
     }
 
@@ -277,6 +311,13 @@ where
         // only respond with the amount requested
         let requested_length = setup_packet.length as usize;
 
+        trace!(
+            "  descriptor_type:{:?} descriptor_number:{} requested_length:{}",
+            descriptor_type,
+            descriptor_number,
+            requested_length
+        );
+
         match (&descriptor_type, descriptor_number) {
             (DescriptorType::Device, 0) => self
                 .hal_driver
@@ -292,6 +333,7 @@ where
                 } else {
                     warn!("SETUP stall: no device qualifier descriptor configured");
                     // TODO stall?
+                    return Ok(());
                 }
             }
             (DescriptorType::OtherSpeedConfiguration, 0) => {
@@ -301,21 +343,22 @@ where
                 } else {
                     warn!("SETUP stall: no other speed configuration descriptor configured");
                     // TODO stall?
+                    return Ok(());
                 }
             }
             (DescriptorType::String, 0) => self
                 .hal_driver
                 .write_ref(0, self.string_descriptor_zero.iter().take(requested_length)),
             (DescriptorType::String, index) => {
-                let offset_index: usize = (index - 1).into();
+                if let Some(cb) = self.cb_string_request {
+                    cb(self, setup_packet, index);
+                    return Ok(());
+                }
 
+                let offset_index: usize = (index - 1).into();
                 if offset_index > self.string_descriptors.len() {
-                    if let Some(cb) = self.cb_string_request {
-                        cb(self, setup_packet, index);
-                    } else {
-                        warn!("SETUP stall: unknown string descriptor {}", index);
-                        self.hal_driver.stall_request();
-                    }
+                    warn!("SETUP stall: unknown string descriptor {}", index);
+                    self.hal_driver.stall_request();
                     return Ok(());
                 }
 
@@ -338,41 +381,43 @@ where
 
         self.hal_driver.ack_status_stage(setup_packet);
 
-        trace!(
-            "SETUP handle_get_descriptor({:?}({}), {}, {})",
-            descriptor_type,
-            descriptor_type_bits,
-            descriptor_number,
-            requested_length
-        );
-
         Ok(())
     }
 
-    fn handle_set_configuration(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
+    fn handle_set_configuration(&mut self, setup_packet: &SetupPacket) -> SmolResult<()> {
         self.hal_driver.ack_status_stage(setup_packet);
 
-        trace!("SETUP handle_set_configuration()");
-
         let configuration = setup_packet.value;
+
+        trace!(
+            "SETUP handle_set_configuration() configuration:{}",
+            configuration
+        );
+
+        // TODO support multiple configurations
         if configuration > 1 {
             warn!("SETUP stall: unknown configuration {}", configuration);
             self.hal_driver.stall_request();
             return Ok(());
         }
+
+        self.current_configuration = configuration as u8; // TODO ?
         self.state.replace(DeviceState::Configured.into());
 
         Ok(())
     }
 
     fn handle_get_configuration(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
-        trace!("SETUP handle_get_configuration()");
-
         let requested_length = setup_packet.length as usize;
 
+        trace!(
+            "SETUP handle_get_configuration() requested_length:{}",
+            requested_length
+        );
+
         self.hal_driver
-            .write(0, [1].into_iter().take(requested_length));
-        self.hal_driver.ack_status_stage(setup_packet);
+            .write_ref(0, [self.current_configuration].iter());
+        //self.hal_driver.ack_status_stage(setup_packet);
 
         Ok(())
     }
@@ -414,11 +459,13 @@ where
             }
         };
 
+        debug!("SETUP handle_clear_feature()");
+
         Ok(())
     }
 
     fn handle_set_feature(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
-        trace!("SETUP handle_set_feature()");
+        debug!("SETUP handle_set_feature()");
 
         // parse request
         let recipient = setup_packet.recipient();

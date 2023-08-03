@@ -69,8 +69,7 @@ fn MachineExternal() {
     // USB1_EP_CONTROL UsbReceiveSetupPacket
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
         let endpoint = usb1.ep_control.epno.read().bits() as u8;
-        let /*mut*/ setup_packet_buffer = [0_u8; 8];
-        //usb1.read_control(&mut setup_packet_buffer);
+        let setup_packet_buffer = [0_u8; 8];
         usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
         let message = match SetupPacket::try_from(setup_packet_buffer) {
             Ok(setup_packet) => InterruptEvent::UsbReceiveSetupPacket(Aux, endpoint, setup_packet),
@@ -106,8 +105,7 @@ fn MachineExternal() {
     // USB0_EP_CONTROL UsbReceiveSetupPacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         let endpoint = usb0.ep_control.epno.read().bits() as u8;
-        let /*mut*/ setup_packet_buffer = [0_u8; 8];
-        //usb0.read_control(&mut setup_packet_buffer);
+        let setup_packet_buffer = [0_u8; 8];
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
         let message = match SetupPacket::try_from(setup_packet_buffer) {
             Ok(setup_packet) => InterruptEvent::UsbReceiveSetupPacket(Target, endpoint, setup_packet),
@@ -210,14 +208,13 @@ impl<'a> Firmware<'a> {
                 peripherals.USB1_EP_IN,
                 peripherals.USB1_EP_OUT,
             ),
-            &moondancer::usb::DEVICE_DESCRIPTOR,
-            &moondancer::usb::CONFIGURATION_DESCRIPTOR_0,
-            &moondancer::usb::USB_STRING_DESCRIPTOR_0,
-            &moondancer::usb::USB_STRING_DESCRIPTORS,
+            moondancer::usb::DEVICE_DESCRIPTOR,
+            moondancer::usb::CONFIGURATION_DESCRIPTOR_0,
+            moondancer::usb::USB_STRING_DESCRIPTOR_0,
+            moondancer::usb::USB_STRING_DESCRIPTORS,
         );
-        usb1.device_qualifier_descriptor = Some(&moondancer::usb::DEVICE_QUALIFIER_DESCRIPTOR);
-        usb1.other_speed_configuration_descriptor =
-            Some(moondancer::usb::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
+        usb1.set_device_qualifier_descriptor(moondancer::usb::DEVICE_QUALIFIER_DESCRIPTOR);
+        usb1.set_other_speed_configuration_descriptor(moondancer::usb::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
 
         // usb0: target
         let usb0 = hal::Usb0::new(
@@ -271,6 +268,9 @@ impl<'a> Firmware<'a> {
             // write csr: enable usb1 interrupts and events
             self.enable_usb1_interrupts();
         }
+
+        // prime our bulk OUT endpoint
+        self.usb1.hal_driver.ep_out_prime_receive(moondancer::usb::GCP_OUT_ENDPOINT_NUMBER);
 
         Ok(())
     }
@@ -341,6 +341,13 @@ impl<'a> Firmware<'a> {
                         let bytes_read = self.usb1.hal_driver.read(0, &mut rx_buffer);
                         self.handle_receive_control_data(bytes_read, rx_buffer)?;
                         self.usb1.hal_driver.ep_out_prime_receive(0);
+                    }
+
+                    // Usb1 received data on command endpoint
+                    UsbReceivePacket(Aux, moondancer::usb::GCP_OUT_ENDPOINT_NUMBER, _) => {
+                        let bytes_read = self.usb1.hal_driver.read(2, &mut rx_buffer);
+                        self.handle_receive_command_data(bytes_read, rx_buffer)?;
+                        self.usb1.hal_driver.ep_out_prime_receive(2);
                     }
 
                     // Usb1 received data on endpoint - shouldn't ever be called
@@ -521,6 +528,24 @@ impl<'a> Firmware<'a> {
         Ok(())
     }
 
+    fn handle_receive_command_data(
+        &mut self,
+        bytes_read: usize,
+        buffer: [u8; moondancer::EP_MAX_PACKET_SIZE],
+    ) -> GreatResult<()> {
+        info!("Received {} bytes on usb1 command endpoint", bytes_read,);
+
+        if bytes_read >= 8 {
+            // it's gcp request data, dispatch it
+            self.dispatch_gcp_bulk_request(&buffer[0..bytes_read])?;
+        } else {
+            warn!("TODO this should never be called?");
+            // it's an ack for the last gcp response we sent, ignore it
+        }
+
+        Ok(())
+    }
+
     /// This shouldn't ever be called
     fn handle_receive_data(
         &mut self,
@@ -528,9 +553,9 @@ impl<'a> Firmware<'a> {
         bytes_read: usize,
         buffer: [u8; moondancer::EP_MAX_PACKET_SIZE],
     ) -> GreatResult<()> {
-        warn!(
+        error!(
             "Usb1 received {} bytes on endpoint: {}",
-            endpoint, bytes_read,
+            bytes_read, endpoint,
         );
         Ok(())
     }
@@ -544,6 +569,66 @@ impl<'a> Firmware<'a> {
 // - gcp command dispatch -----------------------------------------------------
 
 impl<'a> Firmware<'a> {
+    fn dispatch_gcp_bulk_request(&mut self, command_buffer: &[u8]) -> GreatResult<()> {
+        // parse command
+        let (class_id, verb_number, arguments) = match libgreat::gcp::Command::parse(command_buffer)
+        {
+            Some(command) => (command.class_id(), command.verb_number(), command.arguments),
+            None => {
+                // TODO some kind of error handling
+                error!("Failed to parse GCP command");
+                return Ok(());
+            }
+        };
+
+        debug!("GCP bulk dispatch request {:?}.{}", class_id, verb_number);
+
+        // dispatch command
+        let response_buffer: [u8; GCP_MAX_RESPONSE_LENGTH] = [0; GCP_MAX_RESPONSE_LENGTH];
+        let response = match class_id {
+            // class: core
+            libgreat::gcp::ClassId::core => {
+                self.core.dispatch(verb_number, arguments, response_buffer)
+            }
+            // class: firmware
+            libgreat::gcp::ClassId::firmware => {
+                moondancer::gcp::firmware::dispatch(verb_number, arguments, response_buffer)
+            }
+            // class: selftest
+            libgreat::gcp::ClassId::selftest => {
+                moondancer::gcp::selftest::dispatch(verb_number, arguments, response_buffer)
+            }
+            // class: moondancer
+            libgreat::gcp::ClassId::moondancer => {
+                self.moondancer
+                    .dispatch(verb_number, arguments, response_buffer)
+            }
+            // class: unsupported
+            _ => {
+                error!("GCP dispatch request error: Class id '{:?}' not found", class_id);
+                Err(GreatError::InvalidArgument)
+            },
+        };
+
+        // send response
+        match response {
+            Ok(response) => {
+                info!("GCP returning response: {} bytes", response.len());
+                self.usb1.hal_driver.write(moondancer::usb::GCP_IN_ENDPOINT_NUMBER, response);
+            }
+            Err(e) => {
+                error!("GCP error: failed to dispatch command {}", e);
+                // TODO set errno
+                /*self.usb1
+                .hal_driver
+                .write(0, [0xde, 0xad, 0xde, 0xad].into_iter());*/
+                self.usb1.hal_driver.stall_endpoint_in(0);
+            }
+        }
+
+        Ok(())
+    }
+
     fn dispatch_gcp_request(&mut self, command_buffer: &[u8]) -> GreatResult<()> {
         // parse command
         let (class_id, verb_number, arguments) = match libgreat::gcp::Command::parse(command_buffer)

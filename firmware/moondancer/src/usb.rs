@@ -2,6 +2,16 @@
 
 use smolusb::descriptor::*;
 
+// - constants ----------------------------------------------------------------
+
+pub const GCP_OUT_ENDPOINT_ADDRESS: u8 = 0x02;
+pub const GCP_IN_ENDPOINT_ADDRESS: u8 = 0x81;
+
+pub const GCP_OUT_ENDPOINT_NUMBER: u8 = GCP_OUT_ENDPOINT_ADDRESS;
+pub const GCP_IN_ENDPOINT_NUMBER: u8 = GCP_IN_ENDPOINT_ADDRESS & 0x7f;
+
+// - vendor request -----------------------------------------------------------
+
 pub mod vendor {
     #[repr(u8)]
     #[derive(Debug, PartialEq)]
@@ -55,6 +65,8 @@ pub mod vendor {
     }
 }
 
+// - descriptors --------------------------------------------------------------
+
 pub const DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     descriptor_version: 0x0200,
     device_class: 0x00,    // Composite
@@ -85,7 +97,7 @@ pub const CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDes
     ConfigurationDescriptorHeader {
         descriptor_type: DescriptorType::Configuration as u8,
         configuration_value: 1,
-        configuration_string_index: 1,
+        configuration_string_index: 4,
         attributes: 0x80, // 0b1000_0000 = bus-powered
         max_power: 250,   // 250 * 2 mA = 500 mA ?
         ..ConfigurationDescriptorHeader::new()
@@ -98,7 +110,7 @@ pub const CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDes
                 interface_class: 0xff,    // Vendor-specific
                 interface_subclass: 0xff, // Vendor-specific
                 interface_protocol: 0xff, // Vendor-specific
-                interface_string_index: 2,
+                interface_string_index: 5,
                 ..InterfaceDescriptorHeader::new()
             },
             &[],
@@ -110,19 +122,19 @@ pub const CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDes
                 interface_class: 0xff,    // Vendor-specific
                 interface_subclass: 0xff, // Vendor-specific
                 interface_protocol: 0xff, // Vendor-specific
-                interface_string_index: 2,
+                interface_string_index: 6,
                 ..InterfaceDescriptorHeader::new()
             },
             &[
                 EndpointDescriptor {
-                    endpoint_address: 0x81, // IN
+                    endpoint_address: GCP_IN_ENDPOINT_ADDRESS, // IN
                     attributes: 0x02,       // Bulk
                     max_packet_size: 512,
                     interval: 0,
                     ..EndpointDescriptor::new()
                 },
                 EndpointDescriptor {
-                    endpoint_address: 0x02, // OUT
+                    endpoint_address: GCP_OUT_ENDPOINT_ADDRESS, // OUT
                     attributes: 0x02,       // Bulk
                     max_packet_size: 512,
                     interval: 0,
@@ -138,7 +150,7 @@ pub const OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
         ConfigurationDescriptorHeader {
             descriptor_type: DescriptorType::OtherSpeedConfiguration as u8,
             configuration_value: 1,
-            configuration_string_index: 1,
+            configuration_string_index: 7,
             attributes: 0x80, // 0b1000_0000 = bus-powered
             max_power: 250,   // 250 * 2 mA = 500 mA ?
             ..ConfigurationDescriptorHeader::new()
@@ -151,7 +163,7 @@ pub const OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
                     interface_class: 0xff,    // Vendor-specific
                     interface_subclass: 0xff, // Vendor-specific
                     interface_protocol: 0xff, // Vendor-specific
-                    interface_string_index: 2,
+                    interface_string_index: 5,
                     ..InterfaceDescriptorHeader::new()
                 },
                 &[],
@@ -163,7 +175,7 @@ pub const OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
                     interface_class: 0xff,    // Vendor-specific
                     interface_subclass: 0xff, // Vendor-specific
                     interface_protocol: 0xff, // Vendor-specific
-                    interface_string_index: 2,
+                    interface_string_index: 6,
                     ..InterfaceDescriptorHeader::new()
                 },
                 &[
@@ -189,12 +201,20 @@ pub const OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
 pub const USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
     StringDescriptorZero::new(&[LanguageId::EnglishUnitedStates]);
 
-pub const USB_STRING_DESCRIPTOR_1: StringDescriptor = StringDescriptor::new("Great Scott Gadgets");
-pub const USB_STRING_DESCRIPTOR_2: StringDescriptor = StringDescriptor::new("Moondancer");
-pub const USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("040");
+pub const USB_STRING_DESCRIPTOR_1: StringDescriptor = StringDescriptor::new("Great Scott Gadgets"); // manufacturer
+pub const USB_STRING_DESCRIPTOR_2: StringDescriptor = StringDescriptor::new("Moondancer"); // product
+pub const USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("040"); // serial
+pub const USB_STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config0"); // configuration #0
+pub const USB_STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("Moondancer0"); // interface #0
+pub const USB_STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("Moondancer1"); // interface #1
+pub const USB_STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("config1"); // configuration #1
 
 pub const USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &USB_STRING_DESCRIPTOR_1,
     &USB_STRING_DESCRIPTOR_2,
     &USB_STRING_DESCRIPTOR_3,
+    &USB_STRING_DESCRIPTOR_4,
+    &USB_STRING_DESCRIPTOR_5,
+    &USB_STRING_DESCRIPTOR_6,
+    &USB_STRING_DESCRIPTOR_7,
 ];
