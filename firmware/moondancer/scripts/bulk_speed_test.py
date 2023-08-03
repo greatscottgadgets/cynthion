@@ -17,8 +17,8 @@ import usb1
 
 from luna import configure_default_logging
 
-VENDOR_ID  = 0x16d0
-PRODUCT_ID = 0x0f3b
+VENDOR_ID  = 0x1209 # https://pid.codes/1209/
+PRODUCT_ID = 0x0001 # pid.codes Test PID
 
 BULK_ENDPOINT_NUMBER = 1
 COMMAND_ENDPOINT_NUMBER = 2

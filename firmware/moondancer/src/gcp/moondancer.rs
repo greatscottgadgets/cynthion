@@ -1,25 +1,27 @@
 #![allow(dead_code, unused_imports, unused_variables)] // TODO
 
-use crate::{hal, pac};
-use pac::csr::interrupt;
-
-use hal::smolusb;
-use smolusb::control::{Direction, RequestType, SetupPacket};
-use smolusb::device::{Speed, UsbDevice};
-use smolusb::traits::{
-    ControlRead, EndpointRead, EndpointWrite, EndpointWriteRef, UnsafeUsbDriverOperations,
-    UsbDriverOperations,
-};
-
-use libgreat::error::{GreatError, GreatResult};
-use libgreat::gcp::{self, Verb};
+use core::any::Any;
+use core::cell::RefCell;
+use core::slice;
+use core::{array, iter};
 
 use log::{debug, error, trace, warn};
 use zerocopy::{AsBytes, BigEndian, FromBytes, LittleEndian, Unaligned, U16, U32};
 
-use core::any::Any;
-use core::cell::RefCell;
-use core::slice;
+use smolusb::device::{Speed, UsbDevice};
+use smolusb::event::UsbEvent;
+use smolusb::setup::{Direction, RequestType, SetupPacket};
+use smolusb::traits::{
+    ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
+    WriteRefEndpoint,
+};
+
+use libgreat::error::{GreatError, GreatResult};
+use libgreat::gcp::{self, iter_to_response, GreatResponse, Verb, LIBGREAT_MAX_COMMAND_SIZE};
+
+use crate::{hal, pac};
+use hal::smolusb;
+use pac::csr::interrupt;
 
 // - types --------------------------------------------------------------------
 
@@ -29,11 +31,10 @@ pub mod QuirkFlag {
     pub const SetAddressManually: u16 = 0x0001;
 }
 
-
 // - Moondancer --------------------------------------------------------------
 
+use crate::event::InterruptEvent; // TODO use smolusb::event::UsbEvent instead
 use heapless::spsc::Queue;
-use crate::InterruptEvent;
 
 /// Moondancer
 pub struct Moondancer {
@@ -99,7 +100,7 @@ impl Moondancer {
         unsafe { self.enable_usb_interrupts() };
 
         debug!(
-            "MD Moondancer::connect(ep0_max_packet_size:{}, quirk_flags:{}) -> {:?}",
+            "MD moondancer::connect(ep0_max_packet_size:{}, quirk_flags:{}) -> {:?}",
             args.ep0_max_packet_size, args.quirk_flags, speed
         );
 
@@ -110,7 +111,7 @@ impl Moondancer {
     pub fn disconnect(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         self.usb0.disconnect();
 
-        debug!("MD Moondancer::disconnect()");
+        debug!("MD moondancer::disconnect()");
 
         Ok([].into_iter())
     }
@@ -119,7 +120,7 @@ impl Moondancer {
     pub fn bus_reset(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         self.usb0.bus_reset();
 
-        debug!("MD Moondancer::bus_reset()");
+        debug!("MD moondancer::bus_reset()");
 
         Ok([].into_iter())
     }
@@ -133,7 +134,8 @@ impl Moondancer {
         let mut setup_packet_buffer = [0_u8; 8];
         self.usb0.read_control(&mut setup_packet_buffer);
 
-        let packet = SetupPacket::try_from(setup_packet_buffer).map_err(|_| GreatError::IllegalByteSequence)?;
+        let packet = SetupPacket::try_from(setup_packet_buffer)
+            .map_err(|_| GreatError::IllegalByteSequence)?;
 
         Ok(SetupPacket::as_bytes(packet).into_iter())
     }
@@ -153,7 +155,7 @@ impl Moondancer {
         self.usb0.set_address(address);
 
         debug!(
-            "MD Moondancer::set_address(address:{}, deferred:{})",
+            "MD moondancer::set_address(address:{}, deferred:{})",
             args.address, args.deferred
         );
 
@@ -161,7 +163,10 @@ impl Moondancer {
     }
 
     /// Configure endoints.
-    pub fn configure_endpoints(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+    pub fn configure_endpoints(
+        &mut self,
+        arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
         #[derive(Debug, FromBytes, Unaligned)]
         struct ArgEndpoint {
@@ -175,25 +180,33 @@ impl Moondancer {
         while let Some((endpoint, next)) =
             zerocopy::LayoutVerified::<_, ArgEndpoint>::new_from_prefix(byte_slice)
         {
-            debug!("TODO MD Moondancer::configure_endpoint(0x{:x}) -> 0x{:x} -> {}", endpoint.address, endpoint.address & 0x7f, endpoint.max_packet_size);
+            debug!(
+                "TODO MD Moondancer::configure_endpoint(0x{:x}) -> 0x{:x} -> {}",
+                endpoint.address,
+                endpoint.address & 0x7f,
+                endpoint.max_packet_size
+            );
             byte_slice = next;
 
             // endpoint zero is always the control endpoint, and can't be configured
             if endpoint.address & 0x7f == 0x00 {
-                warn!("MD ignoring request to reconfigure control endpoint");
+                warn!("  ignoring request to reconfigure control endpoint");
                 continue;
             }
 
             // prime any OUT endpoints
             if Direction::from_endpoint_address(endpoint.address) == Direction::HostToDevice {
-                debug!("MD priming HostToDevice (OUT) endpoint address: {}", endpoint.address);
+                debug!(
+                    "  priming HostToDevice (OUT) endpoint address: {}",
+                    endpoint.address
+                );
                 self.usb0.ep_out_prime_receive(endpoint.address);
             }
 
             // ignore endpoint configurations we won't be able to handle
             if endpoint.max_packet_size.get() as usize > crate::EP_MAX_PACKET_SIZE {
                 error!(
-                    "MD failed to setup endpoint with max packet size {} > {}",
+                    "  failed to setup endpoint with max packet size {} > {}",
                     endpoint.max_packet_size,
                     crate::EP_MAX_PACKET_SIZE,
                 );
@@ -216,9 +229,10 @@ impl Moondancer {
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
-        self.usb0.stall_endpoint_address(args.endpoint_address, true);
+        self.usb0
+            .stall_endpoint_address(args.endpoint_address, true);
 
-        debug!("MD Moondancer::stall_endpoint({})", args.endpoint_address);
+        debug!("MD moondancer::stall_endpoint({})", args.endpoint_address);
 
         Ok([].into_iter())
     }
@@ -235,9 +249,10 @@ impl Moondancer {
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
-        debug!("MD moondancer::read_endpoint({})", args.endpoint_number);
+        trace!("MD moondancer::read_endpoint({})", args.endpoint_number);
 
-        let mut rx_buffer: [u8; crate::EP_MAX_PACKET_SIZE] = [0; crate::EP_MAX_PACKET_SIZE];
+        // TODO bounds check / handle big responses
+        let mut rx_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
         let bytes_read = self.usb0.read(args.endpoint_number, &mut rx_buffer);
 
         // TODO automatically prime OUT receive?
@@ -246,22 +261,35 @@ impl Moondancer {
         Ok(rx_buffer.into_iter().take(bytes_read))
     }
 
-    pub fn test_read_endpoint(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+    pub fn test_read_endpoint(
+        &mut self,
+        arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
         #[derive(FromBytes, Unaligned)]
         struct Args {
-            payload_length: u8,
+            payload_length: U32<LittleEndian>,
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
-        debug!("MD moondancer::test_read_endpoint({})", args.payload_length);
+        let payload_length: usize = u32::from(args.payload_length) as usize;
 
-        let mut rx_buffer: [u8; crate::EP_MAX_PACKET_SIZE] = [0; crate::EP_MAX_PACKET_SIZE];
+        debug!("MD moondancer::test_read_endpoint({})", payload_length);
+
+        if payload_length > LIBGREAT_MAX_COMMAND_SIZE {
+            debug!(
+                "MD moondancer::test_read_endpoint error overflow: {}",
+                payload_length
+            );
+            return Err(GreatError::NoBufferSpaceAvailable);
+        }
+
+        let mut rx_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
         for (index, byte) in rx_buffer.iter_mut().enumerate() {
             *byte = (index % u8::MAX as usize) as u8;
         }
 
-        Ok(rx_buffer.into_iter().take(args.payload_length as usize))
+        Ok(rx_buffer.into_iter().take(payload_length))
     }
 
     pub fn write_endpoint(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
@@ -278,18 +306,46 @@ impl Moondancer {
         };
 
         let endpoint: u8 = args.endpoint_number.read();
+        let payload_length = args.payload.len();
 
         // TODO automatically prime IN send? usb.write_ref() does this for us at present
         let iter = args.payload.into_iter();
         self.usb0.write_ref(endpoint, iter);
 
-        debug!(
-            "MD Moondancer::write_endpoint(endpoint_number:{}, payload.len:{})",
+        trace!(
+            "MD moondancer::write_endpoint(endpoint_number:{}, payload.len:{})",
             endpoint,
-            args.payload.len()
+            payload_length,
         );
 
         Ok([].into_iter())
+    }
+
+    pub fn test_write_endpoint(
+        &mut self,
+        arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
+        struct Args<B: zerocopy::ByteSlice> {
+            endpoint_number: zerocopy::LayoutVerified<B, u8>,
+            payload: B,
+        }
+        let (endpoint_number, payload) =
+            zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
+                .ok_or(GreatError::InvalidArgument)?;
+        let args = Args {
+            endpoint_number,
+            payload,
+        };
+
+        let endpoint: u8 = args.endpoint_number.read();
+        let payload_length = args.payload.len();
+
+        debug!(
+            "MD moondancer::test_write_endpoint(endpoint_number:{}, payload.len:{})",
+            endpoint, payload_length,
+        );
+
+        Ok(payload_length.to_le_bytes().into_iter())
     }
 }
 
@@ -301,16 +357,17 @@ impl Moondancer {
     /// # Return Value
     ///
     /// [(type, interface, endpoint)]
-    pub fn get_interrupt_events(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        let mut tx_buffer = [0_u8; crate::EP_MAX_PACKET_SIZE];
+    pub fn get_interrupt_events(
+        &mut self,
+        arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
+        let mut tx_buffer = [0_u8; LIBGREAT_MAX_COMMAND_SIZE];
 
         let clone = self.queue.clone();
         self.queue = Queue::new();
 
         let length = clone.len() * 3;
-        let response = clone.iter().flat_map(|message| {
-            message.into_bytes()
-        });
+        let response = clone.iter().flat_map(|message| message.into_bytes());
 
         for (dest, src) in tx_buffer.iter_mut().zip(response) {
             *dest = src;
@@ -324,19 +381,29 @@ impl Moondancer {
     /// # Return value
     ///
     /// [(type, interface, endpoint)]
-    pub fn test_get_interrupt_events(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+    pub fn test_get_interrupt_events(
+        &mut self,
+        arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
         debug!("MD moondancer::test_get_interrupt_events()");
 
-        use crate::UsbInterface::{Target, Aux, Control};
-        self.queue.enqueue(InterruptEvent::UsbBusReset(Target)).ok();
-        self.queue.enqueue(InterruptEvent::UsbReceiveSetupPacket(Aux, 1, SetupPacket::default())).ok();
-        self.queue.enqueue(InterruptEvent::UsbReceivePacket(Control, 2, 0)).ok();
-        self.queue.enqueue(InterruptEvent::UsbSendComplete(Target, 3)).ok();
+        use crate::UsbInterface::{Aux, Control, Target};
+        self.queue
+            .enqueue(InterruptEvent::Usb(Target, UsbEvent::BusReset))
+            .ok();
+        self.queue
+            .enqueue(InterruptEvent::Usb(Aux, UsbEvent::ReceiveSetupPacket(1)))
+            .ok();
+        self.queue
+            .enqueue(InterruptEvent::Usb(Control, UsbEvent::ReceivePacket(2)))
+            .ok();
+        self.queue
+            .enqueue(InterruptEvent::Usb(Target, UsbEvent::SendComplete(3)))
+            .ok();
 
         self.get_interrupt_events(arguments)
     }
 }
-
 
 // - class information --------------------------------------------------------
 
@@ -353,7 +420,7 @@ pub static CLASS_DOCS: &str = "API for fine-grained control of the Target USB po
 ///
 /// Fields are `"\0"`  where C implementation has `""`
 /// Fields are `"*\0"` where C implementation has `NULL`
-pub static VERBS: [Verb; 12] = [
+pub static VERBS: [Verb; 13] = [
     // - device connection --
     Verb {
         id: 0x0,
@@ -382,7 +449,6 @@ pub static VERBS: [Verb; 12] = [
         out_signature: "\0",
         out_param_names: "*\0",
     },
-
     // - status & control --
     Verb {
         id: 0x3,
@@ -390,7 +456,7 @@ pub static VERBS: [Verb; 12] = [
         doc: "\0", //"Read a setup packet from the control endpoint.\0",
         in_signature: "\0",
         in_param_names: "*\0",
-        out_signature: "<*X\0", // TODO 8X
+        out_signature: "<8X\0",
         out_param_names: "setup_packet\0",
     },
     Verb {
@@ -420,7 +486,6 @@ pub static VERBS: [Verb; 12] = [
         out_signature: "\0",
         out_param_names: "*\0",
     },
-
     // - data transfer --
     Verb {
         id: 0x7,
@@ -440,7 +505,6 @@ pub static VERBS: [Verb; 12] = [
         out_signature: "\0",
         out_param_names: "*\0",
     },
-
     // - interrupts --
     Verb {
         id: 0x9,
@@ -451,16 +515,24 @@ pub static VERBS: [Verb; 12] = [
         out_signature: "<*(BBB)\0",
         out_param_names: "type, interface, endpoint\0",
     },
-
     // - tests --
     Verb {
         id: 0x27,
         name: "test_read_endpoint\0",
         doc: "\0", //"Return read_endpoint with payload_length of test data.\0",
-        in_signature: "<B\0",
+        in_signature: "<I\0",
         in_param_names: "payload_length\0",
         out_signature: "<*X\0",
         out_param_names: "read_data\0",
+    },
+    Verb {
+        id: 0x28,
+        name: "test_write_endpoint\0",
+        doc: "\0", //"Write a packet to an IN endpoint and return the length received.\0",
+        in_signature: "<B*X\0",
+        in_param_names: "endpoint_number, payload\0",
+        out_signature: "<I\0",
+        out_param_names: "payload_length\0",
     },
     Verb {
         id: 0x29,
@@ -475,17 +547,13 @@ pub static VERBS: [Verb; 12] = [
 
 // - dispatch -----------------------------------------------------------------
 
-use libgreat::gcp::{iter_to_response, GcpResponse, GCP_MAX_RESPONSE_LENGTH};
-
-use core::{array, iter};
-
 impl Moondancer {
     pub fn dispatch(
         &mut self,
         verb_number: u32,
         arguments: &[u8],
-        response_buffer: [u8; GCP_MAX_RESPONSE_LENGTH],
-    ) -> GreatResult<GcpResponse> {
+        response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE],
+    ) -> GreatResult<GreatResponse> {
         match verb_number {
             0x0 => {
                 // moondancer::connect
@@ -552,6 +620,12 @@ impl Moondancer {
             0x27 => {
                 // moondancer::test_read_endpoint
                 let iter = self.test_read_endpoint(arguments)?;
+                let response = unsafe { iter_to_response(iter, response_buffer) };
+                Ok(response)
+            }
+            0x28 => {
+                // moondancer::test_write_endpoint
+                let iter = self.test_write_endpoint(arguments)?;
                 let response = unsafe { iter_to_response(iter, response_buffer) };
                 Ok(response)
             }

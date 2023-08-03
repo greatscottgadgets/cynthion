@@ -1,5 +1,8 @@
 use crate::descriptor::*;
 
+pub const VENDOR_ID: u16 = 0x1a86; // QinHeng Electronics
+pub const PRODUCT_ID: u16 = 0x7523; // CH341 in serial mode, usb to serial port converter
+
 pub mod ch34x {
     #[derive(Debug, PartialEq)]
     #[repr(u8)]
@@ -36,8 +39,8 @@ pub const DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     device_subclass: 0x00, // Vendor-specific
     device_protocol: 0x00,
     max_packet_size: 8,
-    vendor_id: 0x1a86,
-    product_id: 0x7523,
+    vendor_id: VENDOR_ID,
+    product_id: PRODUCT_ID,
     device_version_number: 0x0264,
     manufacturer_string_index: 1,
     product_string_index: 2,

@@ -15,14 +15,14 @@ fn panic(_panic_info: &PanicInfo) -> ! {
     leds.output.write(|w| unsafe { w.output().bits(0b101010) });
 
     #[cfg(feature = "nightly")]
-    if let Some(message) = panic_info.message() {
+    if let Some(message) = _panic_info.message() {
         error!("Panic: {}", message);
     } else {
         error!("Panic: Unknown");
     }
 
     // TODO This takes up about 4Kb of the firmware size!
-    /*if let Some(location) = panic_info.location() {
+    /*if let Some(location) = _panic_info.location() {
         error!("Panicked at '{}:{}'", location.file(), location.line(),);
     }*/
     error!("Firmware Panicked");

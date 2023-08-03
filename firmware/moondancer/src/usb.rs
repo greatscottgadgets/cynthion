@@ -4,11 +4,31 @@ use smolusb::descriptor::*;
 
 // - constants ----------------------------------------------------------------
 
-pub const GCP_OUT_ENDPOINT_ADDRESS: u8 = 0x02;
-pub const GCP_IN_ENDPOINT_ADDRESS: u8 = 0x81;
+pub const VENDOR_ID: u16 = 0x1d50; // OpenMoko, Inc.
+pub const PRODUCT_ID: u16 = 0x615b; // Cynthion USB Multitool
 
-pub const GCP_OUT_ENDPOINT_NUMBER: u8 = GCP_OUT_ENDPOINT_ADDRESS;
-pub const GCP_IN_ENDPOINT_NUMBER: u8 = GCP_IN_ENDPOINT_ADDRESS & 0x7f;
+pub const DEVICE_VERSION_NUMBER: u16 = 0x0004; // Cynthion r0.4 TODO read from?
+pub const DEVICE_SERIAL_STRING: &'static str = "r0.4"; // TODO read from?
+
+/// libgreat backend interface subclass TODO document
+///
+/// 0x00       - Apollo / Flash Bridge Interface
+/// 0x01..0x0f - Reserved
+/// 0x10       - Analyzer
+/// 0x11       - Moondancer
+pub const LIBGREAT_INTERFACE_SUBCLASS: u8 = 0x11;
+
+/// libgreat backend interface protocol version TODO document
+///
+/// 0x01 -> v0.1
+/// 0x10 -> v1.0
+pub const LIBGREAT_INTERFACE_PROTOCOL: u8 = 0x01;
+
+pub const LIBGREAT_BULK_OUT_ENDPOINT_ADDRESS: u8 = 0x02;
+pub const LIBGREAT_BULK_IN_ENDPOINT_ADDRESS: u8 = 0x81;
+
+pub const LIBGREAT_BULK_OUT_ENDPOINT_NUMBER: u8 = LIBGREAT_BULK_OUT_ENDPOINT_ADDRESS;
+pub const LIBGREAT_BULK_IN_ENDPOINT_NUMBER: u8 = LIBGREAT_BULK_IN_ENDPOINT_ADDRESS & 0x7f;
 
 // - vendor request -----------------------------------------------------------
 
@@ -73,9 +93,9 @@ pub const DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     device_subclass: 0x00, // Composite
     device_protocol: 0x00, // Composite
     max_packet_size: 64,
-    vendor_id: 0x1d50,             // OpenMoko, Inc.
-    product_id: 0x60e6,            // replacement for GoodFET/FaceDancer - GreatFet
-    device_version_number: 0x0040, // Cynthion r04
+    vendor_id: VENDOR_ID,
+    product_id: PRODUCT_ID,
+    device_version_number: DEVICE_VERSION_NUMBER,
     manufacturer_string_index: 1,
     product_string_index: 2,
     serial_string_index: 3,
@@ -102,47 +122,33 @@ pub const CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDes
         max_power: 250,   // 250 * 2 mA = 500 mA ?
         ..ConfigurationDescriptorHeader::new()
     },
-    &[
-        InterfaceDescriptor::new(
-            InterfaceDescriptorHeader {
-                interface_number: 0,
-                alternate_setting: 0,
-                interface_class: 0xff,    // Vendor-specific
-                interface_subclass: 0xff, // Vendor-specific
-                interface_protocol: 0xff, // Vendor-specific
-                interface_string_index: 5,
-                ..InterfaceDescriptorHeader::new()
+    &[InterfaceDescriptor::new(
+        InterfaceDescriptorHeader {
+            interface_number: 0,
+            alternate_setting: 0,
+            interface_class: 0xff, // Vendor-specific
+            interface_subclass: LIBGREAT_INTERFACE_SUBCLASS,
+            interface_protocol: LIBGREAT_INTERFACE_PROTOCOL,
+            interface_string_index: 5,
+            ..InterfaceDescriptorHeader::new()
+        },
+        &[
+            EndpointDescriptor {
+                endpoint_address: LIBGREAT_BULK_IN_ENDPOINT_ADDRESS, // IN
+                attributes: 0x02,                                    // Bulk
+                max_packet_size: 512,
+                interval: 0,
+                ..EndpointDescriptor::new()
             },
-            &[],
-        ),
-        InterfaceDescriptor::new(
-            InterfaceDescriptorHeader {
-                interface_number: 1,
-                alternate_setting: 0,
-                interface_class: 0xff,    // Vendor-specific
-                interface_subclass: 0xff, // Vendor-specific
-                interface_protocol: 0xff, // Vendor-specific
-                interface_string_index: 6,
-                ..InterfaceDescriptorHeader::new()
+            EndpointDescriptor {
+                endpoint_address: LIBGREAT_BULK_OUT_ENDPOINT_ADDRESS, // OUT
+                attributes: 0x02,                                     // Bulk
+                max_packet_size: 512,
+                interval: 0,
+                ..EndpointDescriptor::new()
             },
-            &[
-                EndpointDescriptor {
-                    endpoint_address: GCP_IN_ENDPOINT_ADDRESS, // IN
-                    attributes: 0x02,       // Bulk
-                    max_packet_size: 512,
-                    interval: 0,
-                    ..EndpointDescriptor::new()
-                },
-                EndpointDescriptor {
-                    endpoint_address: GCP_OUT_ENDPOINT_ADDRESS, // OUT
-                    attributes: 0x02,       // Bulk
-                    max_packet_size: 512,
-                    interval: 0,
-                    ..EndpointDescriptor::new()
-                },
-            ],
-        ),
-    ],
+        ],
+    )],
 );
 
 pub const OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
@@ -155,58 +161,45 @@ pub const OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
             max_power: 250,   // 250 * 2 mA = 500 mA ?
             ..ConfigurationDescriptorHeader::new()
         },
-        &[
-            InterfaceDescriptor::new(
-                InterfaceDescriptorHeader {
-                    interface_number: 0,
-                    alternate_setting: 0,
-                    interface_class: 0xff,    // Vendor-specific
-                    interface_subclass: 0xff, // Vendor-specific
-                    interface_protocol: 0xff, // Vendor-specific
-                    interface_string_index: 5,
-                    ..InterfaceDescriptorHeader::new()
+        &[InterfaceDescriptor::new(
+            InterfaceDescriptorHeader {
+                interface_number: 0,
+                alternate_setting: 0,
+                interface_class: 0xff, // Vendor-specific
+                interface_subclass: LIBGREAT_INTERFACE_SUBCLASS,
+                interface_protocol: LIBGREAT_INTERFACE_PROTOCOL,
+                interface_string_index: 5,
+                ..InterfaceDescriptorHeader::new()
+            },
+            &[
+                EndpointDescriptor {
+                    endpoint_address: LIBGREAT_BULK_IN_ENDPOINT_ADDRESS, // IN
+                    attributes: 0x02,                                    // Bulk
+                    max_packet_size: 512,
+                    interval: 0,
+                    ..EndpointDescriptor::new()
                 },
-                &[],
-            ),
-            InterfaceDescriptor::new(
-                InterfaceDescriptorHeader {
-                    interface_number: 1,
-                    alternate_setting: 0,
-                    interface_class: 0xff,    // Vendor-specific
-                    interface_subclass: 0xff, // Vendor-specific
-                    interface_protocol: 0xff, // Vendor-specific
-                    interface_string_index: 6,
-                    ..InterfaceDescriptorHeader::new()
+                EndpointDescriptor {
+                    endpoint_address: LIBGREAT_BULK_OUT_ENDPOINT_ADDRESS, // OUT
+                    attributes: 0x02,                                     // Bulk
+                    max_packet_size: 512,
+                    interval: 0,
+                    ..EndpointDescriptor::new()
                 },
-                &[
-                    EndpointDescriptor {
-                        endpoint_address: 0x81, // IN
-                        attributes: 0x02,       // Bulk
-                        max_packet_size: 64,
-                        interval: 0,
-                        ..EndpointDescriptor::new()
-                    },
-                    EndpointDescriptor {
-                        endpoint_address: 0x02, // OUT
-                        attributes: 0x02,       // Bulk
-                        max_packet_size: 64,
-                        interval: 0,
-                        ..EndpointDescriptor::new()
-                    },
-                ],
-            ),
-        ],
+            ],
+        )],
     );
 
 pub const USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
     StringDescriptorZero::new(&[LanguageId::EnglishUnitedStates]);
 
 pub const USB_STRING_DESCRIPTOR_1: StringDescriptor = StringDescriptor::new("Great Scott Gadgets"); // manufacturer
-pub const USB_STRING_DESCRIPTOR_2: StringDescriptor = StringDescriptor::new("Moondancer"); // product
-pub const USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("040"); // serial
+pub const USB_STRING_DESCRIPTOR_2: StringDescriptor =
+    StringDescriptor::new("Cynthion USB Multitool"); // product
+pub const USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new(DEVICE_SERIAL_STRING); // serial
 pub const USB_STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config0"); // configuration #0
-pub const USB_STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("Moondancer0"); // interface #0
-pub const USB_STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("Moondancer1"); // interface #1
+pub const USB_STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("interface0"); // interface #0
+pub const USB_STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("interface1"); // interface #1
 pub const USB_STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("config1"); // configuration #1
 
 pub const USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[

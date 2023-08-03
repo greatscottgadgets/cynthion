@@ -80,3 +80,6 @@ name = "interrupts"
 
 [[bin]]
 name = "moondancer"
+
+[[bin]]
+name = "test_usb"

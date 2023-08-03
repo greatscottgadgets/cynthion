@@ -3,10 +3,10 @@
 mod error;
 pub use error::ErrorKind;
 
-use smolusb::control::*;
+use smolusb::setup::*;
 use smolusb::traits::{
-    ControlRead, EndpointRead, EndpointWrite, EndpointWriteRef, UnsafeUsbDriverOperations,
-    UsbDriver, UsbDriverOperations,
+    ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriver, UsbDriverOperations,
+    WriteEndpoint, WriteRefEndpoint,
 };
 
 use crate::pac;
@@ -186,24 +186,6 @@ macro_rules! impl_usb {
                     }
                 }
 
-                /// Prepare endpoint to receive a single OUT packet.
-                #[inline(always)]
-                pub fn ep_out_prime_receive(&self, endpoint_number: u8) {
-                    // clear receive buffer
-                    self.ep_out.reset.write(|w| w.reset().bit(true));
-
-                    // select endpoint
-                    self.ep_out
-                        .epno
-                        .write(|w| unsafe { w.epno().bits(endpoint_number) });
-
-                    // prime endpoint
-                    self.ep_out.prime.write(|w| w.prime().bit(true));
-
-                    // enable it
-                    self.ep_out.enable.write(|w| w.enable().bit(true));
-                }
-
                 pub fn ep_control_address(&self) -> u8 {
                     self.ep_control.address.read().address().bits()
                 }
@@ -361,6 +343,7 @@ macro_rules! impl_usb {
                 }
 
                 /// Set stall for the given IN endpoint number
+                /// TODO test this!
                 fn stall_endpoint_in(&self, endpoint_number: u8) {
                     self.ep_in.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
                     self.ep_in.stall.write(|w| w.stall().bit(true));
@@ -382,6 +365,18 @@ macro_rules! impl_usb {
                     // TODO is this the correct behaviour?
                     unsafe { riscv::asm::delay(2000); }
                     self.ep_out.reset.write(|w| w.reset().bit(true));
+                }
+
+                /// Clear stall for the given IN endpoint number.
+                fn unstall_endpoint_in(&self, endpoint_number: u8) {
+                    self.ep_in.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
+                    self.ep_in.stall.write(|w| w.stall().bit(false));
+                }
+
+                /// Clear stall for the given OUT endpoint number.
+                fn unstall_endpoint_out(&self, endpoint_number: u8) {
+                    self.ep_out.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
+                    self.ep_out.stall.write(|w| w.stall().bit(false));
                 }
 
                 /// Clear PID toggle bit for the given endpoint address.
@@ -472,7 +467,7 @@ macro_rules! impl_usb {
 
             // - trait: Read/Write traits -------------------------------------
 
-            impl ControlRead for $USBX {
+            impl ReadControl for $USBX {
                 fn read_control(&self, buffer: &mut [u8]) -> usize {
                     // drain fifo
                     let mut bytes_read = 0;
@@ -487,13 +482,36 @@ macro_rules! impl_usb {
                         }
                     }
 
-                    trace!("  RX CONTROL {} bytes + {} overflow: {:?}", bytes_read, overflow, &buffer[0..bytes_read]);
+                    if overflow == 0 {
+                        trace!("  RX CONTROL {} bytes read", bytes_read);
+                    } else {
+                        warn!("  RX CONTROL {} bytes read + {} bytes overflow",
+                              bytes_read, overflow);
+                    }
 
                     bytes_read
                 }
             }
 
-            impl EndpointRead for $USBX {
+            impl ReadEndpoint for $USBX {
+                /// Prepare endpoint to receive a single OUT packet.
+                #[inline(always)]
+                fn ep_out_prime_receive(&self, endpoint_number: u8) {
+                    // clear receive buffer
+                    self.ep_out.reset.write(|w| w.reset().bit(true));
+
+                    // select endpoint
+                    self.ep_out
+                        .epno
+                        .write(|w| unsafe { w.epno().bits(endpoint_number) });
+
+                    // prime endpoint
+                    self.ep_out.prime.write(|w| w.prime().bit(true));
+
+                    // enable it
+                    self.ep_out.enable.write(|w| w.enable().bit(true));
+                }
+
                 #[inline(always)]
                 fn read(&self, endpoint_number: u8, buffer: &mut [u8]) -> usize {
                     /*let mut bytes_read = 0;
@@ -529,13 +547,51 @@ macro_rules! impl_usb {
                         overflow += 1;
                     }
 
-                    trace!("  RX OUT{} {} bytes read + {} bytes overflow", endpoint_number, bytes_read, overflow);
+                    if overflow == 0 {
+                        trace!("  RX OUT{} {} bytes read", endpoint_number, bytes_read);
+                    } else {
+                        warn!("  RX OUT{} {} bytes read + {} bytes overflow",
+                              endpoint_number, bytes_read, overflow);
+                    }
 
                     bytes_read
                 }
             }
 
-            impl EndpointWrite for $USBX {
+            impl WriteEndpoint for $USBX {
+                fn write_packets<'a, I>(&self, endpoint_number: u8, iter: I, packet_size: usize)
+                where
+                    I: Iterator<Item = u8>
+                {
+                    // reset output fifo if needed
+                    // TODO rather return an error
+                    if self.ep_in.have.read().have().bit() {
+                        trace!("  clear tx");
+                        self.ep_in.reset.write(|w| w.reset().bit(true));
+                    }
+
+                    // write data as multiple packets
+                    let mut bytes_written: usize = 0;
+                    for byte in iter {
+                        self.ep_in.data.write(|w| unsafe { w.data().bits(byte) });
+                        bytes_written += 1;
+                        // end of chunk - transmit packet
+                        if bytes_written % packet_size == 0 {
+                            // prime IN endpoint
+                            self.ep_in
+                                .epno
+                                .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                            // wait for transmission to complete
+                            while self.ep_in.have.read().have().bit() { }
+                        }
+                    }
+
+                    // finally prime IN endpoint
+                    self.ep_in
+                        .epno
+                        .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                }
+
                 #[inline(always)]
                 fn write<I>(&self, endpoint_number: u8, iter: I)
                 where
@@ -566,7 +622,7 @@ macro_rules! impl_usb {
                 }
             }
 
-            impl EndpointWriteRef for $USBX {
+            impl WriteRefEndpoint for $USBX {
                 #[inline(always)]
                 fn write_ref<'a, I>(&self, endpoint_number: u8, iter: I)
                 where

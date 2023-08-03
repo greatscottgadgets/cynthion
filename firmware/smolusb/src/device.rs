@@ -1,17 +1,17 @@
 #![allow(dead_code, unused_imports, unused_variables)] // TODO
 
-use crate::control::{Direction, Feature, Recipient, Request, RequestType, SetupPacket};
-use crate::descriptor::*;
-use crate::error::{SmolError, SmolResult};
-use crate::traits::AsByteSliceIterator;
-use crate::traits::{
-    ControlRead, EndpointRead, EndpointWrite, EndpointWriteRef, UnsafeUsbDriverOperations,
-    UsbDriverOperations,
-};
+use core::cell::RefCell;
+use core::sync::atomic::{AtomicU8, Ordering};
 
 use log::{debug, error, info, trace, warn};
 
-use core::cell::RefCell;
+use crate::control::{Control, ControlEvent};
+use crate::descriptor::*;
+use crate::error::{SmolError, SmolResult};
+use crate::event::UsbEvent;
+use crate::setup::{Direction, Feature, Recipient, Request, RequestType, SetupPacket};
+use crate::traits::AsByteSliceIterator;
+use crate::traits::UsbDriver;
 
 ///! `smolusb` device implementation for Luna USB peripheral
 ///!
@@ -64,7 +64,7 @@ pub enum DeviceState {
 ///     * a configuration descriptor
 ///     * a set of string descriptors
 ///
-pub struct UsbDevice<'a, D> {
+pub struct UsbDevice<'a, D, const MAX_RECEIVE_SIZE: usize> {
     pub hal_driver: D,
 
     device_descriptor: DeviceDescriptor,
@@ -74,22 +74,27 @@ pub struct UsbDevice<'a, D> {
     string_descriptor_zero: StringDescriptorZero<'a>,
     string_descriptors: &'a [&'a StringDescriptor<'a>],
 
+    pub control: Control<'a, D, MAX_RECEIVE_SIZE>,
+
     pub state: RefCell<DeviceState>,
-    pub current_configuration: u8,
+    pub current_configuration: AtomicU8,
     pub reset_count: usize,
     pub feature_remote_wakeup: bool,
 
-    pub cb_class_request:
-        Option<fn(device: &UsbDevice<'a, D>, setup_packet: &SetupPacket, request: u8)>,
-    pub cb_vendor_request:
-        Option<fn(device: &UsbDevice<'a, D>, setup_packet: &SetupPacket, request: u8)>,
-    pub cb_string_request:
-        Option<fn(device: &UsbDevice<'a, D>, setup_packet: &SetupPacket, index: u8)>,
+    pub cb_class_request: Option<
+        fn(device: &UsbDevice<'a, D, MAX_RECEIVE_SIZE>, setup_packet: &SetupPacket, request: u8),
+    >,
+    pub cb_vendor_request: Option<
+        fn(device: &UsbDevice<'a, D, MAX_RECEIVE_SIZE>, setup_packet: &SetupPacket, request: u8),
+    >,
+    pub cb_string_request: Option<
+        fn(device: &UsbDevice<'a, D, MAX_RECEIVE_SIZE>, setup_packet: &SetupPacket, index: u8),
+    >,
 }
 
-impl<'a, D> UsbDevice<'a, D>
+impl<'a, D, const MAX_RECEIVE_SIZE: usize> UsbDevice<'a, D, MAX_RECEIVE_SIZE>
 where
-    D: ControlRead + EndpointRead + EndpointWrite + EndpointWriteRef + UsbDriverOperations,
+    D: UsbDriver,
 {
     pub fn new(
         hal_driver: D,
@@ -113,8 +118,10 @@ where
             string_descriptor_zero,
             string_descriptors,
 
+            control: Control::new(),
+
             state: DeviceState::Reset.into(),
-            current_configuration: 0,
+            current_configuration: 0.into(),
             reset_count: 0,
             feature_remote_wakeup: false,
 
@@ -147,10 +154,10 @@ where
     }
 }
 
-// Device functions
-impl<'a, D> UsbDevice<'a, D>
+// Device connection
+impl<'a, D, const MAX_RECEIVE_SIZE: usize> UsbDevice<'a, D, MAX_RECEIVE_SIZE>
 where
-    D: ControlRead + EndpointRead + EndpointWrite + EndpointWriteRef + UsbDriverOperations,
+    D: UsbDriver,
 {
     pub fn connect(&self) -> Speed {
         self.hal_driver.connect().into()
@@ -175,90 +182,130 @@ where
     }
 }
 
-// Handle SETUP packet
-impl<'a, D> UsbDevice<'a, D>
+// Control dispatch
+impl<'a, D, const MAX_RECEIVE_SIZE: usize> UsbDevice<'a, D, MAX_RECEIVE_SIZE>
 where
-    D: ControlRead
-        + EndpointRead
-        + EndpointWrite
-        + EndpointWriteRef
-        + UsbDriverOperations
-        + UnsafeUsbDriverOperations,
+    D: UsbDriver,
 {
-    pub fn handle_setup_request(
+    /// Dispatches USB events for handling by Control
+    ///
+    /// Returns unhandled Control responses for further handling by the caller
+    pub fn dispatch_control(
+        &mut self,
+        event: UsbEvent,
+    ) -> SmolResult<Option<ControlEvent<'a, MAX_RECEIVE_SIZE>>> {
+        trace!("DEVICE dispatch_control({:?})", event);
+
+        //let response = self.control.dispatch(&self.hal_driver, event)?;
+        //trace!("  {:?} got response: {:?}", event, response);
+
+        match self.control.dispatch(&self.hal_driver, event)? {
+            Some(
+                response @ ControlEvent {
+                    endpoint_number,
+                    setup_packet,
+                    //data,
+                    bytes_read,
+                    //_marker,
+                    ..
+                },
+            ) => {
+                // probably a standard request that can be handled by UsbDevice
+                // TODO check direction and split setup_request into in/out
+                if bytes_read == 0 {
+                    // try to handle the request but return packet to caller if we can't
+                    match self.setup_request(endpoint_number, &setup_packet)? {
+                        Some(_setup_packet) => Ok(Some(response)),
+                        None => Ok(None),
+                    }
+
+                // setup packet has a data stage, probably a class or vendor request
+                } else {
+                    // TODO any scenario where control could be handling this unless we add support
+                    //      for registering class/vendor handlers with UsbDevice?
+                    Ok(Some(response))
+                }
+            }
+            None => Ok(None),
+        }
+    }
+}
+
+// SETUP request
+impl<'a, D, const MAX_RECEIVE_SIZE: usize> UsbDevice<'a, D, MAX_RECEIVE_SIZE>
+where
+    D: UsbDriver,
+{
+    pub fn setup_request(
         &mut self,
         _endpoint_number: u8,
         setup_packet: &SetupPacket,
-    ) -> SmolResult<()> {
+    ) -> SmolResult<Option<SetupPacket>> {
         let request_type = setup_packet.request_type();
         let request = setup_packet.request();
 
-        debug!(
-            "SETUP {:?} {:?} {:?} {:?} 0x{:x} 0x{:x} {}",
-            setup_packet.recipient(),
-            setup_packet.direction(),
-            request_type,
-            request,
-            setup_packet.value,
-            setup_packet.index,
-            setup_packet.length
-        );
+        if matches!(request_type, RequestType::Standard) {
+            debug!(
+                "SETUP {:?} {:?} {:?} {:?} 0x{:x} 0x{:x} {}",
+                setup_packet.recipient(),
+                setup_packet.direction(),
+                request_type,
+                request,
+                setup_packet.value,
+                setup_packet.index,
+                setup_packet.length
+            );
+        }
 
         match (&request_type, &request) {
             (RequestType::Standard, Request::SetAddress) => {
-                self.handle_set_address(setup_packet)?;
+                self.setup_set_address(setup_packet)?;
             }
             (RequestType::Standard, Request::GetDescriptor) => {
-                self.handle_get_descriptor(setup_packet)?;
+                self.setup_get_descriptor(setup_packet)?;
             }
             (RequestType::Standard, Request::SetConfiguration) => {
-                self.handle_set_configuration(setup_packet)?;
+                self.setup_set_configuration(setup_packet)?;
             }
             (RequestType::Standard, Request::GetConfiguration) => {
-                self.handle_get_configuration(setup_packet)?;
+                self.setup_get_configuration(setup_packet)?;
             }
             (RequestType::Standard, Request::ClearFeature) => {
-                self.handle_clear_feature(setup_packet)?;
+                self.setup_clear_feature(setup_packet)?;
             }
             (RequestType::Standard, Request::SetFeature) => {
-                self.handle_set_feature(setup_packet)?;
+                self.setup_set_feature(setup_packet)?;
             }
             (RequestType::Class, Request::ClassOrVendor(request)) => {
+                // if we have a callback handler, invoke it
                 if let Some(cb) = self.cb_class_request {
                     cb(self, setup_packet, *request);
+
+                // otherwise return the setup packet for the caller to handle
                 } else {
-                    warn!(
-                        "SETUP stall: unhandled class request {:?} {:?}",
-                        request_type, request
-                    );
-                    self.hal_driver.stall_request();
+                    return Ok(Some(*setup_packet));
                 }
             }
             (RequestType::Vendor, Request::ClassOrVendor(request)) => {
+                // if we have a callback handler, invoke it
                 if let Some(cb) = self.cb_vendor_request {
                     cb(self, setup_packet, *request);
                 } else {
-                    warn!(
-                        "SETUP stall: unhandled vendor request {:?} {:?}",
-                        request_type, request
-                    );
-                    self.hal_driver.stall_request();
+                    // otherwise return the setup packet for the caller to handle
+                    return Ok(Some(*setup_packet));
                 }
             }
             _ => {
-                warn!(
-                    "SETUP stall: unhandled request {:?} {:?}",
-                    request_type, request
-                );
-                self.hal_driver.stall_request();
+                warn!("SETUP unhandled request {:?} {:?}", request_type, request);
+                return Ok(Some(*setup_packet));
             }
         }
 
-        Ok(())
+        Ok(None)
     }
 
     // TODO move tx_ack_active flag logic to hal_driver
-    fn handle_set_address(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
+    fn setup_set_address(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
         // set tx_ack_active flag
         // TODO a slighty safer approach would be nice
         unsafe {
@@ -284,7 +331,7 @@ where
         self.state.replace(DeviceState::Address.into());
 
         trace!(
-            "SETUP handle_set_address() address:{} ({})",
+            "SETUP setup_set_address() address:{} ({})",
             setup_packet.value,
             address
         );
@@ -292,7 +339,7 @@ where
         Ok(())
     }
 
-    fn handle_get_descriptor(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
+    fn setup_get_descriptor(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
         // extract the descriptor type and number from our SETUP request
         let [descriptor_number, descriptor_type_bits] = setup_packet.value.to_le_bytes();
         let descriptor_type = match DescriptorType::try_from(descriptor_type_bits) {
@@ -384,13 +431,13 @@ where
         Ok(())
     }
 
-    fn handle_set_configuration(&mut self, setup_packet: &SetupPacket) -> SmolResult<()> {
+    fn setup_set_configuration(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
         self.hal_driver.ack_status_stage(setup_packet);
 
-        let configuration = setup_packet.value;
+        let configuration: u8 = setup_packet.value as u8;
 
         trace!(
-            "SETUP handle_set_configuration() configuration:{}",
+            "SETUP setup_set_configuration() configuration:{}",
             configuration
         );
 
@@ -401,28 +448,30 @@ where
             return Ok(());
         }
 
-        self.current_configuration = configuration as u8; // TODO ?
+        self.current_configuration
+            .store(configuration, Ordering::Relaxed);
         self.state.replace(DeviceState::Configured.into());
 
         Ok(())
     }
 
-    fn handle_get_configuration(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
+    fn setup_get_configuration(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
         let requested_length = setup_packet.length as usize;
 
         trace!(
-            "SETUP handle_get_configuration() requested_length:{}",
+            "SETUP setup_get_configuration() requested_length:{}",
             requested_length
         );
 
-        self.hal_driver
-            .write_ref(0, [self.current_configuration].iter());
-        //self.hal_driver.ack_status_stage(setup_packet);
+        let current_configuration = self.current_configuration.load(Ordering::Relaxed);
+
+        self.hal_driver.write_ref(0, [current_configuration].iter());
+        self.hal_driver.ack_status_stage(setup_packet);
 
         Ok(())
     }
 
-    fn handle_clear_feature(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
+    fn setup_clear_feature(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
         // parse request
         let recipient = setup_packet.recipient();
         let feature_bits = setup_packet.value;
@@ -444,8 +493,8 @@ where
                 self.hal_driver
                     .clear_feature_endpoint_halt(endpoint_address);
                 self.hal_driver.ack_status_stage(setup_packet);
-                debug!(
-                    "SETUP handle_clear_feature EndpointHalt: 0x{:x}",
+                trace!(
+                    "SETUP setup_clear_feature EndpointHalt: 0x{:x}",
                     endpoint_address
                 );
             }
@@ -459,13 +508,13 @@ where
             }
         };
 
-        debug!("SETUP handle_clear_feature()");
+        trace!("SETUP setup_clear_feature()");
 
         Ok(())
     }
 
-    fn handle_set_feature(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
-        debug!("SETUP handle_set_feature()");
+    fn setup_set_feature(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
+        trace!("SETUP setup_set_feature()");
 
         // parse request
         let recipient = setup_packet.recipient();
@@ -496,6 +545,9 @@ where
         Ok(())
     }
 }
+
+// Helpers
+impl<'a, D, const MAX_RECEIVE_SIZE: usize> UsbDevice<'a, D, MAX_RECEIVE_SIZE> where D: UsbDriver {}
 
 /*
 # Reference enumeration process (quirks merged from Linux, macOS, and Windows):
