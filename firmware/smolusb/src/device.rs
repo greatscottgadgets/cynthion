@@ -48,10 +48,11 @@ impl From<u8> for Speed {
 /// USB device state
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum DeviceState {
+    None,
     Reset,
-    Address,
+    Addressed,
     Configured,
-    Suspend,
+    Suspended, // TODO first need to add suspend signal to eptri
 }
 
 /// A USB device
@@ -78,8 +79,8 @@ pub struct UsbDevice<'a, D, const MAX_RECEIVE_SIZE: usize> {
 
     pub state: RefCell<DeviceState>,
     pub current_configuration: AtomicU8,
-    pub reset_count: usize,
     pub feature_remote_wakeup: bool,
+    pub quirk_set_address_before_status: bool,
 
     pub cb_class_request: Option<
         fn(device: &UsbDevice<'a, D, MAX_RECEIVE_SIZE>, setup_packet: &SetupPacket, request: u8),
@@ -120,10 +121,10 @@ where
 
             control: Control::new(),
 
-            state: DeviceState::Reset.into(),
+            state: DeviceState::None.into(),
             current_configuration: 0.into(),
-            reset_count: 0,
             feature_remote_wakeup: false,
+            quirk_set_address_before_status: false,
 
             cb_class_request: None,
             cb_vendor_request: None,
@@ -169,14 +170,12 @@ where
 
     pub fn reset(&self) -> Speed {
         let speed = self.hal_driver.reset().into();
-        // TODO self.reset_count += 1;
         self.state.replace(DeviceState::Reset.into());
         speed
     }
 
     pub fn bus_reset(&self) -> Speed {
         let speed = self.hal_driver.bus_reset().into();
-        // TODO self.reset_count += 1;
         self.state.replace(DeviceState::Reset.into());
         speed
     }
@@ -304,33 +303,44 @@ where
         Ok(None)
     }
 
-    // TODO move tx_ack_active flag logic to hal_driver
+    // TODO move tx_ack_active flag logic to control.rs
     fn setup_set_address(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
-        // set tx_ack_active flag
-        // TODO a slighty safer approach would be nice
-        unsafe {
-            self.hal_driver.set_tx_ack_active();
-        }
 
-        // respond with ack status first before changing device address
-        //self.hal_driver.ack_status_stage(setup_packet);
-        self.hal_driver.ack(0, Direction::HostToDevice);
-
-        // wait for the response packet to get sent
-        // TODO a slightly safer approach would be nice
-        loop {
-            let active = unsafe { self.hal_driver.is_tx_ack_active() };
-            if active == false {
-                break;
-            }
-        }
-
-        // activate new address
         let address: u8 = (setup_packet.value & 0x7f) as u8;
-        self.hal_driver.set_address(address);
-        self.state.replace(DeviceState::Address.into());
 
-        trace!(
+        if self.quirk_set_address_before_status {
+            // activate new address
+            self.hal_driver.set_address(address);
+            self.state.replace(DeviceState::Addressed.into());
+
+            // ack status
+            self.hal_driver.ack(0, Direction::HostToDevice);
+
+        } else {
+            // set tx_ack_active flag
+            // TODO a slighty safer approach would be nice
+            unsafe {
+                self.hal_driver.set_tx_ack_active();
+            }
+
+            // respond with ack status first before changing device address
+            self.hal_driver.ack(0, Direction::HostToDevice);
+
+            // wait for the response packet to get sent
+            // TODO a slightly safer approach would be nice
+            loop {
+                let active = unsafe { self.hal_driver.is_tx_ack_active() };
+                if active == false {
+                    break;
+                }
+            }
+
+            // activate new address
+            self.hal_driver.set_address(address);
+            self.state.replace(DeviceState::Addressed.into());
+        }
+
+        debug!(
             "SETUP setup_set_address() address:{} ({})",
             setup_packet.value,
             address
