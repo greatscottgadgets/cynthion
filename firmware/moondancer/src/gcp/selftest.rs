@@ -56,13 +56,13 @@ pub fn test_error_return_code<'a>(
 
 // - dispatch -----------------------------------------------------------------
 
-use libgreat::gcp::{iter_to_response, GcpResponse, GCP_MAX_RESPONSE_LENGTH};
+use libgreat::gcp::{iter_to_response, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
 
 pub fn dispatch(
     verb_number: u32,
     arguments: &[u8],
-    response_buffer: [u8; GCP_MAX_RESPONSE_LENGTH],
-) -> GreatResult<GcpResponse> {
+    response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE],
+) -> GreatResult<GreatResponse> {
     let no_context: Option<u8> = None;
 
     match verb_number {

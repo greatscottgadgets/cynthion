@@ -9,8 +9,24 @@ from ..board import CynthionBoard
 class CynthionMoondancer(CynthionBoard):
     """ Class representing Cynthion base-boards running the Moondancer firmware. """
 
-    # Currently, all Cynthion Moondancer boards have an ID of one.
+    # This field refers to the USB device version number
+    #
+    # digit 1:   major
+    # digit 2:   minor
+    # digit 3&4: patch version
+    HANDLED_BOARD_VERSIONS = [
+        0x0004, # r0.4
+        0x0005, # r0.5
+        0x0006, # r0.6
+        0x0007, # r0.7
+        0x1000, # r1.0.0
+        0x1100, # r1.1.0
+        0x1101, # r1.1.1
+    ]
+
+    # Currently, all Cynthion Moondancer boards have an ID of 0x10.
     HANDLED_BOARD_IDS = [0x10]
+
     BOARD_NAME = "Cynthion in Moondancer mode"
 
     # The Cynthion has six LEDs.
@@ -30,7 +46,8 @@ class CynthionMoondancer(CynthionBoard):
         # Create our simple peripherals.
         self._populate_simple_interfaces()
 
-        # Initialize the fixed peripherals that come on the board.
+        # Initialize the fixed peripherals that come on the board...
+
         # Populate the per-board GPIO.
         if self.supports_api("gpio"):
             self._populate_gpio()

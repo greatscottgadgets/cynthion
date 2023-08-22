@@ -16,10 +16,10 @@ fn main() -> ! {
     let uart = &peripherals.UART;
 
     // configure and enable timer
+    timer.reload.write(|w| unsafe { w.reload().bits(0) });
     timer
-        .reload
-        .write(|w| unsafe { w.reload().bits(0) });
-    timer.ctr.write(|w| unsafe { w.ctr().bits(pac::clock::sysclk() / 2) });
+        .ctr
+        .write(|w| unsafe { w.ctr().bits(pac::clock::sysclk() / 2) });
     timer.en.write(|w| w.en().bit(true));
 
     // enable timer events

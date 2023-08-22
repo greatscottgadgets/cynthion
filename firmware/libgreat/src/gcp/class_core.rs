@@ -280,7 +280,7 @@ impl Core {
 
 // - dispatch -----------------------------------------------------------------
 
-use crate::gcp::{iter_to_response, GcpResponse, GCP_MAX_RESPONSE_LENGTH};
+use crate::gcp::{iter_to_response, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
 
 use core::{array, iter};
 
@@ -289,8 +289,8 @@ impl Core {
         &self,
         verb_number: u32,
         arguments: &[u8],
-        response_buffer: [u8; GCP_MAX_RESPONSE_LENGTH],
-    ) -> GreatResult<GcpResponse> {
+        response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE],
+    ) -> GreatResult<GreatResponse> {
         match verb_number {
             0x0 => {
                 // core::read_board_id

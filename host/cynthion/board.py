@@ -16,10 +16,24 @@ from .interfaces.gpio import GPIO
 
 # Default device identifiers.
 #
-#   CONTROL - apollo:     0x1d50/0x615c
-#   AUX     - moondancer: 0x1d50/0x60e6 (same as greatfet)
-CYNTHION_VENDOR_ID = 0x1d50
-CYNTHION_PRODUCT_ID = 0x60e6 # TODO give cynthion moondancer firmware its own usb product id
+#   CONTROL - 0x1d50/0x615c Apollo FPGA Programmer
+#   AUX     - 0x1d50/0x615b LUNA USB Multitool
+CYNTHION_VENDOR_ID  = 0x1d50 # OpenMoko, Inc.
+CYNTHION_PRODUCT_ID = 0x615b # Cynthion USB Multitool
+
+# libgreat backend interface subclass TODO document
+#
+# 0x00       - Apollo / Flash Bridge Interface
+# 0x01..0x0f - Reserved
+# 0x10       - Analyzer
+# 0x11       - Moondancer
+LIBGREAT_INTERFACE_SUBCLASS = 0x11
+
+# libgreat backend interface protocol version TODO document
+#
+# 0x01 -> v0.1
+# 0x10 -> v1.0
+LIBGREAT_INTERFACE_PROTOCOL = 0x01
 
 # Quirk constant that helps us identify libusb's pipe errors, which bubble
 # up as generic USBErrors with errno 32 on affected platforms.
@@ -57,13 +71,18 @@ class CynthionBoard(GreatBoard):
         # TODO 'gpio': ('gpio', GPIO),
     }
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, **device_identifiers):
         """ Initialize a new CynthionBoard instance with our additional properties. """
 
         # Create a new list of interfaces and programmers.
         self._interfaces = []
         self._instantiated_programmers = WeakSet()
-        super(CynthionBoard, self).__init__(*args, **kwargs)
+
+        # Add libgreat usb interface protocol to device identifiers.
+        device_identifiers['interface_subclass'] = LIBGREAT_INTERFACE_SUBCLASS
+        device_identifiers['interface_protocol'] = LIBGREAT_INTERFACE_PROTOCOL
+
+        super(CynthionBoard, self).__init__(*args, **device_identifiers)
 
 
     def available_interfaces(self):

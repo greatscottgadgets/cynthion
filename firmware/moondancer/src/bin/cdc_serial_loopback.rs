@@ -1,20 +1,23 @@
 #![no_std]
 #![no_main]
 
-use moondancer::pac;
-use pac::csr::interrupt;
-
-use moondancer::hal;
+use log::{debug, error, info, warn};
 
 use smolusb::class::cdc;
-use smolusb::control::SetupPacket;
 use smolusb::device::{Speed, UsbDevice};
+use smolusb::event::UsbEvent;
+use smolusb::setup::SetupPacket;
 use smolusb::traits::{
-    ControlRead, EndpointRead, EndpointWrite, EndpointWriteRef, UnsafeUsbDriverOperations,
-    UsbDriverOperations,
+    ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
+    WriteRefEndpoint,
 };
 
-use log::{debug, error, info, trace};
+use moondancer::{hal, pac};
+use pac::csr::interrupt;
+
+// - constants ----------------------------------------------------------------
+
+const MAX_CONTROL_RESPONSE_SIZE: usize = 8;
 
 // - types --------------------------------------------------------------------
 
@@ -30,18 +33,18 @@ pub struct UsbDataPacket {
 // - global static state ------------------------------------------------------
 
 use heapless::mpmc::MpMcQueue as Queue;
-use moondancer::InterruptEvent;
+use moondancer::event::InterruptEvent;
 
-static MESSAGE_QUEUE: Queue<InterruptEvent, { moondancer::EP_MAX_ENDPOINTS }> = Queue::new();
+static EVENT_QUEUE: Queue<InterruptEvent, { moondancer::EP_MAX_ENDPOINTS }> = Queue::new();
 static USB_RECEIVE_PACKET_QUEUE: Queue<UsbDataPacket, { moondancer::EP_MAX_ENDPOINTS }> =
     Queue::new();
 
 #[inline(always)]
-fn dispatch_message(message: InterruptEvent) {
-    match MESSAGE_QUEUE.enqueue(message) {
+fn dispatch_event(event: InterruptEvent) {
+    match EVENT_QUEUE.enqueue(event) {
         Ok(()) => (),
         Err(_) => {
-            error!("MachineExternal - message queue overflow");
+            error!("MachineExternal - event queue overflow");
         }
     }
 }
@@ -78,27 +81,20 @@ fn MachineExternal() {
     if usb0.is_pending(pac::Interrupt::USB0) {
         usb0.clear_pending(pac::Interrupt::USB0);
         usb0.bus_reset();
-        dispatch_message(InterruptEvent::Event(pac::Interrupt::USB0));
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         let endpoint = usb0.ep_control.epno.read().bits() as u8;
-        let mut buffer = [0_u8; 8];
-        usb0.read_control(&mut buffer);
-        let setup_packet = match SetupPacket::try_from(buffer) {
-            Ok(packet) => packet,
-            Err(e) => {
-                error!("MachineExternal USB0_EP_CONTROL - {:?}", e);
-                return;
-            }
-        };
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-        dispatch_message(InterruptEvent::UsbReceiveSetupPacket(Target, endpoint, setup_packet));
+        dispatch_event(InterruptEvent::Usb(
+            Target,
+            UsbEvent::ReceiveSetupPacket(endpoint),
+        ));
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
         usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
         // TODO something a little bit safer would be nice
         unsafe {
             usb0.clear_tx_ack_active();
         }
-        dispatch_message(InterruptEvent::Event(pac::Interrupt::USB0_EP_IN));
+        dispatch_event(InterruptEvent::Interrupt(pac::Interrupt::USB0_EP_IN));
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
         // read data from endpoint
         let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
@@ -120,27 +116,20 @@ fn MachineExternal() {
     } else if usb1.is_pending(pac::Interrupt::USB1) {
         usb1.clear_pending(pac::Interrupt::USB1);
         usb1.bus_reset();
-        dispatch_message(InterruptEvent::Event(pac::Interrupt::USB1));
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
         let endpoint = usb1.ep_control.epno.read().bits() as u8;
-        let mut buffer = [0_u8; 8];
-        usb1.read_control(&mut buffer);
-        let setup_packet = match SetupPacket::try_from(buffer) {
-            Ok(packet) => packet,
-            Err(e) => {
-                error!("MachineExternal USB1_EP_CONTROL - {:?}", e);
-                return;
-            }
-        };
         usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
-        dispatch_message(InterruptEvent::UsbReceiveSetupPacket(Aux, endpoint, setup_packet));
+        dispatch_event(InterruptEvent::Usb(
+            Aux,
+            UsbEvent::ReceiveSetupPacket(endpoint),
+        ));
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
         usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
         // TODO something a little bit safer would be nice
         unsafe {
             usb1.clear_tx_ack_active();
         }
-        dispatch_message(InterruptEvent::Event(pac::Interrupt::USB1_EP_IN));
+        dispatch_event(InterruptEvent::Interrupt(pac::Interrupt::USB1_EP_IN));
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_OUT) {
         // read data from endpoint
         let endpoint = usb1.ep_out.data_ep.read().bits() as u8;
@@ -160,7 +149,7 @@ fn MachineExternal() {
 
     // - Unknown Interrupt --
     } else {
-        dispatch_message(InterruptEvent::UnknownInterrupt(pending));
+        dispatch_event(InterruptEvent::UnknownInterrupt(pending));
     }
 }
 
@@ -186,40 +175,40 @@ fn main() -> ! {
     info!("logging initialized");
 
     // usb0: Target
-    let mut usb0 = UsbDevice::new(
+    let mut usb0 = UsbDevice::<_, MAX_CONTROL_RESPONSE_SIZE>::new(
         hal::Usb0::new(
             peripherals.USB0,
             peripherals.USB0_EP_CONTROL,
             peripherals.USB0_EP_IN,
             peripherals.USB0_EP_OUT,
         ),
-        &cdc::DEVICE_DESCRIPTOR,
-        &cdc::CONFIGURATION_DESCRIPTOR_0,
-        &cdc::USB_STRING_DESCRIPTOR_0,
-        &cdc::USB_STRING_DESCRIPTORS,
+        cdc::DEVICE_DESCRIPTOR,
+        cdc::CONFIGURATION_DESCRIPTOR_0,
+        cdc::USB_STRING_DESCRIPTOR_0,
+        cdc::USB_STRING_DESCRIPTORS,
     );
-    usb0.device_qualifier_descriptor = Some(&cdc::DEVICE_QUALIFIER_DESCRIPTOR);
-    usb0.other_speed_configuration_descriptor = Some(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
+    usb0.set_device_qualifier_descriptor(cdc::DEVICE_QUALIFIER_DESCRIPTOR);
+    usb0.set_other_speed_configuration_descriptor(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
     usb0.cb_vendor_request = Some(handle_vendor_request);
     usb0.cb_string_request = Some(handle_string_request);
     let speed = usb0.connect();
     info!("Connected USB0 device: {:?}", Speed::from(speed));
 
     // usb1: Aux
-    let mut usb1 = UsbDevice::new(
+    let mut usb1 = UsbDevice::<_, MAX_CONTROL_RESPONSE_SIZE>::new(
         hal::Usb1::new(
             peripherals.USB1,
             peripherals.USB1_EP_CONTROL,
             peripherals.USB1_EP_IN,
             peripherals.USB1_EP_OUT,
         ),
-        &cdc::DEVICE_DESCRIPTOR,
-        &cdc::CONFIGURATION_DESCRIPTOR_0,
-        &cdc::USB_STRING_DESCRIPTOR_0,
-        &cdc::USB_STRING_DESCRIPTORS,
+        cdc::DEVICE_DESCRIPTOR,
+        cdc::CONFIGURATION_DESCRIPTOR_0,
+        cdc::USB_STRING_DESCRIPTOR_0,
+        cdc::USB_STRING_DESCRIPTORS,
     );
-    usb1.device_qualifier_descriptor = Some(&cdc::DEVICE_QUALIFIER_DESCRIPTOR);
-    usb1.other_speed_configuration_descriptor = Some(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
+    usb1.set_device_qualifier_descriptor(cdc::DEVICE_QUALIFIER_DESCRIPTOR);
+    usb1.set_other_speed_configuration_descriptor(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
     usb1.cb_vendor_request = Some(handle_vendor_request);
     usb1.cb_string_request = Some(handle_string_request);
     let speed = usb1.connect();
@@ -302,32 +291,50 @@ fn main() -> ! {
             }
         }
 
-        if let Some(message) = MESSAGE_QUEUE.dequeue() {
+        if let Some(event) = EVENT_QUEUE.dequeue() {
+            use moondancer::event::InterruptEvent::Usb;
             use moondancer::UsbInterface::{Aux, Target};
+            use smolusb::event::UsbEvent::*;
 
-            match message {
-                // usb0 message handlers
-                InterruptEvent::UsbReceiveSetupPacket(Target, endpoint_number, packet) => {
-                    match usb0.handle_setup_request(endpoint_number, &packet) {
-                        Ok(()) => (),
-                        Err(e) => error!("  usb0 handle_setup_request: {:?}: {:?}", e, packet),
+            match event {
+                // Usb0 received a control event
+                Usb(Target, event @ BusReset)
+                | Usb(Target, event @ ReceiveSetupPacket(0))
+                | Usb(Target, event @ ReceivePacket(0))
+                | Usb(Target, event @ SendComplete(0)) => {
+                    debug!("\n\nUsb(Target, {:?})", event);
+                    match usb0.dispatch_control(event) {
+                        Ok(Some(control_event)) => {
+                            // handle any events control couldn't
+                            warn!("Unhandled control event on Target: {:?}", control_event);
+                        }
+                        Ok(None) => {
+                            // control event was handled by UsbDevice
+                        }
+                        Err(e) => {
+                            error!("Error handling control event on Target: {:?}", e);
+                        }
                     }
                 }
-                // usb1 message handlers
-                InterruptEvent::UsbReceiveSetupPacket(Aux, endpoint_number, packet) => {
-                    match usb1.handle_setup_request(endpoint_number, &packet) {
-                        Ok(()) => (),
-                        Err(e) => error!("  usb1 handle_setup_request: {:?}: {:?}", e, packet),
-                    }
-                }
 
-                // usb0 interrupts
-                InterruptEvent::Event(pac::Interrupt::USB0) => {
-                    trace!("MachineExternal - USB0");
-                }
-                // usb1 interrupts
-                InterruptEvent::Event(pac::Interrupt::USB1) => {
-                    trace!("MachineExternal - USB1");
+                // Usb1 received a control event
+                Usb(Aux, event @ BusReset)
+                | Usb(Aux, event @ ReceiveSetupPacket(0))
+                | Usb(Aux, event @ ReceivePacket(0))
+                | Usb(Aux, event @ SendComplete(0)) => {
+                    debug!("\n\nUsb(Aux, {:?})", event);
+                    match usb1.dispatch_control(event) {
+                        Ok(Some(control_event)) => {
+                            // handle any events control couldn't
+                            warn!("Unhandled control event on Aux: {:?}", control_event);
+                        }
+                        Ok(None) => {
+                            // control event was handled by UsbDevice
+                        }
+                        Err(e) => {
+                            error!("Error handling control event on Aux: {:?}", e);
+                        }
+                    }
                 }
 
                 // unhandled
@@ -339,9 +346,12 @@ fn main() -> ! {
 
 // - vendor request handlers --------------------------------------------------
 
-fn handle_vendor_request<'a, D>(device: &UsbDevice<'a, D>, _setup_packet: &SetupPacket, request: u8)
-where
-    D: ControlRead + EndpointRead + EndpointWrite + EndpointWriteRef + UsbDriverOperations,
+fn handle_vendor_request<'a, D>(
+    device: &UsbDevice<'a, D, MAX_CONTROL_RESPONSE_SIZE>,
+    _setup_packet: &SetupPacket,
+    request: u8,
+) where
+    D: ReadControl + ReadEndpoint + WriteEndpoint + WriteRefEndpoint + UsbDriverOperations,
 {
     let request = cdc::ch34x::VendorRequest::from(request);
     debug!("  CDC-SERIAL vendor_request: {:?}", request);
@@ -350,9 +360,12 @@ where
     device.hal_driver.write(0, [0, 0].into_iter());
 }
 
-fn handle_string_request<'a, D>(device: &UsbDevice<'a, D>, _setup_packet: &SetupPacket, index: u8)
-where
-    D: ControlRead + EndpointRead + EndpointWrite + EndpointWriteRef + UsbDriverOperations,
+fn handle_string_request<'a, D>(
+    device: &UsbDevice<'a, D, MAX_CONTROL_RESPONSE_SIZE>,
+    _setup_packet: &SetupPacket,
+    index: u8,
+) where
+    D: ReadControl + ReadEndpoint + WriteEndpoint + WriteRefEndpoint + UsbDriverOperations,
 {
     debug!("  CDC-SERIAL string_request: {}", index);
 

@@ -10,6 +10,9 @@ use zerocopy::{
     Unaligned, U16, U32,
 };
 
+/// Maximum length of a libgreat command or response
+pub const LIBGREAT_MAX_COMMAND_SIZE: usize = 1024;
+
 /// CommandPrelude
 #[repr(C)]
 #[derive(Debug, FromBytes, AsBytes, Unaligned)]
@@ -57,17 +60,12 @@ where
 
 // - helpers ------------------------------------------------------------------
 
-// TODO get rid of this
-pub const GCP_MAX_RESPONSE_LENGTH: usize = 512;
+pub type GreatResponse<'a> = core::iter::Take<core::array::IntoIter<u8, LIBGREAT_MAX_COMMAND_SIZE>>;
 
-pub type GcpResponse<'a> = core::iter::Take<core::array::IntoIter<u8, GCP_MAX_RESPONSE_LENGTH>>;
-//type GcpResponse<'a> = iter::Take<core::slice::IterMut<'a, u8>>;
-
-// TODO an ugly hack to tide us over while I try abstain from digging a deeper hole
 pub unsafe fn iter_to_response<'a>(
     iter: impl Iterator<Item = u8>,
-    mut response: [u8; GCP_MAX_RESPONSE_LENGTH],
-) -> GcpResponse<'a> {
+    mut response: [u8; LIBGREAT_MAX_COMMAND_SIZE],
+) -> GreatResponse<'a> {
     let mut length = 0;
     for (ret, src) in response.iter_mut().zip(iter) {
         *ret = src;
@@ -78,9 +76,9 @@ pub unsafe fn iter_to_response<'a>(
 /*
 unsafe fn iter_ref_to_response<'a>(
     iter: impl Iterator<Item = &'a u8>,
-    _response: &mut [u8; GCP_MAX_RESPONSE_LENGTH],
-) -> GcpResponse {
-    let mut response: [u8; GCP_MAX_RESPONSE_LENGTH] = [0; GCP_MAX_RESPONSE_LENGTH];
+    _response: &mut [u8; LIBGREAT_MAX_COMMAND_SIZE],
+) -> GreatResponse {
+    let mut response: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
     let mut length = 0;
     for (ret, src) in response.iter_mut().zip(iter) {
         *ret = *src;
@@ -287,7 +285,7 @@ mod tests {
         let command = Command::parse(&COMMAND_READ_BOARD_ID[..]).expect("failed parsing command");
         println!("\ntest_dispatch_read_board_id: {:?}", command);
 
-        let response_buffer = [0_u8; GCP_MAX_RESPONSE_LENGTH];
+        let response_buffer = [0_u8; LIBGREAT_MAX_COMMAND_SIZE];
         let response = core
             .dispatch(command.verb_number(), &command.arguments, response_buffer)
             .expect("failed dispatch");
@@ -308,7 +306,7 @@ mod tests {
             Command::parse(&COMMAND_GET_VERB_DESCRIPTOR[..]).expect("failed parsing command");
         println!("\ntest_dispatch_get_verb_descriptor: {:?}", command);
 
-        let response_buffer = [0_u8; GCP_MAX_RESPONSE_LENGTH];
+        let response_buffer = [0_u8; LIBGREAT_MAX_COMMAND_SIZE];
         let response = core
             .dispatch(command.verb_number(), &command.arguments, response_buffer)
             .expect("failed dispatch");

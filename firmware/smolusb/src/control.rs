@@ -1,189 +1,276 @@
-///! Types for working with the SETUP packet.
-use crate::error::SmolError;
+#![allow(dead_code, unused_imports, unused_variables)] // TODO
 
-// - SetupPacket --------------------------------------------------------------
+///! USB control interface
+use log::{debug, error, trace};
 
-#[repr(C)]
-#[derive(Clone, Copy, Default, Debug)]
-pub struct SetupPacket {
-    // 0..4 Recipient: 0=Device, 1=Interface, 2=Endpoint, 3=Other, 4-31=Reserved
-    // 5..6 Type: 0=Standard, 1=Class, 2=Vendor, 3=Reserved
-    // 7    Data Phase Transfer Direction: 0=Host to Device, 1=Device to Host
-    pub request_type: u8,
-    // values 0..=9 are standard, others are class or vendor
-    pub request: u8,
-    pub value: u16,
-    pub index: u16,
-    pub length: u16,
+use crate::error::{SmolError, SmolResult};
+use crate::event::UsbEvent;
+use crate::setup::{Direction, SetupPacket};
+use crate::traits::UsbDriver;
+
+/// Represents USB control transfer state.
+#[derive(Debug)]
+pub enum State {
+    Idle,
+
+    SetupStage,
+
+    OutDataStage(SetupPacket),
+
+    InDataStage,
+
+    /// Error(endpoint_number: u8)
+    Error(u8),
 }
 
-// TODO TryFrom -> From
-impl TryFrom<[u8; 8]> for SetupPacket {
-    type Error = SmolError;
+/// Performs USB control transfers.
+pub struct Control<'a, D, const MAX_RECEIVE_SIZE: usize> {
+    state: State,
+    rx_buffer: [u8; MAX_RECEIVE_SIZE],
+    rx_buffer_position: usize,
 
-    fn try_from(buffer: [u8; 8]) -> core::result::Result<Self, Self::Error> {
-        // Deserialize into a SetupRequest in the most cursed manner available to us
-        // TODO do this properly
-        Ok(unsafe { core::mem::transmute::<[u8; 8], SetupPacket>(buffer) })
-    }
+    //driver: &'a D,
+    _marker: core::marker::PhantomData<&'a D>,
 }
 
-// TODO use impl From and same semantics as InterruptEvent conversion
-impl SetupPacket {
-    pub fn as_bytes(setup_packet: SetupPacket) -> [u8; 8] {
-        // Serialize into bytes in the most cursed manner available to us
-        // TODO do this properly
-        unsafe { core::mem::transmute::<SetupPacket, [u8; 8]>(setup_packet) }
-    }
-}
+impl<'a, D, const MAX_RECEIVE_SIZE: usize> Control<'a, D, MAX_RECEIVE_SIZE>
+where
+    D: UsbDriver,
+{
+    pub fn new() -> Self {
+        Self {
+            //driver: driver,
+            state: State::Idle,
+            _marker: core::marker::PhantomData,
 
-impl SetupPacket {
-    pub fn request_type(&self) -> RequestType {
-        RequestType::from(self.request_type)
-    }
-
-    pub fn recipient(&self) -> Recipient {
-        Recipient::from(self.request_type)
-    }
-
-    pub fn direction(&self) -> Direction {
-        Direction::from(self.request_type)
-    }
-
-    pub fn request(&self) -> Request {
-        Request::from(self.request)
-    }
-}
-
-// - SetupPacket.request_type -------------------------------------------------
-
-#[derive(Debug, PartialEq)]
-#[repr(u8)]
-pub enum Recipient {
-    Device = 0,
-    Interface = 1,
-    Endpoint = 2,
-    Other = 3,
-    Reserved = 4,
-}
-
-impl From<u8> for Recipient {
-    fn from(value: u8) -> Self {
-        match value & 0b0001_1111 {
-            0 => Recipient::Device,
-            1 => Recipient::Interface,
-            2 => Recipient::Endpoint,
-            3 => Recipient::Other,
-            4..=u8::MAX => Recipient::Reserved,
+            rx_buffer: [0; MAX_RECEIVE_SIZE],
+            rx_buffer_position: 0,
         }
     }
 }
 
-#[derive(Debug, PartialEq)]
-#[repr(u8)]
-pub enum RequestType {
-    Standard = 0,
-    Class = 1,
-    Vendor = 2,
-    Reserved = 3,
+// - event dispatch -----------------------------------------------------------
+
+pub struct ControlEvent<'a, const MAX_RECEIVE_SIZE: usize> {
+    pub endpoint_number: u8,
+    pub setup_packet: SetupPacket,
+    pub data: [u8; MAX_RECEIVE_SIZE],
+    pub bytes_read: usize,
+    pub _marker: core::marker::PhantomData<&'a ()>,
 }
 
-impl From<u8> for RequestType {
-    fn from(value: u8) -> Self {
-        match (value >> 5) & 0b0000_0011 {
-            0 => RequestType::Standard,
-            1 => RequestType::Class,
-            2 => RequestType::Vendor,
-            3..=u8::MAX => RequestType::Reserved,
-        }
+impl<'a, const MAX_RECEIVE_SIZE: usize> core::fmt::Debug for ControlEvent<'a, MAX_RECEIVE_SIZE> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(
+            f,
+            "ControlResponse {{ endpoint_number: {}, setup_packet: {:?}, data: {:?} }}",
+            self.endpoint_number,
+            self.setup_packet,
+            &self.data[..self.bytes_read]
+        )
     }
 }
 
-/// USB traffic direction
-#[derive(Debug, PartialEq)]
-#[repr(u8)]
-pub enum Direction {
-    /// Host to device (OUT)
-    HostToDevice = 0x00,
-    /// Device to host (IN)
-    DeviceToHost = 0x80, // 0b1000_0000,
-}
+impl<'a, D, const MAX_RECEIVE_SIZE: usize> Control<'a, D, MAX_RECEIVE_SIZE>
+where
+    D: UsbDriver,
+{
+    pub fn dispatch(
+        &mut self,
+        driver: &D,
+        event: UsbEvent,
+    ) -> SmolResult<Option<ControlEvent<'a, MAX_RECEIVE_SIZE>>> {
+        trace!("CONTROL dispatch({:?})", event);
 
-impl From<u8> for Direction {
-    fn from(request_type: u8) -> Self {
-        match (request_type & 0b1000_0000) == 0 {
-            true => Direction::HostToDevice,
-            false => Direction::DeviceToHost,
+        match event {
+            UsbEvent::BusReset => {
+                self.handle_usb_bus_reset(driver)?;
+                Ok(None)
+            }
+            UsbEvent::ReceiveSetupPacket(endpoint_number) => {
+                match self.handle_receive_setup_packet(driver, endpoint_number)? {
+                    Some(setup_packet) => Ok(Some(ControlEvent {
+                        endpoint_number,
+                        setup_packet,
+                        data: self.rx_buffer,
+                        bytes_read: 0,
+                        _marker: core::marker::PhantomData,
+                    })),
+                    None => Ok(None),
+                }
+            }
+            UsbEvent::ReceivePacket(endpoint_number) => {
+                match self.handle_receive_packet(driver, endpoint_number)? {
+                    Some((setup_packet, data)) => {
+                        let bytes_read = data.len();
+                        Ok(Some(ControlEvent {
+                            endpoint_number,
+                            setup_packet,
+                            data: self.rx_buffer,
+                            bytes_read,
+                            _marker: core::marker::PhantomData,
+                        }))
+                    }
+                    None => Ok(None),
+                }
+            }
+            UsbEvent::SendComplete(endpoint_number) => {
+                self.handle_send_complete(driver, endpoint_number)?;
+                Ok(None)
+            }
         }
     }
-}
 
-impl Direction {
-    pub fn from_endpoint_address(endpoint_address: u8) -> Self {
-        match (endpoint_address & 0b10000000) == 0 {
-            true => Direction::HostToDevice,
-            false => Direction::DeviceToHost,
-        }
+    pub fn foo(&'a mut self) -> &'a [u8] {
+        &self.rx_buffer
     }
-}
 
-// - SetupPacket.request ------------------------------------------------------
-
-#[derive(Debug, PartialEq)]
-#[repr(u8)]
-pub enum Request {
-    GetStatus = 0,
-    ClearFeature = 1,
-    SetFeature = 3,
-    SetAddress = 5,
-    GetDescriptor = 6,
-    SetDescriptor = 7,
-    GetConfiguration = 8,
-    SetConfiguration = 9,
-    GetInterface = 10,
-    SetInterface = 11,
-    SynchronizeFrame = 12,
-    ClassOrVendor(u8),
-    Reserved(u8),
-}
-
-impl From<u8> for Request {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => Request::GetStatus,
-            1 => Request::ClearFeature,
-            2 => Request::Reserved(2),
-            3 => Request::SetFeature,
-            4 => Request::Reserved(4),
-            5 => Request::SetAddress,
-            6 => Request::GetDescriptor,
-            7 => Request::SetDescriptor,
-            8 => Request::GetConfiguration,
-            9 => Request::SetConfiguration,
-            10 => Request::GetInterface,
-            11 => Request::SetInterface,
-            12 => Request::SynchronizeFrame,
-            13..=u8::MAX => Request::ClassOrVendor(value),
-        }
+    // USBx
+    pub fn handle_usb_bus_reset(&self, driver: &D) -> SmolResult<()> {
+        trace!("CONTROL handle_usb_bus_reset");
+        driver.bus_reset();
+        Ok(())
     }
-}
 
-#[derive(Debug, PartialEq)]
-#[repr(u8)]
-pub enum Feature {
-    EndpointHalt = 0,
-    DeviceRemoteWakeup = 1,
-}
-
-impl TryFrom<u16> for Feature {
-    type Error = SmolError;
-
-    fn try_from(value: u16) -> core::result::Result<Self, Self::Error> {
-        let result = match value {
-            0 => Feature::EndpointHalt,
-            1 => Feature::DeviceRemoteWakeup,
-            _ => return Err(SmolError::FailedConversion),
+    // USBx_EP_CONTROL n
+    pub fn handle_receive_setup_packet(
+        &mut self,
+        driver: &D,
+        endpoint_number: u8,
+    ) -> SmolResult<Option<SetupPacket>> {
+        let mut buffer = [0_u8; 8];
+        let _bytes_read = driver.read_control(&mut buffer);
+        let setup_packet = match SetupPacket::try_from(buffer) {
+            Ok(setup_packet) => setup_packet,
+            Err(e) => {
+                // ignore invalid setup packet, the host will resend it after a short delay
+                error!(
+                    "CONTROL handle_receive_setup_packet received invalid setup_packet: {:?}",
+                    e
+                );
+                // TODO return error
+                return Ok(None);
+            }
         };
-        Ok(result)
+        let direction = setup_packet.direction();
+        let length: usize = setup_packet.length as usize;
+
+        self.state = State::SetupStage;
+
+        trace!("CONTROL handle_receive_setup_packet(endpoint_number: {}) state:{:?} direction:{:?} length:{}",
+               endpoint_number, self.state, direction, length);
+
+        // make sure endpoint is not stalled
+        driver.unstall_endpoint_out(endpoint_number);
+
+        // OUT transfer
+        if direction == Direction::HostToDevice {
+            trace!("  OUT {} bytes", length);
+
+            if length > MAX_RECEIVE_SIZE {
+                // has data stage, but too big too receive
+                error!("  data stage too big: {}", length);
+                self.set_error(driver, endpoint_number);
+                return Ok(None); // TODO return error
+            } else if length > 0 {
+                // has data stage
+                self.state = State::OutDataStage(setup_packet);
+                driver.ack(0, Direction::HostToDevice);
+                return Ok(None); // handle_receive_packet will return it
+            } else {
+                // no data stage, we're done
+                self.state = State::Idle;
+                return Ok(Some(setup_packet));
+            }
+
+        // IN transfer - ack ?
+        } else {
+            trace!("  IN {} bytes", length);
+
+            if length > 0 {
+                // has data stage
+                self.state = State::InDataStage;
+            } else {
+                // no data stage, we're done
+                self.state = State::Idle;
+            }
+
+            return Ok(Some(setup_packet));
+        }
+    }
+
+    // USBx_EP_OUT n
+    pub fn handle_receive_packet(
+        &mut self,
+        driver: &D,
+        endpoint_number: u8,
+    ) -> SmolResult<Option<(SetupPacket, &[u8])>> {
+        trace!(
+            "CONTROL handle_receive_packet(endpoint_number: {}) state:{:?}",
+            endpoint_number,
+            self.state
+        );
+
+        let offset = self.rx_buffer_position;
+        let bytes_read = driver.read(endpoint_number, &mut self.rx_buffer[offset..]);
+        driver.ep_out_prime_receive(endpoint_number);
+
+        trace!(
+            "  read {} bytes, buffer position: {}",
+            bytes_read,
+            offset + bytes_read
+        );
+        trace!("  {:?}", &self.rx_buffer[offset..offset + bytes_read]);
+
+        match self.state {
+            State::OutDataStage(setup_packet) => {
+                if bytes_read == 0 {
+                    trace!("  ACK TODO early abort bytes_read:{}", bytes_read);
+                }
+
+                let length = setup_packet.length as usize;
+
+                self.rx_buffer_position += bytes_read;
+                if self.rx_buffer_position >= length {
+                    self.rx_buffer_position = 0;
+                    self.state = State::Idle;
+                    return Ok(Some((setup_packet, &self.rx_buffer[..length])));
+                } else {
+                    // more data awaits
+                    return Ok(None);
+                }
+            }
+
+            // it's an ack
+            _ => {
+                trace!("  ACK bytes_read:{}", bytes_read);
+            }
+        }
+
+        Ok(None)
+    }
+
+    // USBx_EP_IN n
+    pub fn handle_send_complete(&mut self, driver: &D, endpoint_number: u8) -> SmolResult<()> {
+        trace!(
+            "CONTROL handle_send_complete(endpoint_number: {}) state:{:?}",
+            endpoint_number,
+            self.state
+        );
+
+        Ok(())
+    }
+}
+
+// - helpers ------------------------------------------------------------------
+
+impl<'a, D, const MAX_RECEIVE_SIZE: usize> Control<'a, D, MAX_RECEIVE_SIZE>
+where
+    D: UsbDriver,
+{
+    fn set_error(&mut self, driver: &D, endpoint_number: u8) {
+        self.state = State::Error(endpoint_number);
+        driver.stall_endpoint_out(endpoint_number);
+        driver.stall_endpoint_in(endpoint_number);
     }
 }

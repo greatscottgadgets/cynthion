@@ -1,30 +1,34 @@
 #![no_std]
 #![no_main]
 
-use moondancer::{hal, pac, InterruptEvent};
-
-use smolusb::control::SetupPacket;
-use smolusb::descriptor::*;
-use smolusb::device::UsbDevice;
-use smolusb::traits::{ControlRead, EndpointRead, UnsafeUsbDriverOperations, UsbDriverOperations};
+use heapless::mpmc::MpMcQueue as Queue;
+use log::{debug, error, info, warn};
 
 use libgreat::{GreatError, GreatResult};
 
-use heapless::mpmc::MpMcQueue as Queue;
+use smolusb::descriptor::*;
+use smolusb::device::UsbDevice;
+use smolusb::event::UsbEvent;
+use smolusb::traits::{ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations};
 
-use log::{debug, error, info};
+use moondancer::event::InterruptEvent;
+use moondancer::{hal, pac};
+
+// - constants ----------------------------------------------------------------
+
+const MAX_CONTROL_RESPONSE_SIZE: usize = 8;
 
 // - global static state ------------------------------------------------------
 
-static MESSAGE_QUEUE: Queue<InterruptEvent, 32> = Queue::new();
+static EVENT_QUEUE: Queue<InterruptEvent, 32> = Queue::new();
 
 #[inline(always)]
-fn dispatch_message(message: InterruptEvent) {
-    match MESSAGE_QUEUE.enqueue(message) {
+fn dispatch_event(event: InterruptEvent) {
+    match EVENT_QUEUE.enqueue(event) {
         Ok(()) => (),
         Err(_) => {
-            error!("MachineExternal - message queue overflow");
-            panic!("MachineExternal - message queue overflow");
+            error!("MachineExternal - event queue overflow");
+            panic!("MachineExternal - event queue overflow");
         }
     }
 }
@@ -44,20 +48,16 @@ fn MachineExternal() {
     if usb0.is_pending(pac::Interrupt::USB0) {
         usb0.clear_pending(pac::Interrupt::USB0);
         usb0.bus_reset();
-        dispatch_message(InterruptEvent::UsbBusReset(Target))
+        dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset))
 
     // USB0_EP_CONTROL UsbReceiveSetupPacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         let endpoint = usb0.ep_control.epno.read().bits() as u8;
-        let mut setup_packet_buffer = [0_u8; 8];
-        usb0.read_control(&mut setup_packet_buffer);
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-
-        let message = match SetupPacket::try_from(setup_packet_buffer) {
-            Ok(setup_packet) => InterruptEvent::UsbReceiveSetupPacket(Target, endpoint, setup_packet),
-            Err(_e) => InterruptEvent::ErrorMessage("USB0_EP_CONTROL failed to read setup packet"),
-        };
-        dispatch_message(message);
+        dispatch_event(InterruptEvent::Usb(
+            Target,
+            UsbEvent::ReceiveSetupPacket(endpoint),
+        ));
 
     // USB0_EP_OUT UsbReceiveData
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
@@ -74,10 +74,9 @@ fn MachineExternal() {
         }*/
 
         usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
-        dispatch_message(InterruptEvent::UsbReceivePacket(
-            moondancer::UsbInterface::Target,
-            endpoint,
-            0,
+        dispatch_event(InterruptEvent::Usb(
+            Target,
+            UsbEvent::ReceivePacket(endpoint),
         ));
 
     // USB0_EP_IN UsbTransferComplete
@@ -90,12 +89,15 @@ fn MachineExternal() {
             usb0.clear_tx_ack_active();
         }
 
-        dispatch_message(InterruptEvent::UsbSendComplete(Target, endpoint));
+        dispatch_event(InterruptEvent::Usb(
+            Target,
+            UsbEvent::SendComplete(endpoint),
+        ));
 
     // - Unknown Interrupt --
     } else {
         let pending = pac::csr::interrupt::reg_pending();
-        dispatch_message(InterruptEvent::UnknownInterrupt(pending));
+        dispatch_event(InterruptEvent::UnknownInterrupt(pending));
     }
 }
 
@@ -134,20 +136,20 @@ fn main_loop() -> GreatResult<()> {
     info!("Logging initialized");
 
     // usb0: Target
-    let mut usb0 = UsbDevice::new(
+    let mut usb0 = UsbDevice::<_, MAX_CONTROL_RESPONSE_SIZE>::new(
         hal::Usb0::new(
             peripherals.USB0,
             peripherals.USB0_EP_CONTROL,
             peripherals.USB0_EP_IN,
             peripherals.USB0_EP_OUT,
         ),
-        &USB_DEVICE_DESCRIPTOR,
-        &USB_CONFIGURATION_DESCRIPTOR_0,
-        &USB_STRING_DESCRIPTOR_0,
-        &USB_STRING_DESCRIPTORS,
+        USB_DEVICE_DESCRIPTOR,
+        USB_CONFIGURATION_DESCRIPTOR_0,
+        USB_STRING_DESCRIPTOR_0,
+        USB_STRING_DESCRIPTORS,
     );
-    usb0.device_qualifier_descriptor = Some(&USB_DEVICE_QUALIFIER_DESCRIPTOR);
-    usb0.other_speed_configuration_descriptor = Some(USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
+    usb0.set_device_qualifier_descriptor(USB_DEVICE_QUALIFIER_DESCRIPTOR);
+    usb0.set_other_speed_configuration_descriptor(USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
     let speed = usb0.connect();
     debug!("Connected usb0 device: {:?}", speed);
 
@@ -192,26 +194,37 @@ fn main_loop() -> GreatResult<()> {
     loop {
         let mut queue_length = 0;
 
-        while let Some(message) = MESSAGE_QUEUE.dequeue() {
-            use moondancer::{InterruptEvent::*, UsbInterface::Target};
+        while let Some(event) = EVENT_QUEUE.dequeue() {
+            use moondancer::{event::InterruptEvent::*, UsbInterface::Target};
+            use smolusb::event::UsbEvent::*;
 
             leds.output.write(|w| unsafe { w.output().bits(0) });
 
-            match message {
-                // - usb0 message handlers --
+            match event {
+                // - usb0 event handlers --
 
-                // Usb0 received USB bus reset
-                UsbBusReset(Target) => (),
-
-                // Usb0 received setup packet
-                UsbReceiveSetupPacket(Target, endpoint_number, setup_packet) => {
-                    test_command = TestCommand::Stop;
-                    usb0.handle_setup_request(endpoint_number, &setup_packet)
-                        .map_err(|_| GreatError::BadMessage)?;
+                // Usb0 received a control event
+                Usb(Target, event @ BusReset)
+                | Usb(Target, event @ ReceiveSetupPacket(0))
+                | Usb(Target, event @ ReceivePacket(0))
+                | Usb(Target, event @ SendComplete(0)) => {
+                    debug!("\n\nUsb(Target, {:?})", event);
+                    match usb0
+                        .dispatch_control(event)
+                        .map_err(|_| GreatError::IoError)?
+                    {
+                        Some(control_event) => {
+                            // handle any events control couldn't
+                            warn!("Unhandled control event: {:?}", control_event);
+                        }
+                        None => {
+                            // control event was handled by UsbDevice
+                        }
+                    }
                 }
 
                 // Usb0 received packet
-                UsbReceivePacket(Target, endpoint, _) => {
+                Usb(Target, ReceivePacket(endpoint)) => {
                     let bytes_read = usb0.hal_driver.read(endpoint, &mut rx_buffer);
                     if endpoint == 1 {
                         leds.output.write(|w| unsafe { w.output().bits(0b11_1000) });
@@ -262,7 +275,7 @@ fn main_loop() -> GreatResult<()> {
                 }
 
                 // Usb0 transfer complete
-                UsbSendComplete(Target, _endpoint) => {
+                Usb(Target, SendComplete(_endpoint)) => {
                     leds.output.write(|w| unsafe { w.output().bits(0b00_0111) });
                 }
 
@@ -271,9 +284,9 @@ fn main_loop() -> GreatResult<()> {
                     error!("MachineExternal Error - {}", message);
                 }
 
-                // Unhandled message
+                // Unhandled event
                 _ => {
-                    error!("Unhandled message: {:?}", message);
+                    error!("Unhandled event: {:?}", event);
                 }
             }
 
@@ -424,14 +437,17 @@ impl TestStats {
 
 // - usb descriptors ----------------------------------------------------------
 
-static USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
+pub const VENDOR_ID: u16 = 0x1209; // https://pid.codes/1209/
+pub const PRODUCT_ID: u16 = 0x0001; // pid.codes Test PID
+
+const USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     descriptor_version: 0x0200,
     device_class: 0x00,
     device_subclass: 0x00,
     device_protocol: 0x00,
     max_packet_size: 64,
-    vendor_id: 0x16d0,
-    product_id: 0x0f3b,
+    vendor_id: VENDOR_ID,
+    product_id: PRODUCT_ID,
     device_version_number: 0x1234,
     manufacturer_string_index: 1,
     product_string_index: 2,
@@ -440,7 +456,7 @@ static USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     ..DeviceDescriptor::new()
 };
 
-static USB_DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualifierDescriptor {
+const USB_DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualifierDescriptor {
     descriptor_version: 0x0200,
     device_class: 0x00,
     device_subclass: 0x00,
@@ -451,7 +467,7 @@ static USB_DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualif
     ..DeviceQualifierDescriptor::new()
 };
 
-static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDescriptor::new(
+const USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDescriptor::new(
     ConfigurationDescriptorHeader {
         configuration_value: 1,
         configuration_string_index: 1,
@@ -495,7 +511,7 @@ static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDe
     )],
 );
 
-static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
+const USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
     ConfigurationDescriptor::new(
         ConfigurationDescriptorHeader {
             descriptor_type: DescriptorType::OtherSpeedConfiguration as u8,
@@ -541,14 +557,14 @@ static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
         )],
     );
 
-static USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
+const USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
     StringDescriptorZero::new(&[LanguageId::EnglishUnitedStates]);
 
-static USB_STRING_DESCRIPTOR_1: StringDescriptor = StringDescriptor::new("LUNA");
-static USB_STRING_DESCRIPTOR_2: StringDescriptor = StringDescriptor::new("IN speed test");
-static USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("no serial");
+const USB_STRING_DESCRIPTOR_1: StringDescriptor = StringDescriptor::new("LUNA");
+const USB_STRING_DESCRIPTOR_2: StringDescriptor = StringDescriptor::new("IN speed test");
+const USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("no serial");
 
-static USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
+const USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &USB_STRING_DESCRIPTOR_1,
     &USB_STRING_DESCRIPTOR_2,
     &USB_STRING_DESCRIPTOR_3,
