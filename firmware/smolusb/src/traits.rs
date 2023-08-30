@@ -28,22 +28,18 @@ pub trait UsbDriverOperations {
     fn bus_reset(&self) -> u8;
     /// Acknowledge the status stage of an incoming control request.
     fn ack_status_stage(&self, packet: &SetupPacket);
-    fn ack(&self, endpoint: u8, direction: Direction);
+    fn ack(&self, endpoint_number: u8, direction: Direction);
     fn set_address(&self, address: u8);
     /// Stall the current control request.
-    /// TODO replace this with stall_endpoint_*
-    fn stall_request(&self);
-    /// Set the stall state for the given endpoint address
-    /// TODO replace this with stall_endpoint_* / unstall_endpoint_*
-    fn stall_endpoint_address(&self, endpoint: u8, state: bool);
+    fn stall_control_request(&self);
     /// Stall the given IN endpoint
-    fn stall_endpoint_in(&self, endpoint: u8);
+    fn stall_endpoint_in(&self, endpoint_number: u8);
     /// Stall the given OUT endpoint
-    fn stall_endpoint_out(&self, endpoint: u8);
+    fn stall_endpoint_out(&self, endpoint_number: u8);
     /// Unstall the given IN endpoint
-    fn unstall_endpoint_in(&self, endpoint: u8);
+    fn unstall_endpoint_in(&self, endpoint_number: u8);
     /// Unstall the given OUT endpoint
-    fn unstall_endpoint_out(&self, endpoint: u8);
+    fn unstall_endpoint_out(&self, endpoint_number: u8);
 
     /// Clear any halt condition on the target endpoint, and clear the data toggle bit.
     fn clear_feature_endpoint_halt(&self, endpoint_address: u8);
@@ -63,7 +59,7 @@ pub trait ReadControl {
 }
 
 pub trait ReadEndpoint {
-    /// Prepare the given endpoint to receive a single OUT packet.
+    /// Prepare the given OUT endpoint to receive a single packet.
     fn ep_out_prime_receive(&self, endpoint_number: u8);
 
     /// Read a packet from the given endpoint.

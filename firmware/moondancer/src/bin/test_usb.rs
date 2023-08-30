@@ -213,7 +213,7 @@ impl<'a> Firmware<'a> {
 
                     // Usb1 received a control event
                     Usb(Aux, event @ BusReset)
-                    | Usb(Aux, event @ ReceiveSetupPacket(0))
+                    | Usb(Aux, event @ ReceiveControl(0))
                     | Usb(Aux, event @ ReceivePacket(0))
                     | Usb(Aux, event @ SendComplete(0)) => {
                         debug!("\n\nUsb(Aux, {:?})", event);
@@ -358,7 +358,7 @@ impl<'a> Firmware<'a> {
                             "LIBGREAT stall: unknown vendor request and/or value direction{:?} vendor_request{:?} vendor_value:{:?}",
                             direction, vendor_request, vendor_value
                         );
-                        self.usb1.hal_driver.stall_endpoint_address(0, true);
+                        self.usb1.hal_driver.stall_control_request();
                     }
                 }
             }

@@ -309,6 +309,7 @@ where
         let address: u8 = (setup_packet.value & 0x7f) as u8;
 
         if self.quirk_set_address_before_status {
+            warn!("UsbDevice::setup_set_address({}) quirk_set_address_before_status", address);
             // activate new address
             self.hal_driver.set_address(address);
             self.state.replace(DeviceState::Addressed.into());
@@ -317,6 +318,8 @@ where
             self.hal_driver.ack(0, Direction::HostToDevice);
 
         } else {
+            trace!("UsbDevice::setup_set_address({})", address);
+
             // set tx_ack_active flag
             // TODO a slighty safer approach would be nice
             unsafe {
@@ -359,7 +362,7 @@ where
                     "SETUP stall: invalid descriptor type: {} {}",
                     descriptor_type_bits, descriptor_number
                 );
-                self.hal_driver.stall_request();
+                self.hal_driver.stall_control_request();
                 return Ok(());
             }
         };
@@ -415,7 +418,7 @@ where
                 let offset_index: usize = (index - 1).into();
                 if offset_index > self.string_descriptors.len() {
                     warn!("SETUP stall: unknown string descriptor {}", index);
-                    self.hal_driver.stall_request();
+                    self.hal_driver.stall_control_request();
                     return Ok(());
                 }
 
@@ -431,7 +434,7 @@ where
                     "SETUP stall: unhandled descriptor {:?}, {}",
                     descriptor_type, descriptor_number
                 );
-                self.hal_driver.stall_request();
+                self.hal_driver.stall_control_request();
                 return Ok(());
             }
         }
@@ -454,7 +457,7 @@ where
         // TODO support multiple configurations
         if configuration > 1 {
             warn!("SETUP stall: unknown configuration {}", configuration);
-            self.hal_driver.stall_request();
+            self.hal_driver.stall_control_request();
             return Ok(());
         }
 
@@ -489,7 +492,7 @@ where
             Ok(feature) => feature,
             Err(e) => {
                 warn!("SETUP stall: invalid clear feature type: {}", feature_bits);
-                self.hal_driver.stall_request();
+                self.hal_driver.stall_control_request();
                 return Ok(());
             }
         };
@@ -513,7 +516,7 @@ where
                     "SETUP stall: unhandled clear feature {:?}, {:?}",
                     recipient, feature
                 );
-                self.hal_driver.stall_request();
+                self.hal_driver.stall_control_request();
                 return Ok(());
             }
         };
@@ -533,7 +536,7 @@ where
             Ok(feature) => feature,
             Err(e) => {
                 warn!("SETUP stall: invalid set feature type: {}", feature_bits);
-                self.hal_driver.stall_request();
+                self.hal_driver.stall_control_request();
                 return Ok(());
             }
         };
@@ -547,7 +550,7 @@ where
                     "SETUP stall: unhandled set feature {:?}, {:?}",
                     recipient, feature
                 );
-                self.hal_driver.stall_request();
+                self.hal_driver.stall_control_request();
                 return Ok(());
             }
         };

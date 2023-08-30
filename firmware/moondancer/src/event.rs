@@ -56,9 +56,10 @@ impl core::convert::From<InterruptEvent> for [u8; 3] {
         match message {
             InterruptEvent::Usb(interface, event) => match event {
                 BusReset => [event.into(), interface as u8, 0],
-                ReceiveSetupPacket(endpoint_number) => {
+                ReceiveControl(endpoint_number) => {
                     [event.into(), interface as u8, endpoint_number]
                 }
+                ReceiveSetupPacket(endpoint_number, _setup_packet) => [event.into(), interface as u8, endpoint_number],
                 ReceivePacket(endpoint_number) => [event.into(), interface as u8, endpoint_number],
                 SendComplete(endpoint_number) => [event.into(), interface as u8, endpoint_number],
             },

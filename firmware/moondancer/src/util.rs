@@ -32,7 +32,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         let endpoint = usb0.ep_control.epno.read().bits() as u8;
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-        InterruptEvent::Usb(Target, UsbEvent::ReceiveSetupPacket(endpoint))
+        InterruptEvent::Usb(Target, UsbEvent::ReceiveControl(endpoint))
 
     // USB0_EP_OUT UsbReceiveData
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
@@ -63,7 +63,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
         let endpoint = usb1.ep_control.epno.read().bits() as u8;
         usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
-        InterruptEvent::Usb(Aux, UsbEvent::ReceiveSetupPacket(endpoint))
+        InterruptEvent::Usb(Aux, UsbEvent::ReceiveControl(endpoint))
 
     // USB1_EP_OUT UsbReceiveData
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_OUT) {
@@ -94,7 +94,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     } else if usb2.is_pending(pac::Interrupt::USB2_EP_CONTROL) {
         let endpoint = usb2.ep_control.epno.read().bits() as u8;
         usb2.clear_pending(pac::Interrupt::USB2_EP_CONTROL);
-        InterruptEvent::Usb(Control, UsbEvent::ReceiveSetupPacket(endpoint))
+        InterruptEvent::Usb(Control, UsbEvent::ReceiveControl(endpoint))
 
     // USB2_EP_OUT UsbReceiveData
     } else if usb2.is_pending(pac::Interrupt::USB2_EP_OUT) {

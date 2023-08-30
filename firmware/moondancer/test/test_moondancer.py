@@ -47,7 +47,7 @@ class TestMoondancer(unittest.TestCase):
         self.assertEqual(response[0], InterruptEvent.USB_BUS_RESET)
         self.assertEqual(response[0].interface, 0)
         self.assertEqual(response[0].endpoint_number, 0)
-        self.assertEqual(response[1], InterruptEvent.USB_RECEIVE_SETUP_PACKET)
+        self.assertEqual(response[1], InterruptEvent.USB_RECEIVE_CONTROL)
         self.assertEqual(response[1].interface, 1)
         self.assertEqual(response[1].endpoint_number, 1)
         self.assertEqual(response[2], InterruptEvent.USB_RECEIVE_PACKET)

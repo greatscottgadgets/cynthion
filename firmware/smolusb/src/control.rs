@@ -87,7 +87,7 @@ where
                 self.handle_usb_bus_reset(driver)?;
                 Ok(None)
             }
-            UsbEvent::ReceiveSetupPacket(endpoint_number) => {
+            UsbEvent::ReceiveControl(endpoint_number) => {
                 match self.handle_receive_setup_packet(driver, endpoint_number)? {
                     Some(setup_packet) => Ok(Some(ControlEvent {
                         endpoint_number,
@@ -116,6 +116,10 @@ where
             }
             UsbEvent::SendComplete(endpoint_number) => {
                 self.handle_send_complete(driver, endpoint_number)?;
+                Ok(None)
+            }
+            event => { // TODO handle ReceiveSetupPacket
+                log::warn!("CONTROL dispatch() unhandled event: {:?}", event);
                 Ok(None)
             }
         }

@@ -228,14 +228,9 @@ macro_rules! impl_usb {
                     self.ep_control.reset.write(|w| w.reset().bit(true));
                     self.ep_in.reset.write(|w| w.reset().bit(true));
                     self.ep_out.reset.write(|w| w.reset().bit(true));
-
-                    // put device controller into reset
-                    //self.controller.reset.write(|w| w.reset().bit(true));
-                    //unsafe { riscv::asm::delay(60 * 200) };
-                    //self.controller.reset.write(|w| w.reset().bit(false));
-                    //unsafe { riscv::asm::delay(60 * 200) };
                 }
 
+                /// Perform a full reset of the device.
                 fn reset(&self) -> u8 {
                     // disable endpoint events
                     self.disable_interrupts();
@@ -257,6 +252,10 @@ macro_rules! impl_usb {
                     speed
                 }
 
+                /// Perform a bus reset of the device.
+                ///
+                /// This differs from `reset()` by not disabling
+                /// USBx_CONTROLLER bus reset events.
                 fn bus_reset(&self) -> u8 {
                     // disable events
                     self.disable_interrupt(Interrupt::$USBX_CONTROLLER);
@@ -266,10 +265,16 @@ macro_rules! impl_usb {
                     // reset device address to 0
                     self.set_address(0);
 
-                    // reset fifo handlers
+                    // reset FIFOs
                     self.ep_control.reset.write(|w| w.reset().bit(true));
                     self.ep_in.reset.write(|w| w.reset().bit(true));
                     self.ep_out.reset.write(|w| w.reset().bit(true));
+
+                    // reset SETUP handler state
+                    //self.ep_control.reset.write(|w| w.reset().bit(true));
+                    //unsafe { riscv::asm::delay(1000) };
+                    //self.ep_control.reset.write(|w| w.reset().bit(false));
+                    //unsafe { riscv::asm::delay(1000) };
 
                     // re-enable events
                     self.enable_interrupt(Interrupt::$USBX_CONTROLLER);
@@ -302,69 +307,30 @@ macro_rules! impl_usb {
                 }
 
                 fn set_address(&self, address: u8) {
-                    self.ep_control
+                    self.ep_out
                         .address
                         .write(|w| unsafe { w.address().bits(address & 0x7f) });
-                    self.ep_out
+                    self.ep_control
                         .address
                         .write(|w| unsafe { w.address().bits(address & 0x7f) });
                 }
 
                 /// Stalls the current control request.
-                fn stall_request(&self) {
-                    self.ep_in.epno.write(|w| unsafe { w.epno().bits(0) });
-                    self.ep_in.stall.write(|w| w.stall().bit(true));
-                    self.ep_out.epno.write(|w| unsafe { w.epno().bits(0) });
-                    self.ep_out.stall.write(|w| w.stall().bit(true));
-                }
-
-                /// Set the stall state for the given endpoint address
-                ///
-                /// TODO endpoint_address is a USB address i.e. masked with 0x80
-                /// for direction. It may be more consistent to actually pass
-                /// in the direction and peripheral address separately
-                fn stall_endpoint_address(&self, endpoint_address: u8, state: bool) {
-                    match Direction::from(endpoint_address) {
-                        Direction::HostToDevice => {
-                            self.ep_out
-                                .epno
-                                .write(|w| unsafe { w.epno().bits(endpoint_address) });
-                            self.ep_out.stall.write(|w| w.stall().bit(state));
-                            log::debug!("  usb::stall_endpoint EP_OUT: {} -> {}", endpoint_address, state);
-                        }
-                        Direction::DeviceToHost => {
-                            self.ep_in
-                                .epno
-                                .write(|w| unsafe { w.epno().bits(endpoint_address & 0xf) });
-                            self.ep_in.stall.write(|w| w.stall().bit(state));
-                            log::debug!("  usb::stall_endpoint EP_IN: {} -> {}", endpoint_address & 0xf, state);
-                        }
-                    }
+                fn stall_control_request(&self) {
+                    self.stall_endpoint_in(0);
+                    self.stall_endpoint_out(0);
                 }
 
                 /// Set stall for the given IN endpoint number
-                /// TODO test this!
                 fn stall_endpoint_in(&self, endpoint_number: u8) {
                     self.ep_in.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
                     self.ep_in.stall.write(|w| w.stall().bit(true));
-
-                    // wait a moment, then clear stall
-                    // TODO is this the correct behaviour?
-                    unsafe { riscv::asm::delay(2000); }
-                    self.ep_in.reset.write(|w| w.reset().bit(true));
                 }
 
                 /// Set stall for the given OUT endpoint number
-                /// TODO test this!
                 fn stall_endpoint_out(&self, endpoint_number: u8) {
                     self.ep_out.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
                     self.ep_out.stall.write(|w| w.stall().bit(true));
-
-                    // wait a moment, then clear stall
-                    // TODO does ep_out clear stall as with ep_in ?
-                    // TODO is this the correct behaviour?
-                    unsafe { riscv::asm::delay(2000); }
-                    self.ep_out.reset.write(|w| w.reset().bit(true));
                 }
 
                 /// Clear stall for the given IN endpoint number.
@@ -494,7 +460,7 @@ macro_rules! impl_usb {
             }
 
             impl ReadEndpoint for $USBX {
-                /// Prepare endpoint to receive a single OUT packet.
+                /// Prepare OUT endpoint to receive a single packet.
                 #[inline(always)]
                 fn ep_out_prime_receive(&self, endpoint_number: u8) {
                     // clear receive buffer
@@ -566,7 +532,7 @@ macro_rules! impl_usb {
                     // reset output fifo if needed
                     // TODO rather return an error
                     if self.ep_in.have.read().have().bit() {
-                        trace!("  clear tx");
+                        warn!("  clear tx");
                         self.ep_in.reset.write(|w| w.reset().bit(true));
                     }
 
@@ -583,6 +549,7 @@ macro_rules! impl_usb {
                                 .write(|w| unsafe { w.epno().bits(endpoint_number) });
                             // wait for transmission to complete
                             while self.ep_in.have.read().have().bit() { }
+                            //unsafe { riscv::asm::delay(10000); }
                         }
                     }
 
@@ -600,7 +567,7 @@ macro_rules! impl_usb {
                     // reset output fifo if needed
                     // TODO rather return an error
                     if self.ep_in.have.read().have().bit() {
-                        trace!("  clear tx");
+                        warn!("  clear tx");
                         self.ep_in.reset.write(|w| w.reset().bit(true));
                     }
 
@@ -631,7 +598,7 @@ macro_rules! impl_usb {
                     // reset output fifo if needed
                     // TODO rather return an error
                     if self.ep_in.have.read().have().bit() {
-                        trace!("  clear tx");
+                        warn!("  clear tx");
                         self.ep_in.reset.write(|w| w.reset().bit(true));
                     }
 
