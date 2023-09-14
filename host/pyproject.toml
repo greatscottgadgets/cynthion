@@ -32,7 +32,7 @@ dependencies = [
     "tqdm",
     "tabulate",
     "prompt_toolkit",
-    "pygreat",
+    "pygreat @ git+https://github.com/antoinevg/libgreat.git@antoinevg/moondancer#subdirectory=host",
 ]
 
 [project.scripts]
