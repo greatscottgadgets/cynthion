@@ -512,7 +512,7 @@
       <baseAddress>0xf0003000</baseAddress>
       <addressBlock>
         <offset>0</offset>
-        <size>0x40</size>
+        <size>0x20</size>
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
@@ -552,6 +552,40 @@
             2 =&gt; Low, and 3 =&gt; SuperSpeed (incl SuperSpeed+).
         </description>
               <bitRange>[1:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>low_speed_only</name>
+          <description>usb0 low_speed_only register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>low_speed_only</name>
+              <description>
+            Set this bit to '1' to force the device to operate at low speed.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>full_speed_only</name>
+          <description>usb0 full_speed_only register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>full_speed_only</name>
+              <description>
+            Set this bit to '1' to force the device to operate at full speed.
+        </description>
+              <bitRange>[0:0]</bitRange>
             </field>
           </fields>
         </register>
@@ -1225,7 +1259,7 @@
       <baseAddress>0xf0004000</baseAddress>
       <addressBlock>
         <offset>0</offset>
-        <size>0x40</size>
+        <size>0x20</size>
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
@@ -1265,6 +1299,40 @@
             2 =&gt; Low, and 3 =&gt; SuperSpeed (incl SuperSpeed+).
         </description>
               <bitRange>[1:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>low_speed_only</name>
+          <description>usb1 low_speed_only register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>low_speed_only</name>
+              <description>
+            Set this bit to '1' to force the device to operate at low speed.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>full_speed_only</name>
+          <description>usb1 full_speed_only register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>full_speed_only</name>
+              <description>
+            Set this bit to '1' to force the device to operate at full speed.
+        </description>
+              <bitRange>[0:0]</bitRange>
             </field>
           </fields>
         </register>
@@ -1938,7 +2006,7 @@
       <baseAddress>0xf0005000</baseAddress>
       <addressBlock>
         <offset>0</offset>
-        <size>0x40</size>
+        <size>0x20</size>
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
@@ -1978,6 +2046,40 @@
             2 =&gt; Low, and 3 =&gt; SuperSpeed (incl SuperSpeed+).
         </description>
               <bitRange>[1:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>low_speed_only</name>
+          <description>usb2 low_speed_only register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>low_speed_only</name>
+              <description>
+            Set this bit to '1' to force the device to operate at low speed.
+        </description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>full_speed_only</name>
+          <description>usb2 full_speed_only register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>full_speed_only</name>
+              <description>
+            Set this bit to '1' to force the device to operate at full speed.
+        </description>
+              <bitRange>[0:0]</bitRange>
             </field>
           </fields>
         </register>

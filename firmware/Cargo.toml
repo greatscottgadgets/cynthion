@@ -6,6 +6,7 @@ members = [
     "moondancer",
     "smolusb",
 ]
+resolver = "2"
 
 exclude = [
 ]

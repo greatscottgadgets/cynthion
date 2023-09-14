@@ -245,7 +245,7 @@ impl<'a> Firmware<'a> {
 
                     // Usb1 received a control event
                     Usb(Aux, event @ BusReset)
-                    | Usb(Aux, event @ ReceiveSetupPacket(0))
+                    | Usb(Aux, event @ ReceiveControl(0))
                     | Usb(Aux, event @ ReceivePacket(0))
                     | Usb(Aux, event @ SendComplete(0)) => {
                         trace!("Usb(Aux, {:?})", event);
@@ -267,22 +267,14 @@ impl<'a> Firmware<'a> {
 
                     // - usb0 event handlers --
 
+                    // automatically handle set address
+                    /*Usb(Target, event @ ReceiveControl) => {
+
+                    }*/
                     // enqueue moondancer events
-                    Usb(Target, event) => match self
+                    Usb(Target, event) => self
                         .moondancer
-                        .queue
-                        .enqueue(InterruptEvent::from_smolusb_event(Target, event))
-                    {
-                        Ok(()) => (),
-                        Err(_) => {
-                            error!("Moondancer - event queue overflow");
-                            loop {
-                                unsafe {
-                                    riscv::asm::nop();
-                                }
-                            }
-                        }
-                    },
+                        .dispatch_event(InterruptEvent::from_smolusb_event(Target, event)),
 
                     // Unhandled event
                     _ => {
@@ -353,7 +345,7 @@ impl<'a> Firmware<'a> {
                             "handle_control stall: unknown vendor request and/or value direction{:?} vendor_request{:?} vendor_value:{:?}",
                             direction, vendor_request, vendor_value
                         );
-                        self.usb1.hal_driver.stall_endpoint_address(0, true);
+                        self.usb1.hal_driver.stall_control_request();
                     }
                 }
             }
@@ -362,7 +354,7 @@ impl<'a> Firmware<'a> {
                     "handle_control_event Unknown vendor request '{}'",
                     vendor_request
                 );
-                return Err(GreatError::BadMessage);
+                self.usb1.hal_driver.stall_control_request();
             }
             (RequestType::Vendor, vendor_request) => {
                 // TODO this is from one of the legacy boards which we
@@ -371,7 +363,7 @@ impl<'a> Firmware<'a> {
                 //
                 // see: host/greatfet/boards/legacy.py
 
-                // The greatfet board scan code expects the endpoint
+                // The greatfet board scan code expects the IN endpoint
                 // to be stalled if this is not a legacy device.
                 self.usb1.hal_driver.stall_endpoint_in(0);
 
@@ -406,7 +398,7 @@ impl<'a> Firmware<'a> {
                     "handle_control_event Unknown control packet '{:?}'",
                     setup_packet
                 );
-                return Err(GreatError::BadMessage);
+                self.usb1.hal_driver.stall_control_request();
             }
         }
 
@@ -428,7 +420,7 @@ impl<'a> Firmware<'a> {
             }
         };
 
-        trace!("dispatch_libgreat_request {:?}.{}", class_id, verb_number);
+        trace!("dispatch_libgreat_request {:?}.0x{:x}", class_id, verb_number);
 
         // dispatch command
         let response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
@@ -473,11 +465,11 @@ impl<'a> Firmware<'a> {
                 );
                 self.libgreat_response = None;
                 self.libgreat_response_last_error = Some(e);
-                // TODO set a proper errno
-                /*self.usb1
-                .hal_driver
-                .write(0, [0xde, 0xad, 0xde, 0xad].into_iter());*/
+
+                // TODO this is... weird...
                 self.usb1.hal_driver.stall_endpoint_in(0);
+                unsafe { riscv::asm::delay(2000); }
+                self.usb1.hal_driver.ep_in.reset.write(|w| w.reset().bit(true));
             }
         }
 
@@ -505,7 +497,7 @@ impl<'a> Firmware<'a> {
         } else {
             // TODO figure out what to do if we don't have a response or error
             error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");
-            self.usb1.hal_driver.stall_endpoint_in(0);
+            self.usb1.hal_driver.stall_control_request();
         }
 
         Ok(())

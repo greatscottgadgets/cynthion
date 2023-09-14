@@ -86,7 +86,7 @@ fn MachineExternal() {
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
         dispatch_event(InterruptEvent::Usb(
             Target,
-            UsbEvent::ReceiveSetupPacket(endpoint),
+            UsbEvent::ReceiveControl(endpoint),
         ));
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
         usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
@@ -121,7 +121,7 @@ fn MachineExternal() {
         usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
         dispatch_event(InterruptEvent::Usb(
             Aux,
-            UsbEvent::ReceiveSetupPacket(endpoint),
+            UsbEvent::ReceiveControl(endpoint),
         ));
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
         usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
@@ -237,8 +237,8 @@ fn main() -> ! {
 
     // prime the usb OUT endpoints we'll be using
     usb0.hal_driver.ep_out_prime_receive(1);
-    usb1.hal_driver.ep_out_prime_receive(1);
     usb0.hal_driver.ep_out_prime_receive(2);
+    usb1.hal_driver.ep_out_prime_receive(1);
     usb1.hal_driver.ep_out_prime_receive(2);
 
     info!("Peripherals initialized, entering main loop.");
@@ -299,7 +299,7 @@ fn main() -> ! {
             match event {
                 // Usb0 received a control event
                 Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveSetupPacket(0))
+                | Usb(Target, event @ ReceiveControl(0))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
                     debug!("\n\nUsb(Target, {:?})", event);
@@ -319,7 +319,7 @@ fn main() -> ! {
 
                 // Usb1 received a control event
                 Usb(Aux, event @ BusReset)
-                | Usb(Aux, event @ ReceiveSetupPacket(0))
+                | Usb(Aux, event @ ReceiveControl(0))
                 | Usb(Aux, event @ ReceivePacket(0))
                 | Usb(Aux, event @ SendComplete(0)) => {
                     debug!("\n\nUsb(Aux, {:?})", event);

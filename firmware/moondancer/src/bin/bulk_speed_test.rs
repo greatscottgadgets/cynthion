@@ -56,7 +56,7 @@ fn MachineExternal() {
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
         dispatch_event(InterruptEvent::Usb(
             Target,
-            UsbEvent::ReceiveSetupPacket(endpoint),
+            UsbEvent::ReceiveControl(endpoint),
         ));
 
     // USB0_EP_OUT UsbReceiveData
@@ -205,7 +205,7 @@ fn main_loop() -> GreatResult<()> {
 
                 // Usb0 received a control event
                 Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveSetupPacket(0))
+                | Usb(Target, event @ ReceiveControl(0))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
                     debug!("\n\nUsb(Target, {:?})", event);

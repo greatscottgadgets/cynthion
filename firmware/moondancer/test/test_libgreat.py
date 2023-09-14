@@ -54,11 +54,13 @@ class TestLibgreatProtocol(unittest.TestCase):
         code = get_error_code("EBUSY")
         with self.assertRaises(Exception) as context:
             result = api.test_error_return_code(code)
+        print(f"test_error_return code got: {str(context.exception)}")
         self.assertTrue("EBUSY" in str(context.exception))
 
         code = get_error_code("ECONNRESET")
         with self.assertRaises(Exception) as context:
             result = api.test_error_return_code(code)
+        print(f"test_error_return code got: {str(context.exception)}")
         self.assertTrue("ECONNRESET" in str(context.exception))
 
 
