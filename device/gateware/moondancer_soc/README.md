@@ -9,7 +9,7 @@ This directory contains the custom system-on-chip (SoC) design that runs the Moo
 
 Install the python dependencies needed to build the SoC bitstream with:
 
-    cd /path/to/cynthion.git/gateware
+    cd /path/to/cynthion.git/device/gateware
     pip install .
 
 ### Yosys Toolchain
