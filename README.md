@@ -13,8 +13,8 @@ For more information, see the [Cynthion Crowd Supply](https://www.crowdsupply.co
 This project is broken down into several directories:
 
 * [`docs/`](docs/) -- sources for the Cynthion Sphinx documentation
-* [`firmware/`](firmware/) -- sources for Cynthion's Rust firmware
-* [`gateware/`](gateware/) -- sources for Cynthion's Amaranth gateware
+* [`device/firmware/`](device/firmware/) -- sources for Cynthion's Rust firmware
+* [`device/gateware/`](device/gateware/) -- sources for Cynthion's Amaranth gateware
 * [`host/`](host/) -- sources for Cynthion's Python host-side tools
 
 ## Project Documentation
