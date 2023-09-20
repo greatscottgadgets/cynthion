@@ -5,9 +5,9 @@
 *.hex
 *.srec
 *.dfu
-firmware/lunasoc-pac/build/
-gateware/memory.x
-gateware/moondancer_soc/build
+device/firmware/lunasoc-pac/build/
+device/gateware/memory.x
+device/gateware/moondancer_soc/build
 host/build/
 
 # Rust
