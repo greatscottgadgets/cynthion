@@ -102,24 +102,24 @@ class MoondancerSoc(Elaboratable):
         ]
 
         # wire up the cpu external reset signal
-        if isinstance(platform, CynthionPlatformRev0D4):
-            user1_io = platform.request("user_io", 1)
-            m.d.comb += user1_io.oe.eq(1)
-        elif isinstance(platform, CynthionPlatformRev0D7):
+        try:
             user1_io = platform.request("button_user")
             m.d.comb += self.soc.cpu.ext_reset.eq(user1_io.i)
-        else:
-            logging.error("Unsupported platform: {}".format(platform))
-            sys.exit(1)
+        except:
+            logging.warn("Platform does not support a user button for cpu reset")
 
         # create our USB devices, connect device controllers and add eptri endpoint handlers
-        ulpi0 = platform.request(platform.default_usb_connection) # target_phy
+
+        # target_phy
+        ulpi0 = platform.request(platform.default_usb_connection)
         usb0_device = USBDevice(bus=ulpi0)
         usb0_device.add_endpoint(self.usb0_ep_control)
         usb0_device.add_endpoint(self.usb0_ep_in)
         usb0_device.add_endpoint(self.usb0_ep_out)
         m.d.comb += self.usb0.attach(usb0_device)
         m.submodules.usb0_device = usb0_device
+
+        # aux_phy
         try:
             ulpi1 = platform.request("aux_phy")
         except:
@@ -131,6 +131,7 @@ class MoondancerSoc(Elaboratable):
         m.d.comb += self.usb1.attach(usb1_device)
         m.submodules.usb1_device = usb1_device
 
+        # control_phy
         try:
             ulpi2 = platform.request("control_phy")
         except:
@@ -148,17 +149,11 @@ class MoondancerSoc(Elaboratable):
 # - main ----------------------------------------------------------------------
 
 import luna
-from luna.gateware.platform.ulx3s    import ULX3S_85F_Platform
-try:
-    from luna.gateware.platform          import CynthionPlatformRev0D4, CynthionPlatformRev0D7
-except:
-    from luna.gateware.platform.luna_r0_4 import LUNAPlatformRev0D4 as CynthionPlatformRev0D4
 
-from lambdasoc.sim.platform          import CXXRTLPlatform
+from luna.gateware.platform  import get_appropriate_platform
+from luna_soc.generate       import Generate
 
 if __name__ == "__main__":
-    from luna_soc.generate import Generate
-
     # Disable UnusedElaborable warnings
     from amaranth._unused import MustUse
     MustUse._MustUse__silence = True
@@ -170,29 +165,15 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
 
     # select platform
-    platform = luna.gateware.platform.get_appropriate_platform()
-    #platform = CynthionPlatformRev0D7()
-    #platform = ULX3S_85F_Platform()
-    #platform = CXXRTLPlatform()
-
-    # configure platform
-    clock_frequency = int(platform.default_clk_frequency)
-
-    if isinstance(platform, CynthionPlatformRev0D4):
-        logging.info("Building for Cynthion revision 0.4")
-    elif isinstance(platform, CynthionPlatformRev0D7):
-        logging.info("Building for Cynthion revision 0.7")
-    elif isinstance(platform, ULX3S_85F_Platform):
-        logging.info("Building for ULX3s")
-        clock_frequency=int(48e6)
-    elif isinstance(platform, CXXRTLPlatform):
-        logging.info("Building for CXXRTLPlatform")
-        clock_frequency=int(1e6)
-    else:
-        logging.error("Unsupported platform: {}".format(platform))
+    platform = get_appropriate_platform()
+    if platform is None:
+        logging.error("Failed to identify a supported platform")
         sys.exit(1)
 
-    logging.info(f"Platform clock frequency: {clock_frequency}")
+    # configure clock frequency
+    clock_frequency = int(platform.default_clk_frequency)
+
+    logging.info(f"Building for {platform} with clock frequency: {clock_frequency}")
 
     # create design
     design = MoondancerSoc(clock_frequency=clock_frequency)
