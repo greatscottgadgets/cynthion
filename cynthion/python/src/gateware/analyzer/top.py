@@ -29,9 +29,9 @@ from luna.gateware.usb.stream          import USBInStreamInterface
 from luna.gateware.stream.generator    import StreamSerializer
 from luna.gateware.utils.cdc           import synchronize
 from luna.gateware.architecture.car    import LunaECP5DomainGenerator
-
 from luna.gateware.interface.ulpi      import UTMITranslator
-from luna.gateware.usb.analyzer        import USBAnalyzer
+
+from .analyzer                         import USBAnalyzer
 
 
 USB_SPEED_HIGH       = 0b00

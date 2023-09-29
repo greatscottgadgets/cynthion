@@ -1,4 +1,4 @@
-SVD := ../../gateware/moondancer_soc/build/gensvd/lunasoc.svd
+SVD := ../../python/cynthion/build/gensvd/lunasoc.svd
 
 svd2rust:
 	rm -rf build src/generated.rs src/generated/

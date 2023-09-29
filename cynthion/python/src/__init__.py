@@ -41,6 +41,11 @@ class _CynthionSingletonWrapper(object):
 CynthionSingleton = _CynthionSingletonWrapper()
 
 
+# TODO deprecate in favor of:
+#
+#   from importlib.resources import files
+#   assets_directory = files("cynthion").joinpath("assets")
+#
 def cynthion_assets_directory():
     """ Provide a quick function that helps us get at our assets directory. """
     import os

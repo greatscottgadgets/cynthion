@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=41", "wheel", "setuptools-git-versioning<2"]
+requires = ["setuptools>=61.0", "wheel", "setuptools-git-versioning<2"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -35,12 +35,28 @@ dependencies = [
     "pygreat @ git+https://github.com/antoinevg/libgreat.git@antoinevg/moondancer#subdirectory=host",
 ]
 
+[project.optional-dependencies]
+gateware = [
+    "amaranth @ git+https://github.com/amaranth-lang/amaranth",
+    "luna @ git+https://github.com/greatscottgadgets/luna@main",
+]
+gateware-soc = [
+    "amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc",
+    "luna-soc @ git+https://github.com/greatscottgadgets/luna-soc@main",
+    "lambdasoc @ git+https://github.com/antoinevg/lambdasoc.git@antoinevg/support-vexriscv",
+]
+
 [project.scripts]
 cynthion = "cynthion.commands.cli:main"
 cynthion_analyzer = "cynthion.commands.cynthion_analyzer:main"
 cynthion_info = "cynthion.commands.cynthion_info:main"
 cynthion_program = "cynthion.commands.cynthion_program:main"
 
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-dir]
+cynthion = "src"
 
 [tool.setuptools-git-versioning]
 enabled = true
