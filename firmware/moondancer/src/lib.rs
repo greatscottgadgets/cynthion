@@ -27,6 +27,8 @@ pub use libgreat::firmware::BoardInformation;
 // - constants ----------------------------------------------------------------
 
 pub const SYSTEM_CLOCK_FREQUENCY: u32 = pac::clock::sysclk();
+
+// TODO these need to be populated at runtime
 pub const BOARD_INFORMATION: BoardInformation = BoardInformation {
     board_id: 0x10_u32.to_le_bytes(),
     version_string: "v2023.0.1\0",

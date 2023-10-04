@@ -15,7 +15,7 @@ use core::slice;
 ///! USB Descriptors
 
 /// DescriptorType
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(u8)]
 pub enum DescriptorType {
     Device = 1,
@@ -72,7 +72,7 @@ impl TryFrom<u8> for DescriptorType {
 /// USB device descriptor
 ///
 /// TODO consider renaming descriptor fields according to LUNA / industry-standard names
-#[derive(AsBytes, FromBytes)]
+#[derive(AsBytes, FromBytes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct DeviceDescriptor {
     pub _length: u8,             // 18
@@ -123,7 +123,7 @@ impl Default for DeviceDescriptor {
 // - DeviceQualifierDescriptor ------------------------------------------------
 
 /// USB device qualifier descriptor
-#[derive(AsBytes, FromBytes)]
+#[derive(AsBytes, FromBytes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct DeviceQualifierDescriptor {
     pub _length: u8,          // 10
@@ -262,7 +262,7 @@ pub type ConfigurationDescriptorTailIterator<'a> = iter::FlatMap<
 // - InterfaceDescriptor ------------------------------------------------------
 
 /// USB interface descriptor header
-#[derive(AsBytes, FromBytes)]
+#[derive(AsBytes, FromBytes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct InterfaceDescriptorHeader {
     pub _length: u8,          // 9
@@ -316,7 +316,7 @@ impl<'a> InterfaceDescriptor<'a> {
 // - EndpointDescriptor -------------------------------------------------------
 
 /// USB endpoint descriptor
-#[derive(AsBytes, FromBytes)]
+#[derive(AsBytes, FromBytes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct EndpointDescriptor {
     pub _length: u8,          // 7
@@ -363,6 +363,7 @@ pub enum LanguageId {
 impl AsByteSliceIterator for LanguageId {}
 
 /// USB string zero descriptor
+#[derive(Clone, Copy)]
 pub struct StringDescriptorZero<'a> {
     head: StringDescriptorHeader,
     tail: &'a [LanguageId],

@@ -33,13 +33,15 @@ from luna.gateware.interface.ulpi      import UTMITranslator
 
 from .analyzer                         import USBAnalyzer
 
+import cynthion
+
 
 USB_SPEED_HIGH       = 0b00
 USB_SPEED_FULL       = 0b01
 USB_SPEED_LOW        = 0b10
 
-USB_VENDOR_ID        = 0x1d50
-USB_PRODUCT_ID       = 0x615b
+USB_VENDOR_ID        = cynthion.shared.usb.bVendorId.cynthion
+USB_PRODUCT_ID       = cynthion.shared.usb.bProductId.cynthion
 
 BULK_ENDPOINT_NUMBER  = 1
 BULK_ENDPOINT_ADDRESS = 0x80 | BULK_ENDPOINT_NUMBER

@@ -9,11 +9,11 @@ AR=$(CROSS)-ar
 
 analyzer:
 	rm -rf build
-	python -m cynthion.gateware.analyzer.top
+	python3 -m cynthion.gateware.analyzer.top
 
 soc:
 	rm -rf build
-	AR=$(AR) python -m cynthion.gateware.soc.top
+	AR=$(AR) python3 -m cynthion.gateware.soc.top
 	cp build/genrust/memory.x ../../firmware/memory.x
 
 
@@ -27,3 +27,8 @@ console:
 
 load:
 	apollo configure build/top.bit
+
+tests:
+	python3 -m unittest
+
+.PHONY: tests

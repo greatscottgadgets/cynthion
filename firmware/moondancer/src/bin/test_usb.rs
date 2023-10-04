@@ -26,6 +26,8 @@ use moondancer::{hal, pac};
 
 use pac::csr::interrupt;
 
+const BULK_OUT_ENDPOINT_NUMBER: u8 = 0x02;
+
 // - MachineExternal interrupt handler ----------------------------------------
 
 static EVENT_QUEUE: Queue<InterruptEvent, 128> = Queue::new();
@@ -160,7 +162,7 @@ impl<'a> Firmware<'a> {
         // prime our bulk OUT endpoint
         self.usb1
             .hal_driver
-            .ep_out_prime_receive(moondancer::usb::LIBGREAT_BULK_OUT_ENDPOINT_NUMBER);
+            .ep_out_prime_receive(BULK_OUT_ENDPOINT_NUMBER);
 
         Ok(())
     }
@@ -234,19 +236,16 @@ impl<'a> Firmware<'a> {
                     }
 
                     // USB1_EP_OUT 2 - Usb1 received data on command endpoint
-                    Usb(
-                        Aux,
-                        event @ ReceivePacket(moondancer::usb::LIBGREAT_BULK_OUT_ENDPOINT_NUMBER),
-                    ) => {
+                    Usb(Aux, event @ ReceivePacket(BULK_OUT_ENDPOINT_NUMBER)) => {
                         debug!("\n\nUsb(Aux, {:?})", event);
-                        let bytes_read = self.usb1.hal_driver.read(
-                            moondancer::usb::LIBGREAT_BULK_OUT_ENDPOINT_NUMBER,
-                            &mut rx_buffer,
-                        );
+                        let bytes_read = self
+                            .usb1
+                            .hal_driver
+                            .read(BULK_OUT_ENDPOINT_NUMBER, &mut rx_buffer);
                         self.handle_receive_command_packet(bytes_read, rx_buffer)?;
-                        self.usb1.hal_driver.ep_out_prime_receive(
-                            moondancer::usb::LIBGREAT_BULK_OUT_ENDPOINT_NUMBER,
-                        );
+                        self.usb1
+                            .hal_driver
+                            .ep_out_prime_receive(BULK_OUT_ENDPOINT_NUMBER);
                     }
 
                     // USB1_EP_OUT n - Usb1 received data on endpoint - shouldn't ever be called
@@ -423,25 +422,19 @@ impl<'a> Firmware<'a> {
     }
 }
 
-// - descriptors --------------------------------------------------------------
+// - usb descriptors ----------------------------------------------------------
 
-use moondancer::usb::{
-    DEVICE_SERIAL_STRING, DEVICE_VERSION_NUMBER, LIBGREAT_BULK_IN_ENDPOINT_ADDRESS,
-    LIBGREAT_BULK_OUT_ENDPOINT_ADDRESS, LIBGREAT_INTERFACE_PROTOCOL, LIBGREAT_INTERFACE_SUBCLASS,
-};
+use moondancer::usb::{DEVICE_SERIAL_STRING, DEVICE_VERSION_NUMBER};
 use smolusb::descriptor::*;
 
-pub const VENDOR_ID: u16 = 0x1209; // https://pid.codes/1209/
-pub const PRODUCT_ID: u16 = 0x0001; // pid.codes Test PID
-
-pub const DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
+pub static DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     descriptor_version: 0x0200,
     device_class: 0x00,    // Composite
     device_subclass: 0x00, // Composite
     device_protocol: 0x00, // Composite
     max_packet_size: 64,
-    vendor_id: VENDOR_ID,
-    product_id: PRODUCT_ID,
+    vendor_id: cynthion::shared::usb::bVendorId::example,
+    product_id: cynthion::shared::usb::bProductId::example,
     device_version_number: DEVICE_VERSION_NUMBER,
     manufacturer_string_index: 1,
     product_string_index: 2,
@@ -450,7 +443,7 @@ pub const DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     ..DeviceDescriptor::new()
 };
 
-pub const DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualifierDescriptor {
+pub static DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualifierDescriptor {
     descriptor_version: 0x0200,
     device_class: 0x00,    // Composite
     device_subclass: 0x00, // Composite
@@ -460,7 +453,7 @@ pub const DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualifi
     ..DeviceQualifierDescriptor::new()
 };
 
-pub const CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDescriptor::new(
+pub static CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDescriptor::new(
     ConfigurationDescriptorHeader {
         descriptor_type: DescriptorType::Configuration as u8,
         configuration_value: 1,
@@ -474,22 +467,22 @@ pub const CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDes
             interface_number: 0,
             alternate_setting: 0,
             interface_class: 0xff, // Vendor-specific
-            interface_subclass: LIBGREAT_INTERFACE_SUBCLASS,
-            interface_protocol: LIBGREAT_INTERFACE_PROTOCOL,
+            interface_subclass: cynthion::shared::usb::bInterfaceSubClass::libgreat,
+            interface_protocol: cynthion::shared::usb::bInterfaceProtocol::libgreat,
             interface_string_index: 5,
             ..InterfaceDescriptorHeader::new()
         },
         &[
             EndpointDescriptor {
-                endpoint_address: LIBGREAT_BULK_IN_ENDPOINT_ADDRESS, // IN
-                attributes: 0x02,                                    // Bulk
+                endpoint_address: cynthion::shared::libgreat::endpoints::bulk_in_address, // IN
+                attributes: 0x02,                                                         // Bulk
                 max_packet_size: 512,
                 interval: 0,
                 ..EndpointDescriptor::new()
             },
             EndpointDescriptor {
-                endpoint_address: LIBGREAT_BULK_OUT_ENDPOINT_ADDRESS, // OUT
-                attributes: 0x02,                                     // Bulk
+                endpoint_address: cynthion::shared::libgreat::endpoints::bulk_out_address, // OUT
+                attributes: 0x02,                                                          // Bulk
                 max_packet_size: 512,
                 interval: 0,
                 ..EndpointDescriptor::new()
@@ -498,7 +491,7 @@ pub const CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDes
     )],
 );
 
-pub const OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
+pub static OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
     ConfigurationDescriptor::new(
         ConfigurationDescriptorHeader {
             descriptor_type: DescriptorType::OtherSpeedConfiguration as u8,
@@ -513,23 +506,23 @@ pub const OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
                 interface_number: 0,
                 alternate_setting: 0,
                 interface_class: 0xff, // Vendor-specific
-                interface_subclass: LIBGREAT_INTERFACE_SUBCLASS,
-                interface_protocol: LIBGREAT_INTERFACE_PROTOCOL,
+                interface_subclass: cynthion::shared::usb::bInterfaceSubClass::moondancer,
+                interface_protocol: cynthion::shared::usb::bInterfaceProtocol::moondancer,
                 interface_string_index: 5,
                 ..InterfaceDescriptorHeader::new()
             },
             &[
                 EndpointDescriptor {
-                    endpoint_address: LIBGREAT_BULK_IN_ENDPOINT_ADDRESS, // IN
-                    attributes: 0x02,                                    // Bulk
-                    max_packet_size: 512,
+                    endpoint_address: cynthion::shared::libgreat::endpoints::bulk_in_address, // IN
+                    attributes: 0x02, // Bulk
+                    max_packet_size: 64,
                     interval: 0,
                     ..EndpointDescriptor::new()
                 },
                 EndpointDescriptor {
-                    endpoint_address: LIBGREAT_BULK_OUT_ENDPOINT_ADDRESS, // OUT
-                    attributes: 0x02,                                     // Bulk
-                    max_packet_size: 512,
+                    endpoint_address: cynthion::shared::libgreat::endpoints::bulk_out_address, // OUT
+                    attributes: 0x02, // Bulk
+                    max_packet_size: 64,
                     interval: 0,
                     ..EndpointDescriptor::new()
                 },
@@ -537,19 +530,20 @@ pub const OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
         )],
     );
 
-pub const USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
+pub static USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
     StringDescriptorZero::new(&[LanguageId::EnglishUnitedStates]);
 
-pub const USB_STRING_DESCRIPTOR_1: StringDescriptor = StringDescriptor::new("Great Scott Gadgets"); // manufacturer
-pub const USB_STRING_DESCRIPTOR_2: StringDescriptor =
+pub static USB_STRING_DESCRIPTOR_1: StringDescriptor =
+    StringDescriptor::new(cynthion::shared::usb::bManufacturerString::cynthion); // manufacturer
+pub static USB_STRING_DESCRIPTOR_2: StringDescriptor =
     StringDescriptor::new("test_usb.py unittest runner"); // product
-pub const USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new(DEVICE_SERIAL_STRING); // serial
-pub const USB_STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config0"); // configuration #0
-pub const USB_STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("interface0"); // interface #0
-pub const USB_STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("interface1"); // interface #1
-pub const USB_STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("config1"); // configuration #1
+pub static USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new(DEVICE_SERIAL_STRING); // serial
+pub static USB_STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config0"); // configuration #0
+pub static USB_STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("interface0"); // interface #0
+pub static USB_STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("interface1"); // interface #1
+pub static USB_STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("config1"); // configuration #1
 
-pub const USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
+pub static USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &USB_STRING_DESCRIPTOR_1,
     &USB_STRING_DESCRIPTOR_2,
     &USB_STRING_DESCRIPTOR_3,

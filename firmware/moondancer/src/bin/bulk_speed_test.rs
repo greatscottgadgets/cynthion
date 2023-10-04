@@ -437,18 +437,17 @@ impl TestStats {
 
 // - usb descriptors ----------------------------------------------------------
 
-pub const VENDOR_ID: u16 = 0x1209; // https://pid.codes/1209/
-pub const PRODUCT_ID: u16 = 0x0001; // pid.codes Test PID
+use moondancer::usb::{DEVICE_SERIAL_STRING, DEVICE_VERSION_NUMBER};
 
-const USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
+static USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     descriptor_version: 0x0200,
     device_class: 0x00,
     device_subclass: 0x00,
     device_protocol: 0x00,
     max_packet_size: 64,
-    vendor_id: VENDOR_ID,
-    product_id: PRODUCT_ID,
-    device_version_number: 0x1234,
+    vendor_id: cynthion::shared::usb::bVendorId::example,
+    product_id: cynthion::shared::usb::bProductId::example,
+    device_version_number: DEVICE_VERSION_NUMBER,
     manufacturer_string_index: 1,
     product_string_index: 2,
     serial_string_index: 3,
@@ -456,7 +455,7 @@ const USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     ..DeviceDescriptor::new()
 };
 
-const USB_DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualifierDescriptor {
+static USB_DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualifierDescriptor {
     descriptor_version: 0x0200,
     device_class: 0x00,
     device_subclass: 0x00,
@@ -467,7 +466,7 @@ const USB_DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualifi
     ..DeviceQualifierDescriptor::new()
 };
 
-const USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDescriptor::new(
+static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDescriptor::new(
     ConfigurationDescriptorHeader {
         configuration_value: 1,
         configuration_string_index: 1,
@@ -511,7 +510,7 @@ const USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDes
     )],
 );
 
-const USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
+static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
     ConfigurationDescriptor::new(
         ConfigurationDescriptorHeader {
             descriptor_type: DescriptorType::OtherSpeedConfiguration as u8,
@@ -557,14 +556,15 @@ const USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
         )],
     );
 
-const USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
+static USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
     StringDescriptorZero::new(&[LanguageId::EnglishUnitedStates]);
+static USB_STRING_DESCRIPTOR_1: StringDescriptor =
+    StringDescriptor::new(cynthion::shared::usb::bManufacturerString::bulk_speed_test); // manufacturer
+static USB_STRING_DESCRIPTOR_2: StringDescriptor =
+    StringDescriptor::new(cynthion::shared::usb::bProductString::bulk_speed_test); // product
+static USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new(DEVICE_SERIAL_STRING); // serial
 
-const USB_STRING_DESCRIPTOR_1: StringDescriptor = StringDescriptor::new("LUNA");
-const USB_STRING_DESCRIPTOR_2: StringDescriptor = StringDescriptor::new("IN speed test");
-const USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("no serial");
-
-const USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
+static USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &USB_STRING_DESCRIPTOR_1,
     &USB_STRING_DESCRIPTOR_2,
     &USB_STRING_DESCRIPTOR_3,

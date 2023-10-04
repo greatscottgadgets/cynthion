@@ -113,6 +113,11 @@ impl<'a> Firmware<'a> {
     fn new(peripherals: pac::Peripherals) -> Self {
         // initialize logging
         moondancer::log::init(hal::Serial::new(peripherals.UART));
+        info!(
+            "{} {}",
+            cynthion::shared::usb::bManufacturerString::cynthion,
+            cynthion::shared::usb::bProductString::cynthion,
+        );
         info!("Logging initialized");
 
         // usb1: aux (host on r0.4)

@@ -14,26 +14,17 @@ from pygreat.board import GreatBoard
 from .interfaces.led import LED
 from .interfaces.gpio import GPIO
 
+from .shared import usb
+
 # Default device identifiers.
-#
-#   CONTROL - 0x1d50/0x615c Apollo FPGA Programmer
-#   AUX     - 0x1d50/0x615b LUNA USB Multitool
-CYNTHION_VENDOR_ID  = 0x1d50 # OpenMoko, Inc.
-CYNTHION_PRODUCT_ID = 0x615b # Cynthion USB Multitool
+CYNTHION_VENDOR_ID  = usb.bVendorId.cynthion
+CYNTHION_PRODUCT_ID = usb.bProductId.cynthion
 
-# libgreat backend interface subclass TODO document
-#
-# 0x00       - Apollo / Flash Bridge Interface
-# 0x01..0x0f - Reserved
-# 0x10       - Analyzer
-# 0x11       - Moondancer
-LIBGREAT_INTERFACE_SUBCLASS = 0x11
+# libgreat backend interface subclass
+LIBGREAT_INTERFACE_SUBCLASS = usb.bInterfaceSubClass.moondancer
 
-# libgreat backend interface protocol version TODO document
-#
-# 0x01 -> v0.1
-# 0x10 -> v1.0
-LIBGREAT_INTERFACE_PROTOCOL = 0x01
+# libgreat backend interface protocol version
+LIBGREAT_INTERFACE_PROTOCOL = usb.bInterfaceProtocol.moondancer
 
 # Quirk constant that helps us identify libusb's pipe errors, which bubble
 # up as generic USBErrors with errno 32 on affected platforms.
