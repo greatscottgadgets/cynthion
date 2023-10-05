@@ -1,0 +1,88 @@
+### Cynthion shared USB identifiers
+###
+### This configuration file defines USB identifiers that are shared
+### between host and device implementations.
+###
+
+# bVendorId
+#
+# USB Device Descriptor vendor id field value.
+#
+[bVendorId]
+apollo          = 0x1d50 # OpenMoko, Inc.
+cynthion        = 0x1d50 # OpenMoko, Inc.
+example         = 0x1209 # https://pid.codes/1209/
+
+# bProductId
+#
+# USB Device Descriptor product id field value.
+#
+[bProductId]
+apollo          = 0x615c # Apollo Debugger
+cynthion        = 0x615b # Cynthion USB Test Instrument
+example         = 0x0001 # pid.codes Test PID 1
+example_2       = 0x0002 # pid.codes Test PID 2
+example_3       = 0x0001 # pid.codes Test PID 3
+example_4       = 0x0002 # pid.codes Test PID 4
+example_5       = 0x0001 # pid.codes Test PID 5
+
+# iManufacturer
+#
+# USB Device Descriptor Manufacturer string field value.
+#
+[bManufacturerString]
+apollo          = "Great Scott Gadgets"
+bulk_speed_test = "LUNA"
+cynthion        = "Great Scott Gadgets"
+example         = "https://pid.codes/1209/"
+
+# iProduct
+#
+# USB Device Descriptor product string field value.
+#
+[bProductString]
+apollo          = "Apollo Debugger"
+bulk_speed_test = "IN speed test"
+cynthion        = "Cynthion USB Test Instrument"
+example         = "pid.codes Test PID 1"
+example_2       = "pid.codes Test PID 2"
+example_3       = "pid.codes Test PID 3"
+example_4       = "pid.codes Test PID 4"
+example_5       = "pid.codes Test PID 5"
+
+# bInterfaceSubClass
+#
+# Cynthion reports the same idVendor and idProduct values in the USB
+# device descriptor irrespective of the gateware running on the device.
+#
+# Therefore we use the interface subclass field to identify the
+# function being exposed by the currently provided interfaces.
+#
+# Valid values are:
+#
+#   0x00       - Apollo / Flash Bridge Interface
+#   0x01..0x0f - Reserved
+#   0x10       - Analyzer
+#   0x11       - libgreat
+#   0x11       - Moondancer
+#
+[bInterfaceSubClass]
+apollo     = 0x00
+analyzer   = 0x10
+libgreat   = 0x11
+moondancer = 0x11
+
+# bInterfaceProtocol
+#
+# It is recommended to use the interface protocol field to version the
+# protocol used for the the interface subclass in the form:
+#
+#   Bits 0-3:  Minor version
+#   Bits 4-7: Major version
+#
+# e.g. 0x01 = v0.1, 0x02 = v0.2, 0x10 = v1.0, 0x11 = v1.1
+#
+[bInterfaceProtocol]
+analyzer = 0x01
+libgreat = 0x01
+moondancer = 0x01

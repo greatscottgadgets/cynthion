@@ -6,6 +6,7 @@ from .cynthion import CynthionSingleton
 from .cynthion import CynthionBoard
 
 from . import gateware
+from . import shared
 
 
 Cynthion = Cynthion  # pyflakes

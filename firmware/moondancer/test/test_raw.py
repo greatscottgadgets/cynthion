@@ -15,8 +15,8 @@ from pygreat.comms_backends.usb1 import USB1CommsBackend as backend
 
 import cynthion
 
-VENDOR_ID  = cynthion.board.CYNTHION_VENDOR_ID
-PRODUCT_ID = cynthion.board.CYNTHION_PRODUCT_ID
+VENDOR_ID  = cynthion.shared.usb.bVendorId.cynthion
+PRODUCT_ID = cynthion.shared.usb.bProductId.cynthion
 
 EP_MAX_PACKET_SIZE = 512
 

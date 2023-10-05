@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license-file = "LICENSE.txt"
 categories = ["embedded", "hardware-support", "no-std"]
-description = "MoonDancer firmware for the Great Scott Gadgets Cynthion USB Multitool"
+description = "Moondancer firmware for the Great Scott Gadgets Cynthion USB Test Instrument"
 edition = "2021"
 rust-version = "1.68"
 default-run = "moondancer"
@@ -46,6 +46,7 @@ nightly = [
 # - dependencies --------------------------------------------------------------
 
 [dependencies]
+cynthion = { path = "../../cynthion/rust" }
 libgreat = { path = "../libgreat-rs", features = ["errno_minimal"] }
 lunasoc-pac = { path = "../lunasoc-pac", default-features = false, features = ["critical-section"]}
 lunasoc-hal = { path = "../lunasoc-hal", default-features = false, features = ["usb"]}

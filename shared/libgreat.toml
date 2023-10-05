@@ -1,0 +1,14 @@
+### libgreat
+###
+### This configuration file defines constants that are shared between
+### the host and device implementations of the libgreat protocol.
+###
+
+# endpoint configurations
+[endpoints]
+bulk_in_address = 0x81
+bulk_out_address = 0x02
+
+# Vendor request constants
+[vendor]
+command_request = 0x65
