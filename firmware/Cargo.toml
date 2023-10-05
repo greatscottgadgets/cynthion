@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "libgreat",
+    "libgreat-rs",
     "lunasoc-hal",
     "lunasoc-pac",
     "moondancer",

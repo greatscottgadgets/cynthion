@@ -1,4 +1,4 @@
-# moondancer_soc
+# soc
 
 This directory contains the custom system-on-chip (SoC) design that runs the Moondancer firmware.
 

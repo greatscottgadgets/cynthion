@@ -1,34 +1,20 @@
-# Build outputs
-*.bin
-*.d
-*.elf
-*.hex
-*.srec
-*.dfu
-device/firmware/lunasoc-pac/build/
-device/gateware/memory.x
-device/gateware/moondancer_soc/build
-host/build/
+# Python
+__pycache__/
+**/*.py[cod]
+*$py.class
+*.egg-info
+cynthion/python/**/build/
 
 # Rust
-**/target/
-Cargo.lock
+cynthion/rust/**/target/
+firmware/**/target/
+**/Cargo.lock
 **/*.rs.bk
+firmware/lunasoc-pac/build/
 
 # Scala
 .metals/
 .scalafmt.conf
-
-# CMakeInternals
-CMakeFiles
-CMakeCache.txt
-
-# Compiled python files
-__pycache__/
-*.py[cod]
-*$py.class
-*.egg-info
-host/dist
 
 # Environments
 **/.python-version
@@ -50,19 +36,11 @@ Thumbs.db
 # ctags output
 tags
 
-# ccls output
-.ccls-cache
-.ccls
-compile_commands.json
-
 # files involved in generating a release
-VERSION
-dist
-host-packages
-host/.eggs
-release-files
-deploy-files
-firmware-bin
+cynthion/python/VERSION
+cynthion/python/dist
+cynthion/python/host-packages
+cynthion/python/.eggs
 *.tar.xz
 *.zip
 

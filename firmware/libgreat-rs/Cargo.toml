@@ -1,11 +1,15 @@
 [package]
 name = "libgreat"
 version = "0.1.0"
+authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
+license-file = "LICENSE.txt"
+categories = ["embedded", "hardware-support", "no-std"]
+description = "Pure rust implementation of Great Scott Gadgets' libgreat communications protocol."
 edition = "2021"
+rust-version = "1.68"
 
 [features]
-default = [
-]
+default = []
 nightly = []
 
 # selects a minimal subset of error codes in order to reduce binary size

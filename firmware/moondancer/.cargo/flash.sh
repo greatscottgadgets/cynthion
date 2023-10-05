@@ -3,7 +3,7 @@
 # configuration
 : ${UART:=/dev/ttyACM0}
 : ${BASE_MEM:=0x40000000}
-: ${BITSTREAM:=../../gateware/moondancer_soc/build/top.bit}
+: ${BITSTREAM:=../../cynthion/python/build/top.bit}
 
 echo "Using SoC uart: UART=$UART"
 echo "Using SoC base memory address: BASE_MEM=$BASE_MEM"
@@ -11,7 +11,7 @@ echo "Using SoC bitstream: BITSTREAM=$BITSTREAM"
 
 # create bin file
 NAME=$(basename $1)
-cargo objcopy --release --example $NAME -- -Obinary $1.bin
+cargo objcopy --release --bin $NAME -- -Obinary $1.bin
 
 # configure fpga with soc bitstream
 echo "Configuring fpga: $BITSTREAM"

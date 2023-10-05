@@ -7,22 +7,23 @@ AR=$(CROSS)-ar
 
 # - gateware ------------------------------------------------------------------
 
-top:
+analyzer:
 	rm -rf build
-	AR=$(AR) python top.py
+	python -m cynthion.gateware.analyzer.top
+
+soc:
+	rm -rf build
+	AR=$(AR) python -m cynthion.gateware.soc.top
 	cp build/genrust/memory.x ../../firmware/memory.x
-
-load:
-	apollo configure build/top.bit
-
-load-ulx3s:
-	openFPGALoader --board ulx3s build/top.bit
 
 
 # - helpers -------------------------------------------------------------------
 
+clean:
+	-rm -rf build/
+
 console:
 	pyserial-miniterm $(UART) 115200
 
-clean:
-	-rm -rf build/
+load:
+	apollo configure build/top.bit

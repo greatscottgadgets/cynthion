@@ -5,7 +5,6 @@
 pub mod error;
 pub mod firmware;
 pub mod gcp;
-//pub mod smolusb;
 
 pub use error::GreatError;
 pub use error::GreatResult;
