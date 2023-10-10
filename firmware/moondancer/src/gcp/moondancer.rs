@@ -109,28 +109,46 @@ impl Moondancer {
         #[derive(FromBytes, Unaligned)]
         struct Args {
             ep0_max_packet_size: U16<LittleEndian>,
+            device_speed: u8,
             quirk_flags: U16<LittleEndian>,
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-
         let ep0_max_packet_size = args.ep0_max_packet_size.into();
+        let device_speed = Speed::from_libusb(args.device_speed);
         let quirk_flags = args.quirk_flags.into();
 
         self.ep_in_max_packet_size[0] = ep0_max_packet_size;
         self.ep_out_max_packet_size[0] = ep0_max_packet_size;
         self.quirk_flags = quirk_flags;
 
-        // force full-speed - TODO add as argument
-        //self.usb0.controller.full_speed_only.write(|w| w.full_speed_only().bit(true));
-        //self.usb0.controller.low_speed_only.write(|w| w.low_speed_only().bit(true));
+        match device_speed {
+            Speed::High => {
+                self.usb0.controller.full_speed_only.write(|w| w.full_speed_only().bit(false));
+                self.usb0.controller.low_speed_only.write(|w| w.low_speed_only().bit(false));
+            },
+            Speed::Full => {
+                self.usb0.controller.full_speed_only.write(|w| w.full_speed_only().bit(true));
+                self.usb0.controller.low_speed_only.write(|w| w.low_speed_only().bit(false));
+            },
+            Speed::Low => {
+                // FIXME still connects at full speed
+                self.usb0.controller.full_speed_only.write(|w| w.full_speed_only().bit(false));
+                self.usb0.controller.low_speed_only.write(|w| w.low_speed_only().bit(true));
+            },
+            _ => {
+                log::warn!("Requested unsupported device speed, ignoring: {:?}", device_speed);
+            }
+        }
 
-        let speed = self.usb0.connect();
+        // FIXME this returns "1" for full speed irrespective of the actual connection speed if
+        //       the device hasn't been previously enumerated.
+        let speed: Speed = self.usb0.connect().into();
 
         unsafe { self.enable_usb_interrupts() };
 
-        debug!(
-            "MD moondancer::connect(ep0_max_packet_size:{}, quirk_flags:{}) -> {:?}",
-            args.ep0_max_packet_size, args.quirk_flags, speed
+        log::info!(
+            "MD moondancer::connect(ep0_max_packet_size:{}, device_speed:{:?}, quirk_flags:{}) -> {:?}",
+            args.ep0_max_packet_size, device_speed, args.quirk_flags, speed
         );
 
         Ok([].into_iter())
@@ -549,9 +567,9 @@ pub static VERBS: [Verb; 14] = [
     Verb {
         id: 0x0,
         name: "connect\0",
-        doc: "\0", //"Setup the target port to connect to a host.\nEnables the target port's USB pull-ups.\0",
-        in_signature: "<HH\0",
-        in_param_names: "ep0_max_packet_size, quirk_flags\0",
+        doc: "\0", //"Connect the target to the host. device_speed is 3:high, 2:full, 1:low\0",
+        in_signature: "<HBH\0",
+        in_param_names: "ep0_max_packet_size, device_speed, quirk_flags\0",
         out_signature: "\0",
         out_param_names: "*\0",
     },

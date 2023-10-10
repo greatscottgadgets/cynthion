@@ -211,6 +211,7 @@ macro_rules! impl_usb {
                     self.controller.connect.write(|w| w.connect().bit(true));
 
                     // 0: High, 1: Full, 2: Low, 3:SuperSpeed (incl SuperSpeed+)
+                    // FIXME this always return "1" for full speed irrespective of the actual connection speed
                     self.controller.speed.read().speed().bits()
                 }
 
