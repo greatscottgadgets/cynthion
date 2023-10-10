@@ -140,11 +140,13 @@ impl Moondancer {
             }
         }
 
-        // FIXME this returns "1" for full speed irrespective of the actual connection speed if
-        //       the device hasn't been previously enumerated.
-        let speed: Speed = self.usb0.connect().into();
-
+        // connect usb0 device and enable interrupts
+        self.usb0.connect();
         unsafe { self.enable_usb_interrupts() };
+
+        // wait for things to settle and get connection speed
+        unsafe { riscv::asm::delay(5_000_000); }
+        let speed: Speed = self.usb0.controller.speed.read().speed().bits().into();
 
         log::info!(
             "MD moondancer::connect(ep0_max_packet_size:{}, device_speed:{:?}, quirk_flags:{}) -> {:?}",

@@ -191,8 +191,10 @@ fn main() -> ! {
     usb0.set_other_speed_configuration_descriptor(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
     usb0.cb_vendor_request = Some(handle_vendor_request);
     usb0.cb_string_request = Some(handle_string_request);
-    let speed = usb0.connect();
-    info!("Connected USB0 device: {:?}", Speed::from(speed));
+    usb0.connect();
+
+    let speed: Speed = usb0.hal_driver.controller.speed.read().speed().bits().into();
+    info!("Connected USB0 device: {:?}", speed);
 
     // usb1: Aux
     let mut usb1 = UsbDevice::<_, MAX_CONTROL_RESPONSE_SIZE>::new(
@@ -211,8 +213,10 @@ fn main() -> ! {
     usb1.set_other_speed_configuration_descriptor(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
     usb1.cb_vendor_request = Some(handle_vendor_request);
     usb1.cb_string_request = Some(handle_string_request);
-    let speed = usb1.connect();
-    info!("Connected USB1 device: {:?}", Speed::from(speed));
+    usb1.connect();
+
+    let speed: Speed = usb0.hal_driver.controller.speed.read().speed().bits().into();
+    info!("Connected USB1 device: {:?}", speed);
 
     // enable interrupts
     unsafe {

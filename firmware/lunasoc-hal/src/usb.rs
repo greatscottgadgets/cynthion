@@ -195,7 +195,7 @@ macro_rules! impl_usb {
 
             impl UsbDriverOperations for $USBX {
                 /// Set the interface up for new connections
-                fn connect(&self) -> u8 {
+                fn connect(&self) {
                     // disconnect device controller
                     self.controller.connect.write(|w| w.connect().bit(false));
 
@@ -209,10 +209,6 @@ macro_rules! impl_usb {
 
                     // connect device controller
                     self.controller.connect.write(|w| w.connect().bit(true));
-
-                    // 0: High, 1: Full, 2: Low, 3:SuperSpeed (incl SuperSpeed+)
-                    // FIXME this always return "1" for full speed irrespective of the actual connection speed
-                    self.controller.speed.read().speed().bits()
                 }
 
                 fn disconnect(&self) {
@@ -232,7 +228,7 @@ macro_rules! impl_usb {
                 }
 
                 /// Perform a full reset of the device.
-                fn reset(&self) -> u8 {
+                fn reset(&self) {
                     // disable endpoint events
                     self.disable_interrupts();
 
@@ -247,17 +243,14 @@ macro_rules! impl_usb {
                     // re-enable endpoint events
                     self.enable_interrupts();
 
-                    // 0: High, 1: Full, 2: Low, 3:SuperSpeed (incl SuperSpeed+)
-                    let speed = self.controller.speed.read().speed().bits();
-                    trace!("UsbInterface0::reset() -> {}", speed);
-                    speed
+                    trace!("UsbInterface0::reset()");
                 }
 
                 /// Perform a bus reset of the device.
                 ///
                 /// This differs from `reset()` by not disabling
                 /// USBx_CONTROLLER bus reset events.
-                fn bus_reset(&self) -> u8 {
+                fn bus_reset(&self) {
                     // disable events
                     self.disable_interrupt(Interrupt::$USBX_CONTROLLER);
                     self.disable_interrupt(Interrupt::$USBX_EP_CONTROL);
@@ -282,10 +275,7 @@ macro_rules! impl_usb {
                     self.enable_interrupt(Interrupt::$USBX_EP_CONTROL);
                     self.enable_interrupt(Interrupt::$USBX_EP_IN);
 
-                    // 0: High, 1: Full, 2: Low, 3:SuperSpeed (incl SuperSpeed+)
-                    let speed = self.controller.speed.read().speed().bits();
-                    trace!("UsbInterface0::reset() -> {}", speed);
-                    speed
+                    trace!("UsbInterface0::bus_reset()");
                 }
 
                 /// Acknowledge the status stage of an incoming control request.

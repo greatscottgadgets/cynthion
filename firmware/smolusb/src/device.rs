@@ -194,24 +194,21 @@ impl<'a, D, const MAX_RECEIVE_SIZE: usize> UsbDevice<'a, D, MAX_RECEIVE_SIZE>
 where
     D: UsbDriver,
 {
-    pub fn connect(&self) -> Speed {
-        self.hal_driver.connect().into()
+    pub fn connect(&self) {
+        self.hal_driver.connect();
     }
 
     pub fn disconnect(&self) {
         self.hal_driver.disconnect()
     }
 
-    pub fn reset(&self) -> Speed {
-        let speed = self.hal_driver.reset().into();
+    pub fn reset(&self) {
+        self.hal_driver.reset();
         self.state.replace(DeviceState::Reset.into());
-        speed
     }
 
-    pub fn bus_reset(&self) -> Speed {
-        let speed = self.hal_driver.bus_reset().into();
+    pub fn bus_reset(&self) {
         self.state.replace(DeviceState::Reset.into());
-        speed
     }
 }
 
@@ -308,6 +305,9 @@ where
             }
             (RequestType::Standard, Request::SetFeature) => {
                 self.setup_set_feature(setup_packet)?;
+            }
+            (RequestType::Standard, Request::GetStatus) => {
+                self.setup_get_status(setup_packet)?;
             }
             (RequestType::Class, Request::ClassOrVendor(request)) => {
                 // if we have a callback handler, invoke it
@@ -591,6 +591,20 @@ where
 
         Ok(())
     }
+
+    fn setup_get_status(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
+        let recipient = setup_packet.recipient();
+
+        log::info!("SETUP setup_get_status() recipient:{:?}", recipient);
+
+        let status: u16 = 0b00; // TODO bit 1:remote-wakeup bit 0:self-powered
+
+        self.hal_driver.write_ref(0, status.to_le_bytes().iter());
+        self.hal_driver.ack_status_stage(setup_packet);
+
+        Ok(())
+    }
+
 }
 
 // Helpers

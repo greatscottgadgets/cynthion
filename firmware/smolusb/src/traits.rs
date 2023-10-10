@@ -19,13 +19,13 @@ pub trait UsbDriver:
 
 pub trait UsbDriverOperations {
     /// Connect
-    fn connect(&self) -> u8;
+    fn connect(&self);
     /// Disconnect
     fn disconnect(&self);
     /// Reset
-    fn reset(&self) -> u8;
+    fn reset(&self);
     /// Bus Reset
-    fn bus_reset(&self) -> u8;
+    fn bus_reset(&self);
     /// Acknowledge the status stage of an incoming control request.
     fn ack_status_stage(&self, packet: &SetupPacket);
     fn ack(&self, endpoint_number: u8, direction: Direction);
