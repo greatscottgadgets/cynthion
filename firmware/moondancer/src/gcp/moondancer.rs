@@ -59,6 +59,12 @@ impl Moondancer {
     #[inline(always)]
     pub fn dispatch_event(&mut self, event: InterruptEvent) {
         if matches!(event, InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::BusReset)) {
+            // send bus reset events to facedancer, but handle it locally for lower latency
+            self.usb0.bus_reset();
+            trace!("MD => UsbEvent::BusReset");
+
+        } else if matches!(event, InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveControl(0))) {
+
         } else {
             debug!("\n\nMD => {:?}", event);
         }
@@ -176,7 +182,8 @@ impl Moondancer {
 
     /// Perform a USB bus reset.
     pub fn bus_reset(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        self.usb0.bus_reset();
+        // we send the event to facedancer but the actual reset happens locally
+        //self.usb0.bus_reset();
 
         trace!("MD moondancer::bus_reset()");
 
