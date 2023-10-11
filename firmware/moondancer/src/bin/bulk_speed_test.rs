@@ -44,13 +44,13 @@ fn MachineExternal() {
 
     // - usb0 interrupts - "host_phy" / "aux_phy" --
 
-    // USB0 UsbBusReset
+    // USB0 BusReset
     if usb0.is_pending(pac::Interrupt::USB0) {
         usb0.clear_pending(pac::Interrupt::USB0);
         usb0.bus_reset();
         dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset))
 
-    // USB0_EP_CONTROL UsbReceiveSetupPacket
+    // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         let endpoint = usb0.ep_control.epno.read().bits() as u8;
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
@@ -59,7 +59,7 @@ fn MachineExternal() {
             UsbEvent::ReceiveControl(endpoint),
         ));
 
-    // USB0_EP_OUT UsbReceiveData
+    // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
         let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
 
@@ -79,7 +79,7 @@ fn MachineExternal() {
             UsbEvent::ReceivePacket(endpoint),
         ));
 
-    // USB0_EP_IN UsbTransferComplete
+    // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
         let endpoint = usb0.ep_in.epno.read().bits() as u8;
         usb0.clear_pending(pac::Interrupt::USB0_EP_IN);

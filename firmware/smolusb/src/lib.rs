@@ -36,6 +36,10 @@ pub mod event {
 
         /// Received a setup packet on USBx_EP_CONTROL
         ///
+        /// An alternate version of `ReceiveControl` that can be used
+        /// when the setup packet is read inside the interrupt handler
+        /// for lower latency.
+        ///
         /// Contents is (endpoint_number, SetupPacket)
         ReceiveSetupPacket(u8, SetupPacket) = 14,
 
