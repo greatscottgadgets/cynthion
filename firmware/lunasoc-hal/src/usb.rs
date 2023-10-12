@@ -439,12 +439,18 @@ macro_rules! impl_usb {
                         }
                     }
 
+                    if bytes_read != buffer.len() {
+                        warn!("  RX CONTROL {} bytes read - expected {}", bytes_read, buffer.len());
+                    }
+
                     if overflow == 0 {
                         trace!("  RX CONTROL {} bytes read", bytes_read);
                     } else {
                         warn!("  RX CONTROL {} bytes read + {} bytes overflow",
                               bytes_read, overflow);
                     }
+
+                    //self.ep_control.reset.write(|w| w.reset().bit(true));
 
                     bytes_read
                 }
