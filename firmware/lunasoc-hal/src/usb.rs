@@ -440,19 +440,22 @@ macro_rules! impl_usb {
                     }
 
                     if bytes_read != buffer.len() {
-                        warn!("  RX CONTROL {} bytes read - expected {}", bytes_read, buffer.len());
+                        warn!("  RX {} CONTROL {} bytes read - expected {}",
+                              stringify!($USBX),
+                              bytes_read, buffer.len());
                     }
 
                     if overflow == 0 {
-                        trace!("  RX CONTROL {} bytes read", bytes_read);
+                        trace!("  RX {} CONTROL {} bytes read", stringify!($USBX), bytes_read);
                     } else {
-                        warn!("  RX CONTROL {} bytes read + {} bytes overflow",
+                        warn!("  RX {} CONTROL {} bytes read + {} bytes overflow",
+                              stringify!($USBX),
                               bytes_read, overflow);
                     }
 
                     //self.ep_control.reset.write(|w| w.reset().bit(true));
 
-                    bytes_read
+                    bytes_read + overflow
                 }
             }
 
@@ -511,13 +514,14 @@ macro_rules! impl_usb {
                     }
 
                     if overflow == 0 {
-                        trace!("  RX OUT{} {} bytes read", endpoint_number, bytes_read);
+                        trace!("  RX {} OUT {} {} bytes read", stringify!($USBX), endpoint_number, bytes_read);
                     } else {
-                        warn!("  RX OUT{} {} bytes read + {} bytes overflow",
+                        warn!("  RX {} OUT {} {} bytes read + {} bytes overflow",
+                              stringify!($USBX),
                               endpoint_number, bytes_read, overflow);
                     }
 
-                    bytes_read
+                    bytes_read + overflow
                 }
             }
 

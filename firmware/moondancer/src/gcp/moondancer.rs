@@ -43,6 +43,8 @@ pub struct Moondancer {
     quirk_flags: u16,
     ep_in_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
     ep_out_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
+    control_queue: Queue<SetupPacket, 8>,
+    event_counter: usize,
 }
 
 impl Moondancer {
@@ -53,21 +55,77 @@ impl Moondancer {
             quirk_flags: 0,
             ep_in_max_packet_size: [0; crate::EP_MAX_ENDPOINTS],
             ep_out_max_packet_size: [0; crate::EP_MAX_ENDPOINTS],
+            control_queue: Queue::new(),
+            event_counter: 0,
         }
     }
 
     #[inline(always)]
     pub fn dispatch_event(&mut self, event: InterruptEvent) {
+
+        // - filter interrupt events --
+
         if matches!(event, InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::BusReset)) {
-            // send bus reset events to facedancer, but handle it locally for lower latency
+            // handle bus resets immediately for lower latency
             self.usb0.bus_reset();
             trace!("MD => UsbEvent::BusReset");
 
-        } else if matches!(event, InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveControl(0))) {
+        } else if matches!(event, InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveControl(_))) {
+
+            self.event_counter += 1;
+
+
+            // FIXME why are we getting USB0_EP0_CONTROL interrupts that don't show up on packetry and have no data in the FIFO?
+            if self.usb0.ep_control.have.read().have().bit() {
+                log::info!("MD => #{} {:?}  OKAY", self.event_counter, event);
+            } else {
+                log::info!("MD => #{} {:?} dropping GetStatus 1", self.event_counter, event);
+                return;
+            }
+
+            // read and queue setup packets immediately for lower latency
+            let mut setup_packet_buffer = [0_u8; 8];
+            self.usb0.read_control(&mut setup_packet_buffer);
+
+            if setup_packet_buffer[0] == 0 && setup_packet_buffer[1] == 0 {
+                log::info!("MD => #{} {:?} dropping GetStatus 2", self.event_counter, event);
+                return;
+            }
+
+            match SetupPacket::try_from(setup_packet_buffer) {
+                Ok(setup_packet) => {
+                    log::info!("    {:?}", setup_packet);
+                    match self.control_queue.enqueue(setup_packet) {
+                        Ok(()) => (),
+                        Err(_) => {
+                            error!("Moondancer - control queue overflow");
+                            loop {
+                                unsafe {
+                                    riscv::asm::nop();
+                                }
+                            }
+                        }
+                    }
+                    //log::info!("MD => UsbEvent::ReceiveControl {:?}", setup_packet);
+                }
+                Err(e) => {
+                    warn!("MD Failed to parse setup packet: {:?}", e);
+                }
+            }
+
+        } else if matches!(event, InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceivePacket(0))) {
+            // swallow ACK's
+            if !self.usb0.ep_out.have.read().have().bit() {
+                self.usb0.ep_out_prime_receive(0);
+                //log::info!("MD => #{} UsbEvent::ReceivePacket(0) dropping ACK", self.event_counter);
+                return;
+            }
 
         } else {
-            debug!("\n\nMD => {:?}", event);
+            //log::info!("\n\nMD => #{} {:?}", self.event_counter, event);
         }
+
+        // enqueue event
         match self.queue.enqueue(event) {
             Ok(()) => (),
             Err(_) => {
@@ -196,13 +254,25 @@ impl Moondancer {
 impl Moondancer {
     /// Read a control packet from SetupFIFOInterface.
     pub fn read_control(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+/*
         let mut setup_packet_buffer = [0_u8; 8];
         self.usb0.read_control(&mut setup_packet_buffer);
-
         let setup_packet = SetupPacket::try_from(setup_packet_buffer)
             .map_err(|_| GreatError::IllegalByteSequence)?;
+*/
+        let setup_packet = match self.control_queue.dequeue() {
+            Some(setup_packet) => setup_packet,
+            None => {
+                error!("Moondancer - no packets in control queue");
+                loop {
+                    unsafe {
+                        riscv::asm::nop();
+                    }
+                }
+            }
+        };
 
-        debug!("MD moondancer::read_control() -> {:?}", setup_packet);
+        //log::info!("MD #{} moondancer::read_control() -> {:?}", self.event_counter, setup_packet);
 
         Ok(SetupPacket::as_bytes(setup_packet).into_iter())
     }
@@ -304,24 +374,38 @@ impl Moondancer {
         Ok(iter)
     }
 
-    /// Stall the given USB endpoint.
-    pub fn stall_endpoint(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+    /// Stall the given USB IN endpoint number.
+    pub fn stall_endpoint_in(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
         #[derive(FromBytes, Unaligned)]
         struct Args {
-            endpoint_address: u8, // TODO consider using either endpoint_number or making _all_ api calls use address
+            endpoint_number: u8,
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-        let endpoint_address = args.endpoint_address;
-        let endpoint_number = endpoint_address & 0x7f;
+        let endpoint_number = args.endpoint_number;
 
         // stall IN end
         self.usb0.stall_endpoint_in(endpoint_number);
 
+        log::info!("MD moondancer::stall_endpoint_in({})", args.endpoint_number);
+
+        Ok([].into_iter())
+    }
+
+    /// Stall the given USB OUT endpoint number.
+    pub fn stall_endpoint_out(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        #[repr(C)]
+        #[derive(FromBytes, Unaligned)]
+        struct Args {
+            endpoint_number: u8,
+        }
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
+        let endpoint_number = args.endpoint_number;
+
         // stall OUT end
         self.usb0.stall_endpoint_out(endpoint_number);
 
-        log::info!("MD moondancer::stall_endpoint({})", args.endpoint_address);
+        log::info!("MD moondancer::stall_endpoint_out({})", args.endpoint_number);
 
         Ok([].into_iter())
     }
@@ -338,16 +422,17 @@ impl Moondancer {
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
-        // TODO bounds check / handle big responses
-        let mut rx_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
+        let mut rx_buffer: [u8; crate::EP_MAX_PACKET_SIZE] = [0; crate::EP_MAX_PACKET_SIZE];
         let bytes_read = self.usb0.read(args.endpoint_number, &mut rx_buffer);
-
-        // TODO should we automatically prime OUT receive instead of waiting for facedancer?
-        //self.usb0.ep_out_prime_receive(args.endpoint_number);
+        if bytes_read > rx_buffer.len() {
+            error!("MD moondancer::read_endpoint({}) -> bytes_read:{} buffer overflow",
+                   args.endpoint_number,
+                   bytes_read);
+        }
 
         log::debug!(
-            "MD moondancer::read_endpoint({}) -> bytes_read:{}",
-            args.endpoint_number, bytes_read
+            "MD #{} moondancer::read_endpoint({}) -> bytes_read:{}",
+            self.event_counter, args.endpoint_number, bytes_read
         );
 
         Ok(rx_buffer.into_iter().take(bytes_read))
@@ -571,7 +656,7 @@ pub static CLASS_DOCS: &str = "API for fine-grained control of the Target USB po
 ///
 /// Fields are `"\0"`  where C implementation has `""`
 /// Fields are `"*\0"` where C implementation has `NULL`
-pub static VERBS: [Verb; 14] = [
+pub static VERBS: [Verb; 15] = [
     // - device connection --
     Verb {
         id: 0x0,
@@ -630,16 +715,25 @@ pub static VERBS: [Verb; 14] = [
     },
     Verb {
         id: 0x6,
-        name: "stall_endpoint\0",
-        doc: "\0", //"Stall the endpoint with the provided address.\0",
+        name: "stall_endpoint_in\0",
+        doc: "\0", //"Stall the IN endpoint with the provided endpoint number.\0",
         in_signature: "<B\0",
-        in_param_names: "endpoint_address\0",
+        in_param_names: "endpoint_number\0",
+        out_signature: "\0",
+        out_param_names: "*\0",
+    },
+    Verb {
+        id: 0x7,
+        name: "stall_endpoint_out\0",
+        doc: "\0", //"Stall the OUT endpoint with the provided endpoint number.\0",
+        in_signature: "<B\0",
+        in_param_names: "endpoint_number\0",
         out_signature: "\0",
         out_param_names: "*\0",
     },
     // - data transfer --
     Verb {
-        id: 0x7,
+        id: 0x8,
         name: "read_endpoint\0",
         doc: "\0", //"Read a packet from an OUT endpoint.\0",
         in_signature: "<B\0",
@@ -648,7 +742,7 @@ pub static VERBS: [Verb; 14] = [
         out_param_names: "read_data\0",
     },
     Verb {
-        id: 0x8,
+        id: 0x9,
         name: "ep_out_prime_receive\0",
         doc: "\0", //"Prepare OUT endpoint to receive a single packet.\0",
         in_signature: "<B\0",
@@ -657,7 +751,7 @@ pub static VERBS: [Verb; 14] = [
         out_param_names: "*\0",
     },
     Verb {
-        id: 0x9,
+        id: 0xa,
         name: "write_endpoint\0",
         doc: "\0", //"Write a packet to an IN endpoint.\0",
         in_signature: "<BB*X\0",
@@ -667,7 +761,7 @@ pub static VERBS: [Verb; 14] = [
     },
     // - interrupts --
     Verb {
-        id: 0xa,
+        id: 0xb,
         name: "get_interrupt_events\0",
         doc: "\0", //"Return the most recent driver messages.\0",
         in_signature: "\0",
@@ -677,7 +771,7 @@ pub static VERBS: [Verb; 14] = [
     },
     // - tests --
     Verb {
-        id: 0x27,
+        id: 0x28,
         name: "test_read_endpoint\0",
         doc: "\0", //"Return read_endpoint with payload_length of test data.\0",
         in_signature: "<I\0",
@@ -686,7 +780,7 @@ pub static VERBS: [Verb; 14] = [
         out_param_names: "read_data\0",
     },
     Verb {
-        id: 0x29,
+        id: 0x2a,
         name: "test_write_endpoint\0",
         doc: "\0", //"Write a packet to an IN endpoint and return the length received.\0",
         in_signature: "<B*X\0",
@@ -695,7 +789,7 @@ pub static VERBS: [Verb; 14] = [
         out_param_names: "payload_length\0",
     },
     Verb {
-        id: 0x2a,
+        id: 0x2b,
         name: "test_get_interrupt_events\0",
         doc: "\0", //"Return get_interrupt_events() with test data.\0",
         in_signature: "\0",
@@ -752,30 +846,36 @@ impl Moondancer {
                 Ok(response)
             }
             0x6 => {
-                // moondancer::stall_endpoint
-                let iter = self.stall_endpoint(arguments)?;
+                // moondancer::stall_endpoint_in
+                let iter = self.stall_endpoint_in(arguments)?;
                 let response = unsafe { iter_to_response(iter, response_buffer) };
                 Ok(response)
             }
             0x7 => {
+                // moondancer::stall_endpoint_out
+                let iter = self.stall_endpoint_out(arguments)?;
+                let response = unsafe { iter_to_response(iter, response_buffer) };
+                Ok(response)
+            }
+            0x8 => {
                 // moondancer::read_endpoint
                 let iter = self.read_endpoint(arguments)?;
                 let response = unsafe { iter_to_response(iter, response_buffer) };
                 Ok(response)
             }
-            0x8 => {
+            0x9 => {
                 // moondancer::ep_out_prime_receive
                 let iter = self.ep_out_prime_receive(arguments)?;
                 let response = unsafe { iter_to_response(iter, response_buffer) };
                 Ok(response)
             }
-            0x9 => {
+            0xa => {
                 // moondancer::write_endpoint
                 let iter = self.write_endpoint(arguments)?;
                 let response = unsafe { iter_to_response(iter, response_buffer) };
                 Ok(response)
             }
-            0xa => {
+            0xb => {
                 // moondancer::get_interrupt_events
                 let iter = self.get_interrupt_events(arguments)?;
                 let response = unsafe { iter_to_response(iter, response_buffer) };
@@ -783,19 +883,19 @@ impl Moondancer {
             }
 
             // test APIs
-            0x27 => {
+            0x28 => {
                 // moondancer::test_read_endpoint
                 let iter = self.test_read_endpoint(arguments)?;
                 let response = unsafe { iter_to_response(iter, response_buffer) };
                 Ok(response)
             }
-            0x29 => {
+            0x2a => {
                 // moondancer::test_write_endpoint
                 let iter = self.test_write_endpoint(arguments)?;
                 let response = unsafe { iter_to_response(iter, response_buffer) };
                 Ok(response)
             }
-            0x2a => {
+            0x2b => {
                 // moondancer::test_get_interrupt_events
                 let iter = self.test_get_interrupt_events(arguments)?;
                 let response = unsafe { iter_to_response(iter, response_buffer) };
