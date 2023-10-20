@@ -45,7 +45,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
         if bytes_read == 0 {
             return InterruptEvent::ErrorMessage("ERROR Received 0 bytes for setup packet!!!");
         }
-        let setup_packet = SetupPacket::try_from(setup_packet_buffer).unwrap();
+        let setup_packet = SetupPacket::from(setup_packet_buffer);
         InterruptEvent::Usb(Target, UsbEvent::ReceiveSetupPacket(endpoint, setup_packet))*/
 
     // USB0_EP_OUT ReceivePacket

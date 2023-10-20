@@ -16,14 +16,11 @@ pub struct SetupPacket {
     pub length: u16,
 }
 
-// TODO TryFrom -> From
-impl TryFrom<[u8; 8]> for SetupPacket {
-    type Error = SmolError;
-
-    fn try_from(buffer: [u8; 8]) -> core::result::Result<Self, Self::Error> {
+impl From<[u8; 8]> for SetupPacket {
+    fn from(buffer: [u8; 8]) -> Self {
         // Deserialize into a SetupRequest in the most cursed manner available to us
         // TODO do this properly
-        Ok(unsafe { core::mem::transmute::<[u8; 8], SetupPacket>(buffer) })
+        unsafe { core::mem::transmute::<[u8; 8], SetupPacket>(buffer) }
     }
 }
 

@@ -96,24 +96,17 @@ impl Moondancer {
                     return;
                 }
 
-                match SetupPacket::try_from(setup_packet_buffer) {
-                    Ok(setup_packet) => {
-                        log::info!("    {:?}", setup_packet);
-                        match self.control_queue.enqueue(setup_packet) {
-                            Ok(()) => (),
-                            Err(_) => {
-                                error!("Moondancer - control queue overflow");
-                                loop {
-                                    unsafe {
-                                        riscv::asm::nop();
-                                    }
-                                }
+                let setup_packet = SetupPacket::from(setup_packet_buffer);
+                log::info!("    {:?}", setup_packet);
+                match self.control_queue.enqueue(setup_packet) {
+                    Ok(()) => (),
+                    Err(_) => {
+                        error!("Moondancer - control queue overflow");
+                        loop {
+                            unsafe {
+                                riscv::asm::nop();
                             }
                         }
-                        //log::info!("MD => UsbEvent::ReceiveControl {:?}", setup_packet);
-                    }
-                    Err(e) => {
-                        warn!("MD Failed to parse setup packet: {:?}", e);
                     }
                 }
                 event
@@ -295,8 +288,7 @@ impl Moondancer {
 /*
         let mut setup_packet_buffer = [0_u8; 8];
         self.usb0.read_control(&mut setup_packet_buffer);
-        let setup_packet = SetupPacket::try_from(setup_packet_buffer)
-            .map_err(|_| GreatError::IllegalByteSequence)?;
+        let setup_packet = SetupPacketfrom(setup_packet_buffer);
 */
         let setup_packet = match self.control_queue.dequeue() {
             Some(setup_packet) => setup_packet,

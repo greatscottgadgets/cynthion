@@ -145,18 +145,7 @@ where
     ) -> SmolResult<Option<SetupPacket>> {
         let mut buffer = [0_u8; 8];
         let _bytes_read = driver.read_control(&mut buffer);
-        let setup_packet = match SetupPacket::try_from(buffer) {
-            Ok(setup_packet) => setup_packet,
-            Err(e) => {
-                // ignore invalid setup packet, the host will resend it after a short delay
-                error!(
-                    "CONTROL handle_receive_setup_packet received invalid setup_packet: {:?}",
-                    e
-                );
-                // TODO return error
-                return Ok(None);
-            }
-        };
+        let setup_packet = SetupPacket::from(buffer);
         let direction = setup_packet.direction();
         let length: usize = setup_packet.length as usize;
 
