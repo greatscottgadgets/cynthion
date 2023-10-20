@@ -65,65 +65,100 @@ impl Moondancer {
 
         // - filter interrupt events --
 
-        if matches!(event, InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::BusReset)) {
-            // handle bus resets immediately for lower latency
-            self.usb0.bus_reset();
-            trace!("MD => UsbEvent::BusReset");
-
-        } else if matches!(event, InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveControl(_))) {
-
-            self.event_counter += 1;
-
-
-            // FIXME why are we getting USB0_EP0_CONTROL interrupts that don't show up on packetry and have no data in the FIFO?
-            if self.usb0.ep_control.have.read().have().bit() {
-                log::info!("MD => #{} {:?}  OKAY", self.event_counter, event);
-            } else {
-                log::info!("MD => #{} {:?} dropping GetStatus 1", self.event_counter, event);
-                return;
+        let event = match event {
+            InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::BusReset) => {
+                // handle bus resets immediately for lower latency
+                // flush queues
+                //while let Some(_) = self.queue.dequeue() { }
+                //while let Some(_) = self.control_queue.dequeue() { }
+                //self.usb0.bus_reset();
+                //log::info!("MD => UsbEvent::BusReset");
+                event
             }
 
-            // read and queue setup packets immediately for lower latency
-            let mut setup_packet_buffer = [0_u8; 8];
-            self.usb0.read_control(&mut setup_packet_buffer);
+            InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveControl(_)) => {
+                self.event_counter += 1;
 
-            if setup_packet_buffer[0] == 0 && setup_packet_buffer[1] == 0 {
-                log::info!("MD => #{} {:?} dropping GetStatus 2", self.event_counter, event);
-                return;
-            }
+                // FIXME why are we getting USB0_EP0_CONTROL interrupts that don't show up on packetry and have no data in the FIFO?
+                if self.usb0.ep_control.have.read().have().bit() {
+                    log::info!("MD => #{} {:?}  OKAY", self.event_counter, event);
+                } else {
+                    log::info!("MD => #{} {:?} dropping GetStatus 1", self.event_counter, event);
+                    return;
+                }
 
-            match SetupPacket::try_from(setup_packet_buffer) {
-                Ok(setup_packet) => {
-                    log::info!("    {:?}", setup_packet);
-                    match self.control_queue.enqueue(setup_packet) {
-                        Ok(()) => (),
-                        Err(_) => {
-                            error!("Moondancer - control queue overflow");
-                            loop {
-                                unsafe {
-                                    riscv::asm::nop();
+                // read and queue setup packets immediately for lower latency
+                let mut setup_packet_buffer = [0_u8; 8];
+                self.usb0.read_control(&mut setup_packet_buffer);
+
+                if setup_packet_buffer[0] == 0 && setup_packet_buffer[1] == 0 {
+                    log::info!("MD => #{} {:?} dropping GetStatus 2", self.event_counter, event);
+                    return;
+                }
+
+                match SetupPacket::try_from(setup_packet_buffer) {
+                    Ok(setup_packet) => {
+                        log::info!("    {:?}", setup_packet);
+                        match self.control_queue.enqueue(setup_packet) {
+                            Ok(()) => (),
+                            Err(_) => {
+                                error!("Moondancer - control queue overflow");
+                                loop {
+                                    unsafe {
+                                        riscv::asm::nop();
+                                    }
                                 }
                             }
                         }
+                        //log::info!("MD => UsbEvent::ReceiveControl {:?}", setup_packet);
                     }
-                    //log::info!("MD => UsbEvent::ReceiveControl {:?}", setup_packet);
+                    Err(e) => {
+                        warn!("MD Failed to parse setup packet: {:?}", e);
+                    }
                 }
-                Err(e) => {
-                    warn!("MD Failed to parse setup packet: {:?}", e);
-                }
+                event
             }
 
-        } else if matches!(event, InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceivePacket(0))) {
-            // swallow ACK's
-            if !self.usb0.ep_out.have.read().have().bit() {
-                self.usb0.ep_out_prime_receive(0);
-                //log::info!("MD => #{} UsbEvent::ReceivePacket(0) dropping ACK", self.event_counter);
-                return;
+            InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveSetupPacket(endpoint, setup_packet)) => {
+                self.event_counter += 1;
+
+                if setup_packet.request_type == 0 && setup_packet.request == 0 {
+                    // TODO
+                    log::info!("MD => #{} {:?} dropping GetStatus", self.event_counter, event);
+                    return;
+                } else {
+                    log::info!("MD => #{} {:?}  OKAY", self.event_counter, event);
+                }
+
+                match self.control_queue.enqueue(setup_packet) {
+                    Ok(()) => (),
+                    Err(_) => {
+                        error!("Moondancer - control queue overflow");
+                        loop {
+                            unsafe {
+                                riscv::asm::nop();
+                            }
+                        }
+                    }
+                }
+                InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveControl(endpoint))
             }
 
-        } else {
-            //log::info!("\n\nMD => #{} {:?}", self.event_counter, event);
-        }
+            InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceivePacket(0)) => {
+                // handle ACK's locally for lower latency
+                if !self.usb0.ep_out.have.read().have().bit() {
+                    self.usb0.ep_out_prime_receive(0);
+                    //log::info!("MD => #{} UsbEvent::ReceivePacket(0) dropping ACK", self.event_counter);
+                    return;
+                }
+                event
+            }
+
+            _ => {
+                //log::info!("\n\nMD => #{} {:?}", self.event_counter, event);
+                event
+            }
+        };
 
         // enqueue event
         match self.queue.enqueue(event) {
@@ -240,6 +275,9 @@ impl Moondancer {
 
     /// Perform a USB bus reset.
     pub fn bus_reset(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        //while let Some(_) = self.queue.dequeue() { }
+        //while let Some(_) = self.control_queue.dequeue() { }
+
         // we send the event to facedancer but the actual reset happens locally
         //self.usb0.bus_reset();
 

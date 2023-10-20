@@ -1,6 +1,7 @@
 #![allow(dead_code, unused_imports, unused_variables)] // TODO
 
 use smolusb::event::UsbEvent;
+use smolusb::setup::SetupPacket;
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
     WriteRefEndpoint,
@@ -26,6 +27,10 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     // USB0 BusReset
     if usb0.is_pending(pac::Interrupt::USB0) {
         usb0.clear_pending(pac::Interrupt::USB0);
+
+        // handle bus reset in interrupt handler for lowest latency
+        usb0.bus_reset();
+
         InterruptEvent::Usb(Target, UsbEvent::BusReset)
 
     // USB0_EP_CONTROL ReceiveControl
@@ -33,6 +38,15 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
         let endpoint = usb0.ep_control.epno.read().bits() as u8;
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
         InterruptEvent::Usb(Target, UsbEvent::ReceiveControl(endpoint))
+
+        // read setup packet in interrupt handler for lowest latency
+        /*let mut setup_packet_buffer = [0_u8; 8];
+        let bytes_read = usb0.read_control(&mut setup_packet_buffer);
+        if bytes_read == 0 {
+            return InterruptEvent::ErrorMessage("ERROR Received 0 bytes for setup packet!!!");
+        }
+        let setup_packet = SetupPacket::try_from(setup_packet_buffer).unwrap();
+        InterruptEvent::Usb(Target, UsbEvent::ReceiveSetupPacket(endpoint, setup_packet))*/
 
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {

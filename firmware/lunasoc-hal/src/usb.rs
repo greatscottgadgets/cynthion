@@ -264,12 +264,6 @@ macro_rules! impl_usb {
                     self.ep_in.reset.write(|w| w.reset().bit(true));
                     self.ep_out.reset.write(|w| w.reset().bit(true));
 
-                    // reset SETUP handler state
-                    //self.ep_control.reset.write(|w| w.reset().bit(true));
-                    //unsafe { riscv::asm::delay(1000) };
-                    //self.ep_control.reset.write(|w| w.reset().bit(false));
-                    //unsafe { riscv::asm::delay(1000) };
-
                     // re-enable events
                     self.enable_interrupt(Interrupt::$USBX_CONTROLLER);
                     self.enable_interrupt(Interrupt::$USBX_EP_CONTROL);
