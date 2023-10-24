@@ -47,3 +47,6 @@ cynthion/python/.eggs
 # Never include unencrypted deploy keys.
 id_deploy
 id_deploy.pub
+
+# Docs
+/docs/build/
