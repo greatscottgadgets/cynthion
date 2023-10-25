@@ -7,11 +7,9 @@
 import os
 
 from amaranth.build import *
-from amaranth.vendor.lattice_ecp5 import LatticeECP5Platform
 from amaranth_boards.resources import *
 
-from luna.gateware.platform.core import LUNAApolloPlatform
-from luna.gateware.architecture.car import LunaECP5DomainGenerator
+from cynthion.gateware.platform.core import CynthionPlatform
 
 __all__ = ["CynthionPlatformRev0D2"]
 
@@ -21,7 +19,7 @@ __all__ = ["CynthionPlatformRev0D2"]
 # This is supported by a PHY feature that allows you to swap pins 13 + 14.
 #
 
-class CynthionPlatformRev0D2(LUNAApolloPlatform, LatticeECP5Platform):
+class CynthionPlatformRev0D2(CynthionPlatform):
     """ Board description for the pre-release r0.2 revision of Cynthion. """
 
     name        = "Cynthion r0.2"
@@ -30,25 +28,8 @@ class CynthionPlatformRev0D2(LUNAApolloPlatform, LatticeECP5Platform):
     package     = "BG256"
     speed       = os.getenv("ECP5_SPEED_GRADE", "8")
 
-    default_clk = "clk_60MHz"
-
-    # Provide the type that'll be used to create our clock domains.
-    clock_domain_generator = LunaECP5DomainGenerator
-
     # By default, assume we'll be connecting via our target PHY.
     default_usb_connection = "target_phy"
-
-    #
-    # Default clock frequencies for each of our clock domains.
-    #
-    # Different revisions have different FPGA speed grades, and thus the
-    # default frequencies will vary.
-    #
-    DEFAULT_CLOCK_FREQUENCIES_MHZ = {
-        "fast": 240,
-        "sync": 120,
-        "usb":  60
-    }
 
     #
     # Preferred DRAM bus I/O (de)-skewing constants.
@@ -56,14 +37,6 @@ class CynthionPlatformRev0D2(LUNAApolloPlatform, LatticeECP5Platform):
     ram_timings = dict(
         clock_skew = 64
     )
-
-    # Provides any platform-specific ULPI registers necessary.
-    # This is the spot to put any platform-specific vendor registers that need
-    # to be written.
-    ulpi_extra_registers = {
-        0x39: 0b000110 # USB3343: swap D+ and D- to match the hardware design
-    }
-
 
     #
     # I/O resources.
@@ -162,11 +135,3 @@ class CynthionPlatformRev0D2(LUNAApolloPlatform, LatticeECP5Platform):
             A4  -  A3
         """)
     ]
-
-    def toolchain_prepare(self, fragment, name, **kwargs):
-        overrides = {
-            'ecppack_opts': '--compress --freq 38.8'
-        }
-
-        return super().toolchain_prepare(fragment, name, **overrides, **kwargs)
-

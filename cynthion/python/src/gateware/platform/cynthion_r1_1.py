@@ -7,15 +7,13 @@
 import os
 
 from amaranth.build import *
-from amaranth.vendor.lattice_ecp5 import LatticeECP5Platform
 from amaranth_boards.resources import *
 
-from luna.gateware.platform.core import LUNAApolloPlatform
-from luna.gateware.architecture.car import LunaECP5DomainGenerator
+from cynthion.gateware.platform.core import CynthionPlatform
 
 __all__ = ["CynthionPlatformRev1D1"]
 
-class CynthionPlatformRev1D1(LUNAApolloPlatform, LatticeECP5Platform):
+class CynthionPlatformRev1D1(CynthionPlatform):
     """ Board description for Cynthion r1.1 """
 
     name        = "Cynthion r1.1"
@@ -24,25 +22,8 @@ class CynthionPlatformRev1D1(LUNAApolloPlatform, LatticeECP5Platform):
     package     = "BG256"
     speed       = os.getenv("ECP5_SPEED_GRADE", "8")
 
-    default_clk = "clk_60MHz"
-
-    # Provide the type that'll be used to create our clock domains.
-    clock_domain_generator = LunaECP5DomainGenerator
-
     # By default, assume we'll be connecting via our target PHY.
     default_usb_connection = "target_phy"
-
-    #
-    # Default clock frequencies for each of our clock domains.
-    #
-    # Different revisions have different FPGA speed grades, and thus the
-    # default frequencies will vary.
-    #
-    DEFAULT_CLOCK_FREQUENCIES_MHZ = {
-        "fast": 240,
-        "sync": 120,
-        "usb":  60
-    }
 
     #
     # Preferred DRAM bus I/O (de)-skewing constants.
@@ -52,13 +33,6 @@ class CynthionPlatformRev1D1(LUNAApolloPlatform, LatticeECP5Platform):
         # TODO: remove this & use the PLL to produce a 90degree clock signal instead.
         clock_skew = 127
     )
-
-    # Provides any platform-specific ULPI registers necessary.
-    # This is the spot to put any platform-specific vendor registers that need
-    # to be written.
-    ulpi_extra_registers = {
-        0x39: 0b000110 # USB3343: swap D+ and D- to match the hardware design
-    }
 
     #
     # I/O resources.
@@ -195,10 +169,3 @@ class CynthionPlatformRev1D1(LUNAApolloPlatform, LatticeECP5Platform):
         Connector("mezzanine", 0,
             "- - B8 A9 B10 A10 B11 D14 C14 F14 E14 G13 G12 - - - - C16 C15 B16 B15 A14 B13 A13 D13 A12 B12 A11 - -"),
     ]
-
-    def toolchain_prepare(self, fragment, name, **kwargs):
-        overrides = {
-            'ecppack_opts': '--compress --freq 38.8'
-        }
-
-        return super().toolchain_prepare(fragment, name, **overrides, **kwargs)

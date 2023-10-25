@@ -7,10 +7,8 @@
 import os
 
 from amaranth.build import Resource, Subsignal, Pins, PinsN, Attrs, Clock, DiffPairs, Connector
-from amaranth.vendor.lattice_ecp5 import LatticeECP5Platform
 
-from luna.gateware.platform.core import LUNAApolloPlatform
-from luna.gateware.architecture.car import LunaECP5DomainGenerator
+from cynthion.gateware.platform.core import CynthionPlatform
 
 __all__ = ["CynthionPlatformRev0D1"]
 
@@ -35,7 +33,7 @@ def ULPIResource(name, data_sites, clk_site, dir_site, nxt_site, stp_site, reset
     )
 
 
-class CynthionPlatformRev0D1(LUNAApolloPlatform, LatticeECP5Platform):
+class CynthionPlatformRev0D1(CynthionPlatform):
     """ Board description for the pre-release r0.1 revision of Cynthion. """
 
     name        = "Cynthion r0.1"
@@ -50,25 +48,8 @@ class CynthionPlatformRev0D1(LUNAApolloPlatform, LatticeECP5Platform):
     # We'll assume speed grade 8 unless the user overrides it on the command line.
     speed       = os.getenv("ECP5_SPEED_GRADE", "8")
 
-    default_clk = "clk_60MHz"
-
-    # Provide the type that'll be used to create our clock domains.
-    clock_domain_generator = LunaECP5DomainGenerator
-
     # By default, assume we'll be connecting via our target PHY.
     default_usb_connection = "target_phy"
-
-    #
-    # Default clock frequencies for each of our clock domains.
-    #
-    # Different revisions have different FPGA speed grades, and thus the
-    # default frequencies will vary.
-    #
-    DEFAULT_CLOCK_FREQUENCIES_MHZ = {
-        "fast": 240,
-        "sync": 120,
-        "usb":  60
-    }
 
     #
     # Preferred DRAM bus I/O (de)-skewing constants.
@@ -76,15 +57,6 @@ class CynthionPlatformRev0D1(LUNAApolloPlatform, LatticeECP5Platform):
     ram_timings = dict(
         clock_skew = 64
     )
-
-    # Provides any platform-specific ULPI registers necessary.
-    # This is the spot to put any platform-specific vendor registers that need
-    # to be written.
-    ulpi_extra_registers = {
-        0x39: 0b000110 # USB3343: swap D+ and D- to match the hardware design
-    }
-
-
 
     #
     # I/O resources.
@@ -203,10 +175,3 @@ class CynthionPlatformRev0D1(LUNAApolloPlatform, LatticeECP5Platform):
         """)
 
     ]
-
-    def toolchain_prepare(self, fragment, name, **kwargs):
-        overrides = {
-            'ecppack_opts': '--compress --idcode {} --freq 38.8'.format(0x21111043)
-        }
-
-        return super().toolchain_prepare(fragment, name, **overrides, **kwargs)
