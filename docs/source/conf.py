@@ -33,4 +33,3 @@ pygments_style = None
 # run pip install sphinx_rtd_theme if you get sphinx_rtd_theme errors
 html_theme = "sphinx_rtd_theme"
 html_css_files = ['status.css']
-
