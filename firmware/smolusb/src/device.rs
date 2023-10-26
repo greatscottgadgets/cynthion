@@ -141,7 +141,7 @@ where
         // calculate and update descriptor length fields
         // TODO this ain't great but it will do for now
         let mut configuration_descriptor = configuration_descriptor.clone();
-        let total_length = configuration_descriptor.set_total_length();
+        let _total_length = configuration_descriptor.set_total_length();
 
         Self {
             hal_driver,
@@ -509,6 +509,15 @@ where
             "SETUP setup_get_configuration() requested_length:{}",
             requested_length
         );
+
+        // handle unconfigured
+        if self.state() != DeviceState::Configured {
+            trace!(
+                "SETUP stall: setup_get_configuration() device is unconfigured"
+            );
+            self.hal_driver.stall_control_request();
+            return Ok(());
+        }
 
         let current_configuration = self.current_configuration.load(Ordering::Relaxed);
 

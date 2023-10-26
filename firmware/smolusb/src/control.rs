@@ -11,13 +11,22 @@ use crate::traits::UsbDriver;
 /// Represents USB control transfer state.
 #[derive(Debug)]
 pub enum State {
+    Idle,
+
+    /// Device has received bus reset
     Reset,
 
+    /// Device has received PID SETUP
     SetupStage,
 
+    /// Device has received PID OUT
     OutDataStage(SetupPacket),
 
+    /// Device has received PID IN
     InDataStage,
+
+    /// Device has received PID STALL
+    Stalled,
 
     /// Error(endpoint_number: u8)
     Error(u8),
@@ -40,7 +49,7 @@ where
     pub fn new() -> Self {
         Self {
             //driver: driver,
-            state: State::Reset,
+            state: State::Idle,
             _marker: core::marker::PhantomData,
 
             rx_buffer: [0; MAX_RECEIVE_SIZE],
@@ -154,8 +163,8 @@ where
         trace!("CONTROL handle_receive_setup_packet(endpoint_number: {}) state:{:?} direction:{:?} length:{}",
                endpoint_number, self.state, direction, length);
 
-        // make sure endpoint is not stalled
-        driver.unstall_endpoint_out(endpoint_number);
+        // TODO make sure endpoint is not stalled ?
+        // driver.unstall_endpoint_out(endpoint_number);
 
         // OUT transfer
         if direction == Direction::HostToDevice {
@@ -173,7 +182,7 @@ where
                 return Ok(None); // handle_receive_packet will return it
             } else {
                 // no data stage, we're done
-                self.state = State::Reset;
+                self.state = State::Idle;
                 return Ok(Some(setup_packet));
             }
 
@@ -186,7 +195,7 @@ where
                 self.state = State::InDataStage;
             } else {
                 // no data stage, we're done
-                self.state = State::Reset;
+                self.state = State::Idle;
             }
 
             return Ok(Some(setup_packet));
@@ -227,7 +236,7 @@ where
                 self.rx_buffer_position += bytes_read;
                 if self.rx_buffer_position >= length {
                     self.rx_buffer_position = 0;
-                    self.state = State::Reset;
+                    self.state = State::Idle;
                     return Ok(Some((setup_packet, &self.rx_buffer[..length])));
                 } else {
                     // more data awaits

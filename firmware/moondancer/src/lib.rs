@@ -4,6 +4,7 @@
 
 // - modules ------------------------------------------------------------------
 
+pub mod buffer;
 pub mod error;
 pub mod event;
 pub mod gcp;
