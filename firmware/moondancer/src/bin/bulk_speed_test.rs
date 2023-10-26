@@ -48,7 +48,7 @@ fn MachineExternal() {
     if usb0.is_pending(pac::Interrupt::USB0) {
         usb0.clear_pending(pac::Interrupt::USB0);
         usb0.bus_reset();
-        dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset))
+        dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
 
     // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
@@ -150,8 +150,8 @@ fn main_loop() -> GreatResult<()> {
     );
     usb0.set_device_qualifier_descriptor(USB_DEVICE_QUALIFIER_DESCRIPTOR);
     usb0.set_other_speed_configuration_descriptor(USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
-    let speed = usb0.connect();
-    debug!("Connected usb0 device: {:?}", speed);
+    usb0.connect();
+    debug!("Connected usb0 device");
 
     // enable interrupts
     unsafe {
@@ -236,7 +236,6 @@ fn main_loop() -> GreatResult<()> {
                             );
                         }
                         counter += 1;
-                        usb0.hal_driver.ep_out_prime_receive(1);
                     } else if endpoint == 2 {
                         info!("received command data from host: {} bytes", bytes_read);
                         let command = rx_buffer[0].into();
@@ -268,10 +267,8 @@ fn main_loop() -> GreatResult<()> {
                                 );
                             }
                         }
-                        usb0.hal_driver.ep_out_prime_receive(2);
-                    } else {
-                        usb0.hal_driver.ep_out_prime_receive(endpoint);
                     }
+                    usb0.hal_driver.ep_out_prime_receive(endpoint);
                 }
 
                 // Usb0 transfer complete
@@ -437,8 +434,6 @@ impl TestStats {
 
 // - usb descriptors ----------------------------------------------------------
 
-use moondancer::usb::{DEVICE_SERIAL_STRING, DEVICE_VERSION_NUMBER};
-
 static USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     descriptor_version: 0x0200,
     device_class: 0x00,
@@ -447,7 +442,7 @@ static USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     max_packet_size: 64,
     vendor_id: cynthion::shared::usb::bVendorId::example,
     product_id: cynthion::shared::usb::bProductId::example,
-    device_version_number: DEVICE_VERSION_NUMBER,
+    device_version_number: moondancer::usb::DEVICE_VERSION_NUMBER,
     manufacturer_string_index: 1,
     product_string_index: 2,
     serial_string_index: 3,
@@ -559,10 +554,11 @@ static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
 static USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
     StringDescriptorZero::new(&[LanguageId::EnglishUnitedStates]);
 static USB_STRING_DESCRIPTOR_1: StringDescriptor =
-    StringDescriptor::new(cynthion::shared::usb::bManufacturerString::bulk_speed_test); // manufacturer
+    StringDescriptor::new(cynthion::shared::usb::bManufacturerString::bulk_speed_test);
 static USB_STRING_DESCRIPTOR_2: StringDescriptor =
-    StringDescriptor::new(cynthion::shared::usb::bProductString::bulk_speed_test); // product
-static USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new(DEVICE_SERIAL_STRING); // serial
+    StringDescriptor::new(cynthion::shared::usb::bProductString::bulk_speed_test);
+static USB_STRING_DESCRIPTOR_3: StringDescriptor =
+    StringDescriptor::new(moondancer::usb::DEVICE_SERIAL_STRING);
 
 static USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &USB_STRING_DESCRIPTOR_1,

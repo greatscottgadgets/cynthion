@@ -300,7 +300,7 @@ macro_rules! impl_usb {
                         .write(|w| unsafe { w.address().bits(address & 0x7f) });
                 }
 
-                /// Stalls the current control request.
+                /// Stalls the current control request. TODO get rid of this method
                 fn stall_control_request(&self) {
                     self.stall_endpoint_in(0);
                     self.stall_endpoint_out(0);
@@ -446,8 +446,6 @@ macro_rules! impl_usb {
                               stringify!($USBX),
                               bytes_read, overflow);
                     }
-
-                    //self.ep_control.reset.write(|w| w.reset().bit(true));
 
                     bytes_read + overflow
                 }
