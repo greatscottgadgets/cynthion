@@ -57,7 +57,8 @@ riscv-rt = { version = "=0.11.0" }
 
 bbqueue = { version = "0.5.1", default-features = false }
 
-heapless = { version = "=0.7.16", default-features = false, features = ["mpmc_large"] } # TODO 0.8.0 is en-route
+heapless = { version = "=0.7.16", default-features = false, features = ["cas", "mpmc_large"] }
+#heapless = { path = "../../../forks/heapless.git", default-features = false, features = ["cas", "mpmc_large"] }
 zerocopy = { version = "=0.7.0-alpha.2", default-features = false }
 
 log = { version="=0.4.17", features = ["release_max_level_info"] }
@@ -83,4 +84,4 @@ name = "interrupts"
 name = "moondancer"
 
 [[bin]]
-name = "test_usb"
+name = "usb_hal"
