@@ -8,7 +8,7 @@ use log::{debug, error, info, warn};
 use libgreat::{GreatError, GreatResult};
 
 use smolusb::descriptor::*;
-use smolusb::device::UsbDevice;
+use smolusb::device::{Speed, UsbDevice};
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Direction, Request, RequestType, SetupPacket};
 use smolusb::traits::AsByteSliceIterator;
@@ -19,6 +19,76 @@ use smolusb::traits::{
 
 use moondancer::event::InterruptEvent;
 use moondancer::{hal, pac};
+
+// - configuration ------------------------------------------------------------
+
+const DEVICE_SPEED: Speed = Speed::Full;
+const LA_DEBUG: bool = true;
+
+// - debug --------------------------------------------------------------------
+
+static mut REG_VALUE: u8 = 0;
+static mut REGB_VALUE: u8 = 0;
+#[inline(always)]
+fn bit_pulse(bit_number: u8) {
+    if LA_DEBUG == false {
+        return;
+    }
+    bit_high(bit_number);
+    bit_low(bit_number);
+}
+#[inline(always)]
+fn bit_high(bit_number: u8) {
+    if LA_DEBUG == false {
+        return;
+    }
+    unsafe {
+        let gpioa = &pac::Peripherals::steal().GPIOA;
+        gpioa.odr.write(|w| {
+            REG_VALUE = REG_VALUE | (1 << bit_number);
+            w.odr().bits(REG_VALUE)
+        });
+    }
+}
+#[inline(always)]
+fn bit_low(bit_number: u8) {
+    if LA_DEBUG == false {
+        return;
+    }
+    unsafe {
+        let gpioa = &pac::Peripherals::steal().GPIOA;
+        gpioa.odr.write(|w| {
+            REG_VALUE = REG_VALUE ^ (1 << bit_number);
+            w.odr().bits(REG_VALUE)
+        });
+    }
+}
+#[inline(always)]
+fn bit_highb(bit_number: u8) {
+    if LA_DEBUG == false {
+        return;
+    }
+    unsafe {
+        let gpiob = &pac::Peripherals::steal().GPIOB;
+        gpiob.odr.write(|w| {
+            REGB_VALUE = REGB_VALUE | (1 << bit_number);
+            w.odr().bits(REGB_VALUE)
+        });
+    }
+}
+#[inline(always)]
+fn bit_lowb(bit_number: u8) {
+    if LA_DEBUG == false {
+        return;
+    }
+    unsafe {
+        let gpiob = &pac::Peripherals::steal().GPIOB;
+        gpiob.odr.write(|w| {
+            REGB_VALUE = REGB_VALUE ^ (1 << bit_number);
+            w.odr().bits(REGB_VALUE)
+        });
+    }
+}
 
 // - global static state ------------------------------------------------------
 
@@ -46,30 +116,37 @@ fn MachineExternal() {
 
     // USB0 BusReset
     if usb0.is_pending(pac::Interrupt::USB0) {
+        bit_highb(0);
         usb0.clear_pending(pac::Interrupt::USB0);
         usb0.bus_reset();
-        dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
+        //dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
+        bit_lowb(0);
 
     // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
+        bit_highb(1);
         let endpoint = usb0.ep_control.epno.read().bits() as u8;
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
         dispatch_event(InterruptEvent::Usb(
             Target,
             UsbEvent::ReceiveControl(endpoint),
         ));
+        bit_lowb(1);
 
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
+        bit_highb(2);
         let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
         usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
         dispatch_event(InterruptEvent::Usb(
             Target,
             UsbEvent::ReceivePacket(endpoint),
         ));
+        bit_lowb(2);
 
     // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
+        bit_highb(3);
         let endpoint = usb0.ep_in.epno.read().bits() as u8;
         usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
 
@@ -82,6 +159,7 @@ fn MachineExternal() {
             Target,
             UsbEvent::SendComplete(endpoint),
         ));
+        bit_lowb(3);
 
     // - Unknown Interrupt --
     } else {
@@ -123,6 +201,16 @@ fn main_loop() -> GreatResult<()> {
     moondancer::log::init(hal::Serial::new(peripherals.UART));
     info!("Logging initialized");
 
+    // debug: gpioa
+    let gpioa = &peripherals.GPIOA;
+    gpioa
+        .moder
+        .write(|w| unsafe { w.moder().bits(0b1111_1111) }); // 0=input, 1=output
+    let gpiob = &peripherals.GPIOB;
+    gpiob
+        .moder
+        .write(|w| unsafe { w.moder().bits(0b1111_1111) }); // 0=input, 1=output
+
     // usb0: Target
     let mut usb0 = UsbDevice::<_, 64>::new(
         hal::Usb0::new(
@@ -138,8 +226,12 @@ fn main_loop() -> GreatResult<()> {
     );
 
     // set controller speed
-    usb0.hal_driver.controller.full_speed_only.write(|w| w.full_speed_only().bit(true));
-    usb0.hal_driver.controller.low_speed_only.write(|w| w.low_speed_only().bit(false));
+    if DEVICE_SPEED == Speed::Full {
+        usb0.hal_driver
+            .controller
+            .full_speed_only
+            .write(|w| w.full_speed_only().bit(true));
+    }
 
     // connect device
     usb0.connect();
@@ -172,21 +264,22 @@ fn main_loop() -> GreatResult<()> {
 
     // state & buffers
     let mut current_configuration = 0;
-    //let mut rx_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] = [0; moondancer::EP_MAX_PACKET_SIZE];
 
     info!("Peripherals initialized, entering main loop.");
 
-    loop {
-        use moondancer::{event::InterruptEvent::*, UsbInterface::Target};
-        use smolusb::event::UsbEvent::*;
+    use moondancer::{event::InterruptEvent::*, UsbInterface::Target};
+    use smolusb::event::UsbEvent::*;
 
+    loop {
         let event = EVENT_QUEUE.dequeue();
         if matches!(event, None) {
             continue;
         }
         let event = event.unwrap();
 
-        log::info!("USB0 Event: {:?}", event);
+        //log::info!("USB0 Event: {:?}", event);
+
+        bit_high(0);
 
         match event {
             // USB0 - bus reset
@@ -197,14 +290,16 @@ fn main_loop() -> GreatResult<()> {
             // USB0_EP_CONTROL - received a control event
             Usb(Target, ReceiveControl(endpoint)) => {
                 let mut buffer = [0_u8; 8];
+                bit_high(1);
                 let _bytes_read = usb0.hal_driver.read_control(&mut buffer);
+                bit_low(1);
 
                 // parse setup packet
                 let setup_packet = SetupPacket::from(buffer);
                 let request_type = setup_packet.request_type();
                 let request = setup_packet.request();
 
-                info!("  SETUP {:?}", request);
+                //info!("  SETUP {:?}", request);
 
                 // handle setup request
                 match (&request_type, &request) {
@@ -218,8 +313,10 @@ fn main_loop() -> GreatResult<()> {
                         }
 
                         // respond with ack status first before changing device address
+                        bit_high(3);
                         //usb0.hal_driver.ack(0, Direction::HostToDevice);
                         usb0.hal_driver.ack_status_stage(&setup_packet);
+                        bit_low(3);
 
                         // wait for the response packet to get sent
                         // TODO a slightly safer approach would be nice
@@ -248,13 +345,14 @@ fn main_loop() -> GreatResult<()> {
                             }
                         };
 
-                        info!("    GetDescriptor {:?} {}", descriptor_type, descriptor_number);
+                        //info!("    GetDescriptor {:?} {}", descriptor_type, descriptor_number);
 
                         // if the host is requesting less than the maximum amount of data,
                         // only respond with the amount requested
                         let requested_length = setup_packet.length as usize;
 
                         // respond with the requested descriptor
+                        bit_high(2);
                         match (&descriptor_type, descriptor_number) {
                             (DescriptorType::Device, 0) => {
                                 usb0.hal_driver.write_ref(
@@ -269,23 +367,24 @@ fn main_loop() -> GreatResult<()> {
                                 );
                             }
                             (DescriptorType::DeviceQualifier, 0) => {
-                                // optional
-                                //warn!("USB0_EP_CONTROL stall: no device qualifier descriptor");
-                                //usb0.hal_driver.stall_endpoint_out(endpoint);
-                                //continue;
-
-                                usb0.hal_driver.write_ref(
-                                    endpoint,
-                                    USB_DEVICE_QUALIFIER_DESCRIPTOR
-                                        .as_iter()
-                                        .take(requested_length),
-                                );
+                                if DEVICE_SPEED == Speed::High {
+                                    usb0.hal_driver.write_ref(
+                                        endpoint,
+                                        USB_DEVICE_QUALIFIER_DESCRIPTOR
+                                            .as_iter()
+                                            .take(requested_length),
+                                    );
+                                } else {
+                                    usb0.hal_driver.ack(0, Direction::HostToDevice);
+                                }
                             }
                             (DescriptorType::OtherSpeedConfiguration, 0) => {
+                                info!("OtherSpeedConfiguration");
                                 // optional
-                                //warn!("USB0_EP_CONTROL stall: no other speed configuration descriptor");
+                                /*warn!("USB0_EP_CONTROL stall: no other speed configuration descriptor");
                                 //usb0.hal_driver.stall_endpoint_out(endpoint);
-                                //continue;
+                                //usb0.hal_driver.ack_status_stage(&setup_packet);
+                                usb0.hal_driver.ack(0, Direction::HostToDevice);*/
 
                                 usb0.hal_driver.write_ref(
                                     endpoint,
@@ -308,6 +407,7 @@ fn main_loop() -> GreatResult<()> {
                                         index
                                     );
                                     usb0.hal_driver.stall_control_request();
+                                    bit_low(2);
                                     continue;
                                 }
                                 usb0.hal_driver.write(
@@ -323,18 +423,24 @@ fn main_loop() -> GreatResult<()> {
                                     descriptor_type, descriptor_number
                                 );
                                 usb0.hal_driver.stall_control_request();
+                                bit_low(2);
                                 continue;
                             }
                         }
+                        bit_low(2);
 
                         // finally, ack status stage
+                        bit_high(3);
                         usb0.hal_driver.ack_status_stage(&setup_packet);
+                        bit_low(3);
                     }
                     (RequestType::Standard, Request::SetConfiguration) => {
+                        bit_high(3);
                         usb0.hal_driver.ack_status_stage(&setup_packet); // TODO immediately, really?
+                        bit_low(3);
 
                         let configuration: u8 = setup_packet.value as u8;
-                        info!("SetConfiguration {}", configuration);
+                        //info!("SetConfiguration {}", configuration);
 
                         if configuration > 1 {
                             warn!(
@@ -349,9 +455,11 @@ fn main_loop() -> GreatResult<()> {
                         }
                     }
                     (RequestType::Standard, Request::GetConfiguration) => {
-                        info!("GetConfiguration");
+                        //info!("GetConfiguration");
                         usb0.hal_driver.write_ref(0, [current_configuration].iter());
+                        bit_high(3);
                         usb0.hal_driver.ack_status_stage(&setup_packet);
+                        bit_low(3);
                     }
                     (RequestType::Standard, Request::ClearFeature) => {
                         let recipient = setup_packet.recipient();
@@ -377,7 +485,9 @@ fn main_loop() -> GreatResult<()> {
                                 let endpoint_address = setup_packet.index as u8;
                                 usb0.hal_driver
                                     .clear_feature_endpoint_halt(endpoint_address);
+                                bit_high(3);
                                 usb0.hal_driver.ack_status_stage(&setup_packet);
+                                bit_low(3);
                             }
                             _ => {
                                 warn!(
@@ -424,7 +534,9 @@ fn main_loop() -> GreatResult<()> {
                         let _recipient = setup_packet.recipient();
                         let status: u16 = 0b00; // TODO bit 1:remote-wakeup bit 0:self-powered
                         usb0.hal_driver.write_ref(0, status.to_le_bytes().iter());
+                        bit_high(3);
                         usb0.hal_driver.ack_status_stage(&setup_packet);
+                        bit_low(3);
                     }
                     _ => {
                         log::warn!(
@@ -436,11 +548,21 @@ fn main_loop() -> GreatResult<()> {
                 }
             }
 
-            // USB0_EP_OUT 0 - received packet on endpoint 0
-            Usb(Target, ReceivePacket(0)) => {}
-
             // USB0_EP_OUT n - received packet on endpoint
-            Usb(Target, ReceivePacket(endpoint)) => {}
+            Usb(Target, ReceivePacket(endpoint)) => {
+                let mut rx_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] =
+                    [0; moondancer::EP_MAX_PACKET_SIZE];
+                let bytes_read = usb0.hal_driver.read(endpoint, &mut rx_buffer);
+                if bytes_read == 0 {
+                    // it's an ack
+                } else {
+                    info!(
+                        "USB0_EP_OUT received packet on endpoint:{} bytes_read:{}",
+                        endpoint, bytes_read
+                    );
+                }
+                usb0.hal_driver.ep_out_prime_receive(endpoint);
+            }
 
             // USB0_EP_IN - transfer complete
             Usb(Target, SendComplete(_endpoint)) => {}
@@ -455,6 +577,8 @@ fn main_loop() -> GreatResult<()> {
                 error!("Unhandled event: {:?}", event);
             }
         } // end match
+
+        bit_low(0);
     } // end loop
 }
 
