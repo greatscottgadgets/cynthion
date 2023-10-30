@@ -6,6 +6,8 @@
 
 import os
 
+from amaranth import Fragment, Module
+
 from amaranth.build import *
 from amaranth.vendor.lattice_ecp5 import LatticeECP5Platform
 from amaranth_boards.resources import *
@@ -97,3 +99,27 @@ class CynthionPlatform(LUNAApolloPlatform, LatticeECP5Platform):
 
         # Let the LUNA gateware take over in devices with shared USB port
         debugger.honor_fpga_adv()
+
+    def pseudo_power_supply_fragment(self):
+        """ Fragment to assign fixed values to the pseudo power supply pins """
+        m = Module()
+        pseudo_vccio = self.request_optional("pseudo_vccio", default=None)
+        pseudo_gnd   = self.request_optional("pseudo_gnd", default=None)
+        if pseudo_vccio is not None:
+            m.d.comb += pseudo_vccio.o.eq(-1)
+        if pseudo_gnd is not None:
+            m.d.comb += pseudo_gnd.o.eq(0)
+        return m
+
+    append_fragments = [ pseudo_power_supply_fragment ]
+
+    def prepare(self, elaboratable, name="top", **kwargs):
+        fragment = Fragment.get(elaboratable, self)
+
+        # Merge base CynthionPlatform fragments with board-specific ones
+        append_fragments = set(CynthionPlatform.append_fragments) | set(self.append_fragments)
+
+        for subfragment in append_fragments:
+            fragment.add_subfragment(Fragment.get(subfragment(self), self))
+
+        return super().prepare(fragment, name, **kwargs)
