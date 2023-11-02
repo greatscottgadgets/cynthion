@@ -16,8 +16,6 @@ pub enum Channel {
 }
 
 pub trait LogicAnalyzer {
-    //fn trace<R>(channel: Channel, bit_number: u8, f: impl FnOnce() -> R) -> R;
-
     fn high(&self, channel: Channel, bit_number: u8);
     fn low(&self, channel: Channel, bit_number: u8);
 }
