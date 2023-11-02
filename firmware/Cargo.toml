@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "ladybug",
     "libgreat-rs",
     "lunasoc-hal",
     "lunasoc-pac",

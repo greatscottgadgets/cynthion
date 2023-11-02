@@ -47,6 +47,7 @@ nightly = [
 
 [dependencies]
 cynthion = { path = "../../cynthion/rust" }
+ladybug = { path = "../ladybug", features = ["enable"] }
 libgreat = { path = "../libgreat-rs", features = ["errno_minimal"] }
 lunasoc-pac = { path = "../lunasoc-pac", default-features = false, features = ["critical-section"]}
 lunasoc-hal = { path = "../lunasoc-hal", default-features = false, features = ["usb"]}
