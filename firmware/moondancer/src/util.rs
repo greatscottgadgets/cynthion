@@ -1,5 +1,7 @@
 #![allow(dead_code, unused_imports, unused_variables)] // TODO
 
+use ladybug::Channel;
+
 use smolusb::event::UsbEvent;
 use smolusb::setup::SetupPacket;
 use smolusb::traits::{
@@ -11,6 +13,8 @@ use crate::event::InterruptEvent;
 use crate::{hal, pac};
 
 use pac::csr::interrupt;
+
+// - generic usb isr ----------------------------------------------------------
 
 pub fn get_usb_interrupt_event() -> InterruptEvent {
     use crate::UsbInterface::{Aux, Control, Target};
@@ -26,45 +30,55 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
 
     // USB0 BusReset
     if usb0.is_pending(pac::Interrupt::USB0) {
-        usb0.clear_pending(pac::Interrupt::USB0);
+        ladybug::trace(Channel::A, 0, || {
+            // handle bus reset in interrupt handler for lowest latency
+            usb0.bus_reset();
 
-        // handle bus reset in interrupt handler for lowest latency
-        usb0.bus_reset();
-
-        InterruptEvent::Usb(Target, UsbEvent::BusReset)
+            usb0.clear_pending(pac::Interrupt::USB0);
+            InterruptEvent::Usb(Target, UsbEvent::BusReset)
+        })
 
     // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
-        let endpoint = usb0.ep_control.epno.read().bits() as u8;
-        usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-        InterruptEvent::Usb(Target, UsbEvent::ReceiveControl(endpoint))
+        ladybug::trace(Channel::A, 1, || {
+            let endpoint = usb0.ep_control.epno.read().bits() as u8;
+            //InterruptEvent::Usb(Target, UsbEvent::ReceiveControl(endpoint))
 
-        // read setup packet in interrupt handler for lowest latency
-        /*let mut setup_packet_buffer = [0_u8; 8];
-        let bytes_read = usb0.read_control(&mut setup_packet_buffer);
-        if bytes_read == 0 {
-            return InterruptEvent::ErrorMessage("ERROR Received 0 bytes for setup packet!!!");
-        }
-        let setup_packet = SetupPacket::from(setup_packet_buffer);
-        InterruptEvent::Usb(Target, UsbEvent::ReceiveSetupPacket(endpoint, setup_packet))*/
+            // read setup packet in interrupt handler for lowest latency
+            let mut setup_packet_buffer = [0_u8; 8];
+            let bytes_read = usb0.read_control(&mut setup_packet_buffer);
+            let setup_packet = SetupPacket::from(setup_packet_buffer);
+
+            usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
+            if bytes_read == 0 {
+                InterruptEvent::ErrorMessage("ERROR Received 0 bytes for setup packet!!!")
+            } else {
+                InterruptEvent::Usb(Target, UsbEvent::ReceiveSetupPacket(endpoint, setup_packet))
+            }
+        })
 
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
-        let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
-        usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
-        InterruptEvent::Usb(Target, UsbEvent::ReceivePacket(endpoint))
+        ladybug::trace(Channel::A, 2, || {
+            let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
+
+            usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
+            InterruptEvent::Usb(Target, UsbEvent::ReceivePacket(endpoint))
+        })
 
     // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
-        let endpoint = usb0.ep_in.epno.read().bits() as u8;
-        usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
+        ladybug::trace(Channel::A, 3, || {
+            let endpoint = usb0.ep_in.epno.read().bits() as u8;
 
-        // TODO something a little bit safer would be nice
-        unsafe {
-            usb0.clear_tx_ack_active();
-        }
+            // TODO something a little bit safer would be nice
+            unsafe {
+                usb0.clear_tx_ack_active();
+            }
 
-        InterruptEvent::Usb(Target, UsbEvent::SendComplete(endpoint))
+            usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
+            InterruptEvent::Usb(Target, UsbEvent::SendComplete(endpoint))
+        })
 
     // - usb1 interrupts - "aux_phy" (host on r0.4) --
 
@@ -88,13 +102,13 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     // USB1_EP_IN SendComplete
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
         let endpoint = usb1.ep_in.epno.read().bits() as u8;
-        usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
 
         // TODO something a little safer would be nice
         unsafe {
             usb1.clear_tx_ack_active();
         }
 
+        usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
         InterruptEvent::Usb(Aux, UsbEvent::SendComplete(endpoint))
 
     // - usb2 interrupts - "control_phy" (sideband on r0.4) --
@@ -119,13 +133,13 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     // USB2_EP_IN SendComplete
     } else if usb2.is_pending(pac::Interrupt::USB2_EP_IN) {
         let endpoint = usb2.ep_in.epno.read().bits() as u8;
-        usb2.clear_pending(pac::Interrupt::USB2_EP_IN);
 
         // TODO something a little safer would be nice
         unsafe {
             usb2.clear_tx_ack_active();
         }
 
+        usb2.clear_pending(pac::Interrupt::USB2_EP_IN);
         InterruptEvent::Usb(Control, UsbEvent::SendComplete(endpoint))
 
     // - unhandled interrupt --
