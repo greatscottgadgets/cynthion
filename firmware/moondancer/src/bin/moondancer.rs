@@ -225,7 +225,7 @@ impl<'a> Firmware<'a> {
             }
             queue_length = 0;
 
-            while let Some(event) = EVENT_QUEUE.dequeue() {
+            while let Some(interrupt_event) = EVENT_QUEUE.dequeue() {
                 counter += 1;
                 queue_length += 1;
 
@@ -240,13 +240,13 @@ impl<'a> Firmware<'a> {
                 };
                 use smolusb::event::UsbEvent::*;
 
-                match event {
+                match interrupt_event {
                     // - misc event handlers --
                     ErrorMessage(message) => {
                         error!("MachineExternal Error - {}", message);
                     }
 
-                    // - usb1 event handlers --
+                    // - usb1 Aux event handlers --
 
                     // Usb1 received a control event
                     Usb(Aux, event @ BusReset)
@@ -270,20 +270,16 @@ impl<'a> Firmware<'a> {
                         }
                     }
 
-                    // - usb0 event handlers --
+                    // - usb0 Target event handlers --
 
-                    // automatically handle set address
-                    /*Usb(Target, event @ ReceiveControl) => {
-
-                    }*/
                     // enqueue moondancer events
                     Usb(Target, event) => self
                         .moondancer
-                        .dispatch_event(InterruptEvent::from_smolusb_event(Target, event)),
+                        .dispatch_event(interrupt_event),
 
                     // Unhandled event
                     _ => {
-                        error!("Unhandled event: {:?}", event);
+                        error!("Unhandled event: {:?}", interrupt_event);
                     }
                 }
             }
