@@ -103,14 +103,14 @@ class CynthionPlatform(LUNAApolloPlatform, LatticeECP5Platform):
     def pseudo_power_supply_fragment(self):
         """ Fragment to assign fixed values to the pseudo power supply pins """
         m = Module()
-        pseudo_vccio = self.request_optional("pseudo_vccio", default=None)
-        pseudo_gnd   = self.request_optional("pseudo_gnd", default=None)
-        if pseudo_vccio is not None:
-            m.d.comb += pseudo_vccio.o.eq(-1)
-        if pseudo_gnd is not None:
-            m.d.comb += pseudo_gnd.o.eq(0)
+        if ("pseudo_vccio", 0) in self.resources:
+            m.d.comb += self.request("pseudo_vccio").o.eq(-1)
+        if ("pseudo_gnd", 0) in self.resources:
+            m.d.comb += self.request("pseudo_gnd").o.eq(0)
         return m
 
+    # This list can be safely overriden in child classes.
+    # Fragments defined in this class are always added.
     append_fragments = [ pseudo_power_supply_fragment ]
 
     def prepare(self, elaboratable, name="top", **kwargs):
