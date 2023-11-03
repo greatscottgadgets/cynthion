@@ -2,14 +2,15 @@
 #![no_main]
 
 use heapless::mpmc::MpMcQueue as Queue;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 
-use libgreat::{GreatError, GreatResult};
+use libgreat::GreatResult;
 
+use smolusb::control_new::{Control, Descriptors};
 use smolusb::descriptor::*;
-use smolusb::device::{Speed, UsbDevice};
+use smolusb::device::Speed;
 use smolusb::event::UsbEvent;
-use smolusb::traits::{ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations};
+use smolusb::traits::{ReadEndpoint, UsbDriverOperations};
 
 use moondancer::event::InterruptEvent;
 use moondancer::{hal, pac};
@@ -18,7 +19,8 @@ use ladybug::Channel;
 
 // - constants ----------------------------------------------------------------
 
-const MAX_CONTROL_RESPONSE_SIZE: usize = 8;
+// TODO add support for other speeds
+const DEVICE_SPEED: Speed = Speed::High;
 
 // - global static state ------------------------------------------------------
 
@@ -44,7 +46,7 @@ fn MachineExternal() {
 
     let usb0 = unsafe { hal::Usb0::summon() };
 
-    // - usb0 interrupts - "host_phy" / "aux_phy" --
+    // - usb0 interrupts - "target_phy" --
 
     // USB0 BusReset
     if usb0.is_pending(pac::Interrupt::USB0) {
@@ -58,11 +60,20 @@ fn MachineExternal() {
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         ladybug::trace(Channel::A, 1, || {
             let endpoint = usb0.ep_control.epno.read().bits() as u8;
-            usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-            dispatch_event(InterruptEvent::Usb(
+            //let event = InterruptEvent::Usb(Target, UsbEvent::ReceiveControl(endpoint));
+
+            use smolusb::setup::SetupPacket;
+            use smolusb::traits::ReadControl;
+            let mut buffer = [0_u8; 8];
+            let _bytes_read = usb0.read_control(&mut buffer);
+            let setup_packet = SetupPacket::from(buffer);
+            let event = InterruptEvent::Usb(
                 Target,
-                UsbEvent::ReceiveControl(endpoint),
-            ));
+                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
+            );
+
+            usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
+            dispatch_event(event);
         });
 
     // USB0_EP_IN SendComplete
@@ -70,11 +81,6 @@ fn MachineExternal() {
         ladybug::trace(Channel::A, 2, || {
             let endpoint = usb0.ep_in.epno.read().bits() as u8;
             usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
-
-            // TODO something a little bit safer would be nice
-            unsafe {
-                usb0.clear_tx_ack_active();
-            }
 
             dispatch_event(InterruptEvent::Usb(
                 Target,
@@ -92,16 +98,17 @@ fn MachineExternal() {
                 /*while usb0.ep_out.have.read().have().bit() {
                     let _b = usb0.ep_out.data.read().data().bits();
                 }*/
+                //usb0.ep_out.reset.write(|w| w.reset().bit(true));
                 usb0.ep_out_prime_receive(1);
                 usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
                 return;
             }*/
 
-            usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
             dispatch_event(InterruptEvent::Usb(
                 Target,
                 UsbEvent::ReceivePacket(endpoint),
             ));
+            usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
         });
 
     // - Unknown Interrupt --
@@ -149,24 +156,33 @@ fn main_loop() -> GreatResult<()> {
     moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
     // usb0: Target
-    let mut usb0 = UsbDevice::<_, MAX_CONTROL_RESPONSE_SIZE>::new(
-        hal::Usb0::new(
-            peripherals.USB0,
-            peripherals.USB0_EP_CONTROL,
-            peripherals.USB0_EP_IN,
-            peripherals.USB0_EP_OUT,
-        ),
-        USB_DEVICE_DESCRIPTOR,
-        USB_CONFIGURATION_DESCRIPTOR_0,
-        USB_STRING_DESCRIPTOR_0,
-        USB_STRING_DESCRIPTORS,
+    let usb0 = hal::Usb0::new(
+        peripherals.USB0,
+        peripherals.USB0_EP_CONTROL,
+        peripherals.USB0_EP_IN,
+        peripherals.USB0_EP_OUT,
     );
-    usb0.set_device_qualifier_descriptor(USB_DEVICE_QUALIFIER_DESCRIPTOR);
-    usb0.set_other_speed_configuration_descriptor(USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
+
+    // control
+    let mut control = Control::<_, { moondancer::EP_MAX_PACKET_SIZE }>::new(
+        0,
+        Descriptors {
+            device_speed: DEVICE_SPEED,
+            device_descriptor: USB_DEVICE_DESCRIPTOR,
+            configuration_descriptor: USB_CONFIGURATION_DESCRIPTOR_0,
+            other_speed_configuration_descriptor: Some(USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0),
+            device_qualifier_descriptor: Some(USB_DEVICE_QUALIFIER_DESCRIPTOR),
+            string_descriptor_zero: USB_STRING_DESCRIPTOR_0,
+            string_descriptors: USB_STRING_DESCRIPTORS,
+        }.set_total_lengths() // TODO figure out a better solution
+    );
+
+    // set device speed
+    usb0.set_speed(DEVICE_SPEED);
 
     // connect device
     usb0.connect();
-    debug!("Connected usb0 device");
+    info!("Connected usb0 device");
 
     // enable interrupts
     unsafe {
@@ -181,10 +197,8 @@ fn main_loop() -> GreatResult<()> {
         pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_CONTROL);
         pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_IN);
         pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_OUT);
-        usb0.hal_driver.enable_interrupts();
+        usb0.enable_interrupts();
     }
-
-    info!("Peripherals initialized, entering main loop.");
 
     let mut test_command = TestCommand::Stop;
     let mut test_stats = TestStats::new();
@@ -199,12 +213,13 @@ fn main_loop() -> GreatResult<()> {
     };
 
     // prime the usb OUT endpoints we'll be using
-    usb0.hal_driver.ep_out_prime_receive(1);
-    usb0.hal_driver.ep_out_prime_receive(2);
+    usb0.ep_out_prime_receive(1);
+    usb0.ep_out_prime_receive(2);
 
     let mut counter = 0;
-
     let mut rx_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] = [0; moondancer::EP_MAX_PACKET_SIZE];
+
+    info!("Peripherals initialized, entering main loop.");
 
     loop {
         let mut queue_length = 0;
@@ -215,16 +230,19 @@ fn main_loop() -> GreatResult<()> {
 
             leds.output.write(|w| unsafe { w.output().bits(0) });
 
+            //log::info!("{:?}", event);
+
             match event {
                 // - usb0 event handlers --
 
                 // Usb0 received a control event
                 Usb(Target, event @ BusReset)
                 | Usb(Target, event @ ReceiveControl(0))
+                | Usb(Target, event @ ReceiveSetupPacket(0, _))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
-                    debug!("\n\nUsb(Target, {:?})", event);
-                    match usb0
+                    //debug!("\n\nUsb(Target, {:?})", event);
+                    /*match usb0
                         .dispatch_control(event)
                         .map_err(|_| GreatError::IoError)?
                     {
@@ -235,12 +253,15 @@ fn main_loop() -> GreatResult<()> {
                         None => {
                             // control event was handled by UsbDevice
                         }
-                    }
+                    }*/
+
+                    control.handle_event(&usb0, event);
                 }
 
                 // Usb0 received packet
                 Usb(Target, ReceivePacket(endpoint)) => {
-                    let bytes_read = usb0.hal_driver.read(endpoint, &mut rx_buffer);
+                    let bytes_read = usb0.read(endpoint, &mut rx_buffer);
+
                     if endpoint == 1 {
                         leds.output.write(|w| unsafe { w.output().bits(0b11_1000) });
                         if counter % 100 == 0 {
@@ -280,10 +301,18 @@ fn main_loop() -> GreatResult<()> {
                                     "received invalid command from host: {:?} (read {} bytes)",
                                     command, bytes_read,
                                 );
+                                error!(
+                                    "{:?} .. {:?}",
+                                    &rx_buffer[0..8],
+                                    &rx_buffer[(bytes_read - 8)..bytes_read]
+                                );
                             }
                         }
+                    } else {
+                        error!("received data on unknown endpoint: {}", endpoint);
                     }
-                    usb0.hal_driver.ep_out_prime_receive(endpoint);
+
+                    usb0.ep_out_prime_receive(endpoint);
                 }
 
                 // Usb0 transfer complete
@@ -307,7 +336,7 @@ fn main_loop() -> GreatResult<()> {
 
         // perform tests
         match test_command {
-            TestCommand::In => test_in_speed(leds, &usb0.hal_driver, &test_data, &mut test_stats),
+            TestCommand::In => test_in_speed(leds, &usb0, &test_data, &mut test_stats),
             TestCommand::Out => (),
             _ => (),
         }
