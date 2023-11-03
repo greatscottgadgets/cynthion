@@ -42,10 +42,14 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         ladybug::trace(Channel::A, 1, || {
             let endpoint = usb0.ep_control.epno.read().bits() as u8;
-            //InterruptEvent::Usb(Target, UsbEvent::ReceiveControl(endpoint))
+
+            // we'll read the setup packet in the main loop because, for some reason, this
+            // is currently breaking facedancer
+            usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
+            InterruptEvent::Usb(Target, UsbEvent::ReceiveControl(endpoint))
 
             // read setup packet in interrupt handler for lowest latency
-            let mut setup_packet_buffer = [0_u8; 8];
+            /*let mut setup_packet_buffer = [0_u8; 8];
             let bytes_read = usb0.read_control(&mut setup_packet_buffer);
             let setup_packet = SetupPacket::from(setup_packet_buffer);
 
@@ -54,7 +58,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                 InterruptEvent::ErrorMessage("ERROR Received 0 bytes for setup packet!!!")
             } else {
                 InterruptEvent::Usb(Target, UsbEvent::ReceiveSetupPacket(endpoint, setup_packet))
-            }
+            }*/
         })
 
     // USB0_EP_OUT ReceivePacket

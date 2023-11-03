@@ -53,8 +53,6 @@ mod usb_protocol;
 fn MachineExternal() {
     use moondancer::UsbInterface::Target;
 
-    //unsafe { riscv::register::mie::clear_mext(); }
-
     let usb0 = unsafe { hal::Usb0::summon() };
 
     // - usb0 interrupts - "target_phy" --
@@ -103,11 +101,6 @@ fn MachineExternal() {
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
         ladybug::trace(Channel::A, 3, || {
             let endpoint = usb0.ep_in.epno.read().bits() as u8;
-
-            /*unsafe {
-                usb0.clear_tx_ack_active();
-            }*/
-
             dispatch_event(InterruptEvent::Usb(
                 Target,
                 UsbEvent::SendComplete(endpoint),
@@ -120,9 +113,6 @@ fn MachineExternal() {
         let pending = pac::csr::interrupt::reg_pending();
         dispatch_event(InterruptEvent::UnknownInterrupt(pending));
     }
-
-    //unsafe { riscv::register::mie::set_mext(); }
-
 }
 
 // - main entry point ---------------------------------------------------------
@@ -169,27 +159,22 @@ fn main_loop() -> GreatResult<()> {
         peripherals.USB0_EP_OUT,
     );
 
-    // descriptors
-    let descriptors = usb_protocol::Descriptors {
-        device_speed: DEVICE_SPEED,
-        device_descriptor: USB_DEVICE_DESCRIPTOR,
-        configuration_descriptor: USB_CONFIGURATION_DESCRIPTOR_0,
-        other_speed_configuration_descriptor: Some(USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0),
-        device_qualifier_descriptor: Some(USB_DEVICE_QUALIFIER_DESCRIPTOR),
-        string_descriptor_zero: USB_STRING_DESCRIPTOR_0,
-        string_descriptors: USB_STRING_DESCRIPTORS,
-    }.set_total_lengths(); // TODO figure out a better solution
-
     // control
-    let mut control = usb_protocol::Control::new(0);
+    let mut control = usb_protocol::Control::new(
+        0,
+        usb_protocol::Descriptors {
+            device_speed: DEVICE_SPEED,
+            device_descriptor: USB_DEVICE_DESCRIPTOR,
+            configuration_descriptor: USB_CONFIGURATION_DESCRIPTOR_0,
+            other_speed_configuration_descriptor: Some(USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0),
+            device_qualifier_descriptor: Some(USB_DEVICE_QUALIFIER_DESCRIPTOR),
+            string_descriptor_zero: USB_STRING_DESCRIPTOR_0,
+            string_descriptors: USB_STRING_DESCRIPTORS,
+        }.set_total_lengths() // TODO figure out a better solution
+    );
 
     // set controller speed
-    if DEVICE_SPEED == Speed::Full {
-        usb0
-            .controller
-            .full_speed_only
-            .write(|w| w.full_speed_only().bit(true));
-    }
+    usb0.set_speed(DEVICE_SPEED);
 
     // connect device
     usb0.connect();
@@ -234,7 +219,7 @@ fn main_loop() -> GreatResult<()> {
 
         if let Usb(Target, usb_event) = event {
             ladybug::trace(Channel::B, 0, || {
-                control.handle_event(&usb0, &descriptors, usb_event);
+                control.handle_event(&usb0, usb_event);
             });
         }
 

@@ -176,8 +176,8 @@ impl<'a> Firmware<'a> {
             .write(|w| unsafe { w.output().bits(1 << 2) });
 
         // connect usb1
-        let speed = self.usb1.connect();
-        info!("Connected usb1 device: {:?}", speed);
+        self.usb1.connect();
+        info!("Connected usb1 device");
 
         // enable interrupts
         unsafe {

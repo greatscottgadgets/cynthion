@@ -3,6 +3,7 @@
 mod error;
 pub use error::ErrorKind;
 
+use smolusb::device::Speed;
 use smolusb::setup::*;
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriver, UsbDriverOperations,
@@ -194,6 +195,28 @@ macro_rules! impl_usb {
             // - trait: UsbDriverOperations -----------------------------------
 
             impl UsbDriverOperations for $USBX {
+                /// Set the device speed
+                fn set_speed(&self, device_speed: Speed) {
+                    match device_speed {
+                        Speed::High => {
+                            self.controller.full_speed_only.write(|w| w.full_speed_only().bit(false));
+                            self.controller.low_speed_only.write(|w| w.low_speed_only().bit(false));
+                        },
+                        Speed::Full => {
+                            self.controller.full_speed_only.write(|w| w.full_speed_only().bit(true));
+                            self.controller.low_speed_only.write(|w| w.low_speed_only().bit(false));
+                        },
+                        Speed::Low => {
+                            // FIXME still connects at full speed
+                            self.controller.full_speed_only.write(|w| w.full_speed_only().bit(false));
+                            self.controller.low_speed_only.write(|w| w.low_speed_only().bit(true));
+                        }
+                        _ => {
+                            log::warn!("Requested unsupported device speed, ignoring: {:?}", device_speed);
+                        }
+                    }
+                }
+
                 /// Set the interface up for new connections
                 fn connect(&self) {
                     // disconnect device controller

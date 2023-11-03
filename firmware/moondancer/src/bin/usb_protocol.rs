@@ -88,6 +88,7 @@ pub enum ControlState {
 
 pub struct Control<'a, D> {
     endpoint_number: u8,
+    descriptors: Descriptors<'a>,
 
     state: ControlState,
     configuration: Option<u8>,
@@ -104,9 +105,10 @@ impl<'a, D> Control<'a, D>
 where
     D: UsbDriver
 {
-    pub fn new(endpoint_number: u8) -> Self {
+    pub fn new(endpoint_number: u8, descriptors: Descriptors<'a>) -> Self {
         Self {
             endpoint_number,
+            descriptors,
 
             state: ControlState::Idle,
             configuration: None,
@@ -117,7 +119,7 @@ where
         }
     }
 
-    pub fn handle_event(&mut self, usb: &D, descriptors: &Descriptors, event: UsbEvent) {
+    pub fn handle_event(&mut self, usb: &D, event: UsbEvent) {
         if self.state == ControlState::Error {
             // stall endpoint and drop event I'd assume ?
             return;
@@ -130,7 +132,7 @@ where
                 self.state = self.handle_bus_reset();
             }
             ReceiveSetupPacket(_endpoint_number, setup_packet) => {
-                self.handle_receive_control(usb, descriptors, &setup_packet);
+                self.handle_receive_control(usb, &setup_packet);
             }
             SendComplete(_endpoint_number) => {
                 self.handle_send_complete(usb);
@@ -145,12 +147,16 @@ where
     }
 
     fn handle_bus_reset(&mut self) -> ControlState {
-        *self = Self::new(self.endpoint_number);
+        self.state = ControlState::Idle;
+        self.configuration = None;
+        self.cb_send_complete = None;
+        self.cb_receive_packet = None;
+
         ControlState::Idle
     }
 
     // TODO -> ControlState
-    fn handle_receive_control(&mut self, usb: &D, descriptors: &Descriptors, setup_packet: &SetupPacket) {
+    fn handle_receive_control(&mut self, usb: &D, setup_packet: &SetupPacket) {
         // TODO if not idle, stall ?
         if self.state != ControlState::Idle {
             error!("Control::handle_receive_setup_packet() stall - not idle");
@@ -175,7 +181,7 @@ where
 
                 // write descriptor and enter data stage
                 ladybug::trace(Channel::B, 1, || {
-                    self.state = descriptors.write(usb, self.endpoint_number, setup_packet);
+                    self.state = self.descriptors.write(usb, self.endpoint_number, setup_packet);
                 });
             }
 

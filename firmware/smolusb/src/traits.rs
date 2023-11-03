@@ -1,3 +1,4 @@
+use crate::device::Speed;
 use crate::setup::{Direction, SetupPacket};
 
 use zerocopy::AsBytes;
@@ -18,6 +19,8 @@ pub trait UsbDriver:
 }
 
 pub trait UsbDriverOperations {
+    /// Speed
+    fn set_speed(&self, device_speed: Speed);
     /// Connect
     fn connect(&self);
     /// Disconnect

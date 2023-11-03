@@ -13,17 +13,13 @@ use crate::setup::{Direction, Feature, Recipient, Request, RequestType, SetupPac
 use crate::traits::AsByteSliceIterator;
 use crate::traits::UsbDriver;
 
-///! `smolusb` device implementation for Luna USB peripheral
-///!
-///! TODO probably not all of this should live in the smolusb crate,
-///! it should rather be split into generic and
-///! implementation-specific parts
+///! `smolusb` device implementation
 
 /// USB Speed
 ///
 /// Note: These match UTMI xcvr_select constant so the mapping may not be correct for other contexts.
 ///       See: https://github.com/greatscottgadgets/luna/blob/main/luna/gateware/usb/usb2/__init__.py
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Speed {
     /// High speed (480 Mbps)
@@ -617,7 +613,7 @@ where
 }
 
 // Helpers
-impl<'a, D, const MAX_RECEIVE_SIZE: usize> UsbDevice<'a, D, MAX_RECEIVE_SIZE> where D: UsbDriver {}
+//impl<'a, D, const MAX_RECEIVE_SIZE: usize> UsbDevice<'a, D, MAX_RECEIVE_SIZE> where D: UsbDriver {}
 
 /*
 # Reference enumeration process (quirks merged from Linux, macOS, and Windows):
