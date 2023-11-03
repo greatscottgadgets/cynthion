@@ -159,17 +159,7 @@ fn main_loop() -> GreatResult<()> {
     info!("Logging initialized");
 
     // initialize ladybug
-    moondancer::debug::init();
-
-    // debug: gpioa & gpiob
-    let gpioa = &peripherals.GPIOA;
-    gpioa
-        .moder
-        .write(|w| unsafe { w.moder().bits(0b1111_1111) }); // 0=input, 1=output
-    let gpiob = &peripherals.GPIOB;
-    gpiob
-        .moder
-        .write(|w| unsafe { w.moder().bits(0b1111_1111) }); // 0=input, 1=output
+    moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
     // usb0: Target
     let mut usb0 = hal::Usb0::new(
