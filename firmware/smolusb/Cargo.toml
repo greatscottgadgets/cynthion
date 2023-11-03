@@ -18,8 +18,10 @@ bench = false
 
 [features]
 default = []
+ladybug = ["ladybug/enable"]
 
 [dependencies]
 heapless = { version = "=0.7.16" } # TODO 0.8.0 is en-route...
+ladybug = { path = "../ladybug" }
 log = "=0.4.17"
 zerocopy = { version = "=0.7.0-alpha.2", default-features = false }

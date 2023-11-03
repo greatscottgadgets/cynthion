@@ -4,11 +4,11 @@ use core::marker::PhantomData;
 
 use log::{error, info, warn};
 
-use smolusb::device::Speed;
-use smolusb::event::UsbEvent;
-use smolusb::descriptor::*;
-use smolusb::setup::{Direction, Request, RequestType, SetupPacket};
-use smolusb::traits::{AsByteSliceIterator, UsbDriver};
+use crate::device::Speed;
+use crate::event::UsbEvent;
+use crate::descriptor::*;
+use crate::setup::{Direction, Request, RequestType, SetupPacket};
+use crate::traits::{AsByteSliceIterator, UsbDriver};
 
 use ladybug::Channel;
 
@@ -86,7 +86,7 @@ pub enum ControlState {
     Error, // what is Error if not Stalled?
 }
 
-pub struct Control<'a, D> {
+pub struct Control<'a, D, const MAX_RECEIVE_SIZE: usize> {
     endpoint_number: u8,
     descriptors: Descriptors<'a>,
 
@@ -95,20 +95,18 @@ pub struct Control<'a, D> {
     cb_send_complete: Option<Callback>,
     cb_receive_packet: Option<Callback>,
 
-    //la: Option<&'static dyn moondancer::util::LogicAnalyzer>,
-
     _marker: PhantomData<&'a D>,
 }
 
 
-impl<'a, D> Control<'a, D>
+impl<'a, D, const MAX_RECEIVE_SIZE: usize> Control<'a, D, MAX_RECEIVE_SIZE>
 where
     D: UsbDriver
 {
     pub fn new(endpoint_number: u8, descriptors: Descriptors<'a>) -> Self {
         Self {
             endpoint_number,
-            descriptors,
+            descriptors: descriptors.set_total_lengths(), // TODO figure out a better solution
 
             state: ControlState::Idle,
             configuration: None,
@@ -131,17 +129,37 @@ where
             BusReset => {
                 self.state = self.handle_bus_reset();
             }
-            ReceiveSetupPacket(_endpoint_number, setup_packet) => {
+            ReceiveControl(endpoint_number) => {
+                if endpoint_number != self.endpoint_number {
+                    error!("event endpoint does not match control endpoint");
+                }
+                let mut buffer = [0_u8; 8];
+                let bytes_read = usb.read_control(&mut buffer);
+                if bytes_read != 8 {
+                    error!("Received {} bytes for Setup packet.", bytes_read);
+                    error!("Dropping control event");
+                    return;
+                }
+                let setup_packet = SetupPacket::from(buffer);
                 self.handle_receive_control(usb, &setup_packet);
             }
-            SendComplete(_endpoint_number) => {
+            ReceiveSetupPacket(endpoint_number, setup_packet) => {
+                if endpoint_number != self.endpoint_number {
+                    error!("event endpoint does not match control endpoint");
+                }
+                self.handle_receive_control(usb, &setup_packet);
+            }
+            SendComplete(endpoint_number) => {
+                if endpoint_number != self.endpoint_number {
+                    error!("event endpoint does not match control endpoint");
+                }
                 self.handle_send_complete(usb);
             }
-            ReceivePacket(_endpoint_number) => {
+            ReceivePacket(endpoint_number) => {
+                if endpoint_number != self.endpoint_number {
+                    error!("event endpoint does not match control endpoint");
+                }
                 self.handle_receive_packet(usb);
-            }
-            _ => {
-                error!("Control::handle_event() - unhandled event {:?}", event);
             }
         }
     }
@@ -170,8 +188,6 @@ where
         // parse setup packet
         let request_type = setup_packet.request_type();
         let request = setup_packet.request();
-
-        //info!("{:?} - {:?}", request, setup_packet.direction());
 
         // handle request
         match (&request_type, &request) {
@@ -290,8 +306,7 @@ where
     // TODO -> ControlState
     fn handle_receive_packet(&mut self, usb: &D) {
         ladybug::trace(Channel::B, 3, || {
-            let mut rx_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] =
-                [0; moondancer::EP_MAX_PACKET_SIZE];
+            let mut rx_buffer: [u8; MAX_RECEIVE_SIZE] = [0; MAX_RECEIVE_SIZE];
             let bytes_read = usb.read(self.endpoint_number, &mut rx_buffer);
             if bytes_read == 0 {
                 // it's an ack
@@ -303,11 +318,10 @@ where
             }
         });
 
-        // TODO always prime for next packet?
-        /*ladybug::trace(Channel::B, 2, || {
+        // FIXME make sure we always prime for next packet, at the moment it's getting lost
+        ladybug::trace(Channel::B, 2, || {
             usb.ep_out_prime_receive(self.endpoint_number);
-        });*/
-
+        });
 
         // execute any receive packet callback we may have registered
         if let Some(callback) = self.cb_receive_packet.take() {
@@ -342,6 +356,7 @@ where
 
 // - Descriptors --------------------------------------------------------------
 
+//#[derive(Clone, Copy)]
 pub struct Descriptors<'a> {
     pub device_speed: Speed,
     pub device_descriptor: DeviceDescriptor,
@@ -356,7 +371,7 @@ impl<'a> Descriptors<'a> {
     // TODO ugly hack because I haven't figured out how to do this at compile time yet
     pub fn set_total_lengths(mut self) -> Self {
         self.configuration_descriptor.set_total_length();
-        if let Some(mut other_speed_configuration_descriptor) = self.other_speed_configuration_descriptor {
+        if let Some(mut other_speed_configuration_descriptor) = self.other_speed_configuration_descriptor.as_mut() {
             other_speed_configuration_descriptor.set_total_length();
         }
         self
@@ -380,7 +395,7 @@ impl<'a> Descriptors<'a> {
             }
         };
 
-        //info!("  {:?}", descriptor_type);
+        //info!("  {:?} #{}", descriptor_type, descriptor_number);
 
         // if the host is requesting less than the maximum amount of data,
         // only respond with the amount requested
@@ -391,11 +406,11 @@ impl<'a> Descriptors<'a> {
                 endpoint_number,
                 self.device_descriptor.as_iter().take(requested_length)
             ),
-            (DescriptorType::Configuration, 0) => usb.write_ref(
+            (DescriptorType::Configuration, _) => usb.write_ref(
                 endpoint_number,
                 self.configuration_descriptor.iter().take(requested_length),
             ),
-            (DescriptorType::DeviceQualifier, 0) => {
+            (DescriptorType::DeviceQualifier, _) => {
                 if self.device_speed == Speed::High {
                     if let Some(descriptor) = &self.device_qualifier_descriptor {
                         usb.write_ref(
@@ -413,26 +428,28 @@ impl<'a> Descriptors<'a> {
                     usb.write(endpoint_number, [].into_iter());
                 }
             }
-            (DescriptorType::OtherSpeedConfiguration, 0) => {
+            (DescriptorType::OtherSpeedConfiguration, _) => {
                 if let Some(descriptor) = self.other_speed_configuration_descriptor {
                     usb.write_ref(endpoint_number, descriptor.iter().take(requested_length));
                 } else {
                     warn!("Descriptors::write_descriptor() - no other speed configuration descriptor configured");
-                    // ack HostToDevice instead
+                    // ack HostToDevice instead?
                     usb.write(endpoint_number, [].into_iter());
+                    //usb.stall_control_request();
+                    //return ControlState::Stalled;
                 }
             }
             (DescriptorType::String, 0) => usb.write_ref(
                 endpoint_number,
                 self.string_descriptor_zero.iter().take(requested_length)
             ),
-            (DescriptorType::String, index) => {
-                let offset_index: usize = (index - 1).into();
+            (DescriptorType::String, number) => {
+                let offset_index: usize = (number - 1).into();
                 if offset_index > self.string_descriptors.len() {
                     // TODO stall or ack HostToDevice ?
-                    warn!("Descriptors::write_descriptor() stall - unknown string descriptor {}", index);
+                    warn!("Descriptors::write_descriptor() stall - unknown string descriptor {}", number);
                     //usb.stall_control_request();
-                    // ack HostToDevice instead
+                    // ack HostToDevice instead?
                     usb.write(endpoint_number, [].into_iter());
                     //return ControlState::Stalled; //  TODO ??
                 }

@@ -7,6 +7,7 @@ use log::{debug, error, info, warn};
 
 use libgreat::{GreatError, GreatResult};
 
+use smolusb::control_new::{Control, Descriptors};
 use smolusb::descriptor::*;
 use smolusb::device::{Speed, UsbDevice};
 use smolusb::event::UsbEvent;
@@ -40,11 +41,6 @@ fn dispatch_event(event: InterruptEvent) {
         }
     }
 }
-
-// - Types --------------------------------------------------------------------
-
-mod usb_protocol;
-
 
 // - MachineExternal interrupt handler ----------------------------------------
 
@@ -152,7 +148,7 @@ fn main_loop() -> GreatResult<()> {
     moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
     // usb0: Target
-    let mut usb0 = hal::Usb0::new(
+    let usb0 = hal::Usb0::new(
         peripherals.USB0,
         peripherals.USB0_EP_CONTROL,
         peripherals.USB0_EP_IN,
@@ -160,9 +156,9 @@ fn main_loop() -> GreatResult<()> {
     );
 
     // control
-    let mut control = usb_protocol::Control::new(
+    let mut control = Control::<_, { moondancer::EP_MAX_PACKET_SIZE }>::new(
         0,
-        usb_protocol::Descriptors {
+        Descriptors {
             device_speed: DEVICE_SPEED,
             device_descriptor: USB_DEVICE_DESCRIPTOR,
             configuration_descriptor: USB_CONFIGURATION_DESCRIPTOR_0,
@@ -170,7 +166,7 @@ fn main_loop() -> GreatResult<()> {
             device_qualifier_descriptor: Some(USB_DEVICE_QUALIFIER_DESCRIPTOR),
             string_descriptor_zero: USB_STRING_DESCRIPTOR_0,
             string_descriptors: USB_STRING_DESCRIPTORS,
-        }.set_total_lengths() // TODO figure out a better solution
+        }//.set_total_lengths() // TODO figure out a better solution
     );
 
     // set controller speed
@@ -179,7 +175,6 @@ fn main_loop() -> GreatResult<()> {
     // connect device
     usb0.connect();
     info!("Connected usb0 device");
-
 
     // enable interrupts
     unsafe {
@@ -199,14 +194,12 @@ fn main_loop() -> GreatResult<()> {
 
     // prime the usb OUT endpoint(s) we'll be using
     usb0.ep_out_prime_receive(1);
-
-    // state & buffers
-    let mut current_configuration = 0;
-
-    info!("Peripherals initialized, entering main loop.");
+    usb0.ep_out_prime_receive(2);
 
     use moondancer::{event::InterruptEvent::*, UsbInterface::Target};
     use smolusb::event::UsbEvent::*;
+
+    info!("Peripherals initialized, entering main loop.");
 
     loop {
         let event = EVENT_QUEUE.dequeue();
@@ -215,13 +208,33 @@ fn main_loop() -> GreatResult<()> {
         }
         let event = event.unwrap();
 
-        //log::info!("USB0 Event: {:?}", event);
+        // Usb0 received a control event
+        match event {
+            Usb(Target, event @ BusReset)                 |
+            Usb(Target, event @ ReceiveControl(0))        |
+            Usb(Target, event @ ReceiveSetupPacket(0, _)) |
+            Usb(Target, event @ ReceivePacket(0))         |
+            Usb(Target, event @ SendComplete(0)) => {
+                ladybug::trace(Channel::B, 0, || {
+                    control.handle_event(&usb0, event);
+                });
+            }
+            Usb(Target, ReceivePacket(endpoint)) => {
+                log::info!("USB0 Event: {:?}", event);
+            }
+            Usb(Target, SendComplete(_endpoint)) => {
+                log::info!("USB0 Event: {:?}", event);
+            }
+            _ => {
+                error!("Unhandled event: {:?}", event);
+            }
+        }
 
-        if let Usb(Target, usb_event) = event {
+        /*if let Usb(Target, usb_event) = event {
             ladybug::trace(Channel::B, 0, || {
                 control.handle_event(&usb0, usb_event);
             });
-        }
+        }*/
 
         /*match event {
             // USB0 - bus reset
@@ -539,14 +552,13 @@ static USB_DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualif
     device_protocol: 0x00,
     max_packet_size: 64,
     num_configurations: 1,
-    reserved: 0,
     ..DeviceQualifierDescriptor::new()
 };
 
 static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDescriptor::new(
     ConfigurationDescriptorHeader {
         configuration_value: 1,
-        configuration_string_index: 1,
+        configuration_string_index: 4,
         attributes: 0x80, // 0b1000_0000 = bus-powered
         max_power: 50,    // 50 * 2 mA = 100 mA
         ..ConfigurationDescriptorHeader::new()
@@ -558,14 +570,14 @@ static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDe
             interface_class: 0x00,
             interface_subclass: 0x00,
             interface_protocol: 0x00,
-            interface_string_index: 2,
+            interface_string_index: 5,
             ..InterfaceDescriptorHeader::new()
         },
         &[
             EndpointDescriptor {
                 endpoint_address: 0x01, // OUT
                 attributes: 0x02,       // Bulk
-                max_packet_size: 64,
+                max_packet_size: 512,
                 interval: 0,
                 ..EndpointDescriptor::new()
             },
@@ -579,7 +591,7 @@ static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDe
             EndpointDescriptor {
                 endpoint_address: 0x81, // IN
                 attributes: 0x02,       // Bulk
-                max_packet_size: 64,
+                max_packet_size: 512,
                 interval: 0,
                 ..EndpointDescriptor::new()
             },
@@ -592,7 +604,7 @@ static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
         ConfigurationDescriptorHeader {
             descriptor_type: DescriptorType::OtherSpeedConfiguration as u8,
             configuration_value: 1,
-            configuration_string_index: 1,
+            configuration_string_index: 7,
             attributes: 0x80, // 0b1000_0000 = bus-powered
             max_power: 50,    // 50 * 2 mA = 100 mA
             ..ConfigurationDescriptorHeader::new()
@@ -604,7 +616,7 @@ static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
                 interface_class: 0x00,
                 interface_subclass: 0x00,
                 interface_protocol: 0x00,
-                interface_string_index: 2,
+                interface_string_index: 5,
                 ..InterfaceDescriptorHeader::new()
             },
             &[
@@ -641,9 +653,18 @@ static USB_STRING_DESCRIPTOR_2: StringDescriptor =
     StringDescriptor::new(cynthion::shared::usb::bProductString::example);
 static USB_STRING_DESCRIPTOR_3: StringDescriptor =
     StringDescriptor::new(moondancer::usb::DEVICE_SERIAL_STRING);
+pub static USB_STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config0"); // configuration #0
+pub static USB_STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("interface0"); // interface #0
+pub static USB_STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("interface1"); // interface #1
+pub static USB_STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("config1"); // configuration #1
+
 
 static USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &USB_STRING_DESCRIPTOR_1,
     &USB_STRING_DESCRIPTOR_2,
     &USB_STRING_DESCRIPTOR_3,
+    &USB_STRING_DESCRIPTOR_4,
+    &USB_STRING_DESCRIPTOR_5,
+    &USB_STRING_DESCRIPTOR_6,
+    &USB_STRING_DESCRIPTOR_7,
 ];

@@ -6,6 +6,7 @@
 
 pub mod class;
 pub mod control;
+pub mod control_new;
 pub mod descriptor;
 pub mod device;
 pub mod error;
