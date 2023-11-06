@@ -127,7 +127,8 @@ where
                 self.handle_send_complete(driver, endpoint_number)?;
                 Ok(None)
             }
-            event => { // TODO handle ReceiveSetupPacket
+            event => {
+                // TODO handle ReceiveSetupPacket
                 log::warn!("CONTROL dispatch() unhandled event: {:?}", event);
                 Ok(None)
             }

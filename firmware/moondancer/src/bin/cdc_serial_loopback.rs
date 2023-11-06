@@ -1,15 +1,17 @@
+#![allow(unused_imports)] // TODO
 #![no_std]
 #![no_main]
 
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 
 use smolusb::class::cdc;
-use smolusb::device::{Speed, UsbDevice};
+use smolusb::control_new::{Control, Descriptors};
+use smolusb::descriptor::DescriptorType;
+use smolusb::device::Speed;
 use smolusb::event::UsbEvent;
-use smolusb::setup::SetupPacket;
+use smolusb::setup::{Request, RequestType, SetupPacket};
 use smolusb::traits::{
-    ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
-    WriteRefEndpoint,
+    ReadControl, ReadEndpoint, UsbDriverOperations, WriteEndpoint, WriteRefEndpoint,
 };
 
 use moondancer::{hal, pac};
@@ -17,6 +19,7 @@ use pac::csr::interrupt;
 
 // - constants ----------------------------------------------------------------
 
+const DEVICE_SPEED: Speed = Speed::High;
 const MAX_CONTROL_RESPONSE_SIZE: usize = 8;
 
 // - types --------------------------------------------------------------------
@@ -89,12 +92,12 @@ fn MachineExternal() {
             UsbEvent::ReceiveControl(endpoint),
         ));
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
+        let endpoint = usb0.ep_in.epno.read().bits() as u8;
         usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
-        // TODO something a little bit safer would be nice
-        unsafe {
-            usb0.clear_tx_ack_active();
-        }
-        dispatch_event(InterruptEvent::Interrupt(pac::Interrupt::USB0_EP_IN));
+        dispatch_event(InterruptEvent::Usb(
+            Target,
+            UsbEvent::SendComplete(endpoint)
+        ));
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
         // read data from endpoint
         let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
@@ -119,17 +122,14 @@ fn MachineExternal() {
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
         let endpoint = usb1.ep_control.epno.read().bits() as u8;
         usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
+        dispatch_event(InterruptEvent::Usb(Aux, UsbEvent::ReceiveControl(endpoint)));
+    } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
+        let endpoint = usb1.ep_in.epno.read().bits() as u8;
+        usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
         dispatch_event(InterruptEvent::Usb(
             Aux,
-            UsbEvent::ReceiveControl(endpoint),
+            UsbEvent::SendComplete(endpoint)
         ));
-    } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
-        usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
-        // TODO something a little bit safer would be nice
-        unsafe {
-            usb1.clear_tx_ack_active();
-        }
-        dispatch_event(InterruptEvent::Interrupt(pac::Interrupt::USB1_EP_IN));
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_OUT) {
         // read data from endpoint
         let endpoint = usb1.ep_out.data_ep.read().bits() as u8;
@@ -175,47 +175,69 @@ fn main() -> ! {
     info!("logging initialized");
 
     // usb0: Target
-    let mut usb0 = UsbDevice::<_, MAX_CONTROL_RESPONSE_SIZE>::new(
-        hal::Usb0::new(
-            peripherals.USB0,
-            peripherals.USB0_EP_CONTROL,
-            peripherals.USB0_EP_IN,
-            peripherals.USB0_EP_OUT,
-        ),
-        cdc::DEVICE_DESCRIPTOR,
-        cdc::CONFIGURATION_DESCRIPTOR_0,
-        cdc::USB_STRING_DESCRIPTOR_0,
-        cdc::USB_STRING_DESCRIPTORS,
+    let usb0 = hal::Usb0::new(
+        peripherals.USB0,
+        peripherals.USB0_EP_CONTROL,
+        peripherals.USB0_EP_IN,
+        peripherals.USB0_EP_OUT,
     );
-    usb0.set_device_qualifier_descriptor(cdc::DEVICE_QUALIFIER_DESCRIPTOR);
-    usb0.set_other_speed_configuration_descriptor(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
-    usb0.cb_vendor_request = Some(handle_vendor_request);
-    usb0.cb_string_request = Some(handle_string_request);
-    usb0.connect();
 
-    let speed: Speed = usb0.hal_driver.controller.speed.read().speed().bits().into();
+    // usb0 control endpoint
+    let mut control_usb0 = Control::<_, MAX_CONTROL_RESPONSE_SIZE>::new(
+        0,
+        Descriptors {
+            device_speed: DEVICE_SPEED,
+            device_descriptor: cdc::DEVICE_DESCRIPTOR,
+            configuration_descriptor: cdc::CONFIGURATION_DESCRIPTOR_0,
+            other_speed_configuration_descriptor: Some(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0),
+            device_qualifier_descriptor: Some(cdc::DEVICE_QUALIFIER_DESCRIPTOR),
+            string_descriptor_zero: cdc::STRING_DESCRIPTOR_0,
+            string_descriptors: cdc::STRING_DESCRIPTORS,
+        }
+        .set_total_lengths(), // TODO figure out a better solution
+    );
+    // TODO control_usb0.cb_vendor_request = Some(handle_vendor_request);
+    // TODO control_usb0.cb_string_request = Some(handle_string_request);
+
+    // set device speed
+    usb0.set_speed(DEVICE_SPEED);
+
+    // connect device
+    usb0.connect();
+    let speed: Speed = usb0.controller.speed.read().speed().bits().into();
     info!("Connected USB0 device: {:?}", speed);
 
     // usb1: Aux
-    let mut usb1 = UsbDevice::<_, MAX_CONTROL_RESPONSE_SIZE>::new(
-        hal::Usb1::new(
-            peripherals.USB1,
-            peripherals.USB1_EP_CONTROL,
-            peripherals.USB1_EP_IN,
-            peripherals.USB1_EP_OUT,
-        ),
-        cdc::DEVICE_DESCRIPTOR,
-        cdc::CONFIGURATION_DESCRIPTOR_0,
-        cdc::USB_STRING_DESCRIPTOR_0,
-        cdc::USB_STRING_DESCRIPTORS,
+    let usb1 = hal::Usb1::new(
+        peripherals.USB1,
+        peripherals.USB1_EP_CONTROL,
+        peripherals.USB1_EP_IN,
+        peripherals.USB1_EP_OUT,
     );
-    usb1.set_device_qualifier_descriptor(cdc::DEVICE_QUALIFIER_DESCRIPTOR);
-    usb1.set_other_speed_configuration_descriptor(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0);
-    usb1.cb_vendor_request = Some(handle_vendor_request);
-    usb1.cb_string_request = Some(handle_string_request);
-    usb1.connect();
 
-    let speed: Speed = usb0.hal_driver.controller.speed.read().speed().bits().into();
+    // usb1 control endpoint
+    let mut control_usb1 = Control::<_, MAX_CONTROL_RESPONSE_SIZE>::new(
+        0,
+        Descriptors {
+            device_speed: DEVICE_SPEED,
+            device_descriptor: cdc::DEVICE_DESCRIPTOR,
+            configuration_descriptor: cdc::CONFIGURATION_DESCRIPTOR_0,
+            other_speed_configuration_descriptor: Some(cdc::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0),
+            device_qualifier_descriptor: Some(cdc::DEVICE_QUALIFIER_DESCRIPTOR),
+            string_descriptor_zero: cdc::STRING_DESCRIPTOR_0,
+            string_descriptors: cdc::STRING_DESCRIPTORS,
+        }
+        .set_total_lengths(), // TODO figure out a better solution
+    );
+    // TODO control_usb1.cb_vendor_request = Some(handle_vendor_request);
+    // TODO control_usb1.cb_string_request = Some(handle_string_request);
+
+    // set device speed
+    usb1.set_speed(DEVICE_SPEED);
+
+    // connect device
+    usb1.connect();
+    let speed: Speed = usb1.controller.speed.read().speed().bits().into();
     info!("Connected USB1 device: {:?}", speed);
 
     // enable interrupts
@@ -235,66 +257,19 @@ fn main() -> ! {
         interrupt::enable(pac::Interrupt::USB1_EP_CONTROL);
         interrupt::enable(pac::Interrupt::USB1_EP_IN);
         interrupt::enable(pac::Interrupt::USB1_EP_OUT);
-        usb0.hal_driver.enable_interrupts();
-        usb1.hal_driver.enable_interrupts();
+        usb0.enable_interrupts();
+        usb1.enable_interrupts();
     }
 
     // prime the usb OUT endpoints we'll be using
-    usb0.hal_driver.ep_out_prime_receive(1);
-    usb0.hal_driver.ep_out_prime_receive(2);
-    usb1.hal_driver.ep_out_prime_receive(1);
-    usb1.hal_driver.ep_out_prime_receive(2);
+    usb0.ep_out_prime_receive(1);
+    usb0.ep_out_prime_receive(2);
+    usb1.ep_out_prime_receive(1);
+    usb1.ep_out_prime_receive(2);
 
     info!("Peripherals initialized, entering main loop.");
 
     loop {
-        if let Some(UsbDataPacket {
-            interface,
-            endpoint,
-            bytes_read,
-            buffer,
-        }) = USB_RECEIVE_PACKET_QUEUE.dequeue()
-        {
-            use moondancer::UsbInterface::{Aux, Target};
-
-            match (interface, endpoint, bytes_read, buffer) {
-                // usb0 receive packet handler
-                (Target, endpoint, bytes_read, buffer) => {
-                    if endpoint != 0 {
-                        debug!(
-                            "Received {} bytes on usb0 endpoint: {} - {:?}",
-                            bytes_read,
-                            endpoint,
-                            &buffer[0..8],
-                        );
-                        usb1.hal_driver
-                            .write_ref(endpoint, buffer.iter().take(bytes_read).into_iter());
-                        info!("Sent {} bytes to usb1 endpoint: {}", bytes_read, endpoint);
-                    }
-                    usb0.hal_driver.ep_out_prime_receive(endpoint);
-                }
-
-                // usb1 receive packet handler
-                (Aux, endpoint, bytes_read, buffer) => {
-                    if endpoint != 0 {
-                        debug!(
-                            "Received {} bytes on usb1 endpoint: {} - {:?}",
-                            bytes_read,
-                            endpoint,
-                            &buffer[0..8],
-                        );
-                        usb0.hal_driver
-                            .write_ref(endpoint, buffer.iter().take(bytes_read).into_iter());
-                        info!("Sent {} bytes to usb0 endpoint: {}", bytes_read, endpoint);
-                    }
-                    usb1.hal_driver.ep_out_prime_receive(endpoint);
-                }
-
-                // unhandled
-                _ => (),
-            }
-        }
-
         if let Some(event) = EVENT_QUEUE.dequeue() {
             use moondancer::event::InterruptEvent::Usb;
             use moondancer::UsbInterface::{Aux, Target};
@@ -306,18 +281,13 @@ fn main() -> ! {
                 | Usb(Target, event @ ReceiveControl(0))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
-                    debug!("\n\nUsb(Target, {:?})", event);
-                    match usb0.dispatch_control(event) {
-                        Ok(Some(control_event)) => {
-                            // handle any events control couldn't
-                            warn!("Unhandled control event on Target: {:?}", control_event);
+                    match control_usb0.handle_event(&usb0, event) {
+                        // vendor requests are not handled by control
+                        Some((setup_packet, _rx_buffer)) => {
+                            handle_vendor_request(&usb0, setup_packet);
                         }
-                        Ok(None) => {
-                            // control event was handled by UsbDevice
-                        }
-                        Err(e) => {
-                            error!("Error handling control event on Target: {:?}", e);
-                        }
+                        // control event was handled
+                        None => (),
                     }
                 }
 
@@ -326,19 +296,71 @@ fn main() -> ! {
                 | Usb(Aux, event @ ReceiveControl(0))
                 | Usb(Aux, event @ ReceivePacket(0))
                 | Usb(Aux, event @ SendComplete(0)) => {
-                    debug!("\n\nUsb(Aux, {:?})", event);
-                    match usb1.dispatch_control(event) {
-                        Ok(Some(control_event)) => {
-                            // handle any events control couldn't
-                            warn!("Unhandled control event on Aux: {:?}", control_event);
+                    match control_usb1.handle_event(&usb1, event) {
+                        // vendor requests are not handled by control
+                        Some((setup_packet, _rx_buffer)) => {
+                            handle_vendor_request(&usb1, setup_packet);
                         }
-                        Ok(None) => {
-                            // control event was handled by UsbDevice
-                        }
-                        Err(e) => {
-                            error!("Error handling control event on Aux: {:?}", e);
-                        }
+                        // control event was handled
+                        None => (),
                     }
+                }
+
+                // unhandled
+                _ => {
+                    info!("Unhandled event: {:?}", event);
+                },
+            }
+        }
+
+        if let Some(UsbDataPacket {
+            interface,
+            endpoint,
+            bytes_read,
+            buffer,
+        }) = USB_RECEIVE_PACKET_QUEUE.dequeue()
+        {
+            use moondancer::UsbInterface::{Aux, Target};
+
+            match (interface, endpoint, bytes_read, buffer) {
+                // usb0 control endpoint receive packet
+                (Target, 0, _bytes_read, _buffer) => {
+                    control_usb0.handle_event(&usb0, UsbEvent::ReceivePacket(0));
+                }
+
+                // usb1 control endpoint receive packet
+                (Aux, 0, _bytes_read, _buffer) => {
+                    control_usb1.handle_event(&usb1, UsbEvent::ReceivePacket(0));
+                }
+
+                // usb0 receive packet handler
+                (Target, endpoint, bytes_read, buffer) => {
+                    if endpoint != 0 {
+                        debug!(
+                            "Received {} bytes on usb0 endpoint: {} - {:?}",
+                            bytes_read,
+                            endpoint,
+                            &buffer[0..8],
+                        );
+                        usb1.write_ref(endpoint, buffer.iter().take(bytes_read).into_iter());
+                        info!("Sent {} bytes to usb1 endpoint: {}", bytes_read, endpoint);
+                    }
+                    usb0.ep_out_prime_receive(endpoint);
+                }
+
+                // usb1 receive packet handler
+                (Aux, endpoint, bytes_read, buffer) => {
+                    if endpoint != 0 {
+                        debug!(
+                            "Received {} bytes on usb1 endpoint: {} - {:?}",
+                            bytes_read,
+                            endpoint,
+                            &buffer[0..8],
+                        );
+                        usb0.write_ref(endpoint, buffer.iter().take(bytes_read).into_iter());
+                        info!("Sent {} bytes to usb0 endpoint: {}", bytes_read, endpoint);
+                    }
+                    usb1.ep_out_prime_receive(endpoint);
                 }
 
                 // unhandled
@@ -350,29 +372,47 @@ fn main() -> ! {
 
 // - vendor request handlers --------------------------------------------------
 
+
 fn handle_vendor_request<'a, D>(
-    device: &UsbDevice<'a, D, MAX_CONTROL_RESPONSE_SIZE>,
-    _setup_packet: &SetupPacket,
-    request: u8,
+    usb: &D,
+    setup_packet: SetupPacket,
 ) where
     D: ReadControl + ReadEndpoint + WriteEndpoint + WriteRefEndpoint + UsbDriverOperations,
 {
-    let request = cdc::ch34x::VendorRequest::from(request);
-    debug!("  CDC-SERIAL vendor_request: {:?}", request);
+    let request_type = setup_packet.request_type();
+    let request = setup_packet.request();
 
-    // we can just spoof these
-    device.hal_driver.write(0, [0, 0].into_iter());
-}
+    match (request_type, request) {
+        (RequestType::Vendor, Request::ClassOrVendor(vendor_request)) => {
+            let vendor_request =
+                cdc::ch34x::VendorRequest::from(vendor_request);
+            info!("CDC-SERIAL vendor request: {:?} {} {}", vendor_request, setup_packet.value, setup_packet.index);
 
-fn handle_string_request<'a, D>(
-    device: &UsbDevice<'a, D, MAX_CONTROL_RESPONSE_SIZE>,
-    _setup_packet: &SetupPacket,
-    index: u8,
-) where
-    D: ReadControl + ReadEndpoint + WriteEndpoint + WriteRefEndpoint + UsbDriverOperations,
-{
-    debug!("  CDC-SERIAL string_request: {}", index);
+            // we can just spoof these
+            usb.write(0, [0, 0].into_iter());
+        }
+        (RequestType::Standard, Request::GetDescriptor) => {
+            let [index, descriptor_type_bits] = setup_packet.value.to_le_bytes();
+            match DescriptorType::try_from(descriptor_type_bits) {
+                Ok(DescriptorType::String) => {
+                    debug!("CDC-SERIAL string_request: {}", index);
 
-    // we can just spoof this too
-    device.hal_driver.write(0, [].into_iter());
+                    // we can just spoof this too
+                    usb.write(0, [].into_iter());
+                }
+                _ => {
+                    error!(
+                        "handle_vendor_request error - unhandled descriptor request: {:?} {:?}",
+                        request_type, request
+                    );
+                }
+            }
+        }
+        _ => {
+            error!(
+                "handle_vendor_request error - unhandled control request: {:?} {:?}",
+                request_type, request
+            );
+        }
+    }
 }

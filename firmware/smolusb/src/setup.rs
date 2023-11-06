@@ -75,7 +75,7 @@ impl From<u8> for Recipient {
 }
 
 /// Represents bit 5..=6 of the `[SetupPacket]` `request`_type field.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum RequestType {
     Standard = 0,
@@ -129,7 +129,7 @@ impl Direction {
 }
 
 /// Represents the `SetupPacket` `request` field.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Request {
     GetStatus = 0,

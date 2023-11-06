@@ -409,13 +409,17 @@ where
         );
 
         match (&descriptor_type, descriptor_number) {
-            (DescriptorType::Device, 0) => self
-                .hal_driver
-                .write_ref(0, self.device_descriptor.as_iter().take(requested_length)),
-            (DescriptorType::Configuration, 0) => self.hal_driver.write_ref(
-                0,
-                self.configuration_descriptor.iter().take(requested_length),
-            ),
+            (DescriptorType::Device, 0) => {
+                self
+                    .hal_driver
+                    .write_ref(0, self.device_descriptor.as_iter().take(requested_length));
+            },
+            (DescriptorType::Configuration, 0) => {
+                self.hal_driver.write_ref(
+                    0,
+                    self.configuration_descriptor.iter().take(requested_length),
+                );
+            },
             (DescriptorType::DeviceQualifier, 0) => {
                 if let Some(descriptor) = &self.device_qualifier_descriptor {
                     self.hal_driver
@@ -436,9 +440,11 @@ where
                     return Ok(());
                 }
             }
-            (DescriptorType::String, 0) => self
-                .hal_driver
-                .write_ref(0, self.string_descriptor_zero.iter().take(requested_length)),
+            (DescriptorType::String, 0) => {
+                self
+                    .hal_driver
+                    .write_ref(0, self.string_descriptor_zero.iter().take(requested_length));
+            },
             (DescriptorType::String, index) => {
                 if let Some(cb) = self.cb_string_request {
                     cb(self, setup_packet, index);
@@ -457,7 +463,7 @@ where
                     self.string_descriptors[offset_index]
                         .iter()
                         .take(requested_length),
-                )
+                );
             }
             _ => {
                 warn!(

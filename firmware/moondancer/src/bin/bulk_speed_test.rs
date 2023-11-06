@@ -60,7 +60,6 @@ fn MachineExternal() {
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         ladybug::trace(Channel::A, 1, || {
             let endpoint = usb0.ep_control.epno.read().bits() as u8;
-            //let event = InterruptEvent::Usb(Target, UsbEvent::ReceiveControl(endpoint));
 
             use smolusb::setup::SetupPacket;
             use smolusb::traits::ReadControl;
@@ -163,7 +162,7 @@ fn main_loop() -> GreatResult<()> {
         peripherals.USB0_EP_OUT,
     );
 
-    // control
+    // usb0 control endpoint
     let mut control = Control::<_, { moondancer::EP_MAX_PACKET_SIZE }>::new(
         0,
         Descriptors {
@@ -182,7 +181,7 @@ fn main_loop() -> GreatResult<()> {
 
     // connect device
     usb0.connect();
-    info!("Connected usb0 device");
+    info!("Connected USB0 device.");
 
     // enable interrupts
     unsafe {

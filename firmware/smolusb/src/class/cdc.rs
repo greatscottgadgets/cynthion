@@ -151,15 +151,15 @@ pub const OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
         )],
     );
 
-pub const USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
+pub const STRING_DESCRIPTOR_0: StringDescriptorZero =
     StringDescriptorZero::new(&[LanguageId::EnglishUnitedStates]);
 
-pub const USB_STRING_DESCRIPTOR_1: StringDescriptor = StringDescriptor::new("Great Scott Gadgets");
-pub const USB_STRING_DESCRIPTOR_2: StringDescriptor = StringDescriptor::new("CDC-SERIAL Emulation");
-pub const USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("100");
+pub const STRING_DESCRIPTOR_1: StringDescriptor = StringDescriptor::new("Great Scott Gadgets");
+pub const STRING_DESCRIPTOR_2: StringDescriptor = StringDescriptor::new("CDC-SERIAL Emulation");
+pub const STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("100");
 
-pub const USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
-    &USB_STRING_DESCRIPTOR_1,
-    &USB_STRING_DESCRIPTOR_2,
-    &USB_STRING_DESCRIPTOR_3,
+pub const STRING_DESCRIPTORS: &[&StringDescriptor] = &[
+    &STRING_DESCRIPTOR_1,
+    &STRING_DESCRIPTOR_2,
+    &STRING_DESCRIPTOR_3,
 ];
