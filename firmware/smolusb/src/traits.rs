@@ -58,6 +58,8 @@ pub trait UnsafeUsbDriverOperations {
 
 pub trait ReadControl {
     /// Read a setup packet from the control endpoint
+    ///
+    /// Returns the number of bytes read from the control endpoint.
     fn read_control(&self, buffer: &mut [u8]) -> usize;
 }
 
@@ -66,26 +68,34 @@ pub trait ReadEndpoint {
     fn ep_out_prime_receive(&self, endpoint_number: u8);
 
     /// Read a packet from the given endpoint.
+    ///
+    /// Returns the number of bytes read from the endpoint.
     fn read(&self, endpoint_number: u8, buffer: &mut [u8]) -> usize;
 }
 
 // These two should be one trait
-// TODO return bytes_written
 
 pub trait WriteEndpoint {
     /// Write iterator to a single packet
-    fn write<'a, I>(&self, endpoint_number: u8, iter: I)
+    ///
+    /// Returns the number of bytes written to the endpoint.
+    fn write<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
     where
         I: Iterator<Item = u8>;
 
     /// Write iterator to multiple packets
-    fn write_packets<'a, I>(&self, endpoint_number: u8, iter: I, packet_size: usize)
+    ///
+    /// Returns the number of bytes written to the endpoint.
+    fn write_packets<'a, I>(&self, endpoint_number: u8, iter: I, packet_size: usize) -> usize
     where
         I: Iterator<Item = u8>;
 }
 
 pub trait WriteRefEndpoint {
-    fn write_ref<'a, I>(&self, endpoint_number: u8, iter: I)
+    /// Write iterator to a single packet
+    ///
+    /// Returns the number of bytes written to the endpoint.
+    fn write_ref<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
     where
         I: Iterator<Item = &'a u8>;
 }

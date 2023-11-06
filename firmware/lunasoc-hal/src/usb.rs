@@ -299,18 +299,26 @@ macro_rules! impl_usb {
                 fn ack_status_stage(&self, packet: &SetupPacket) {
                     match Direction::from(packet.request_type) {
                         // If this is an IN request, read a zero-length packet (ZLP) from the host..
-                        Direction::DeviceToHost => self.ep_out_prime_receive(0),
+                        Direction::DeviceToHost => {
+                            self.ep_out_prime_receive(0);
+                        }
                         // ... otherwise, send a ZLP.
-                        Direction::HostToDevice => self.write(0, [].into_iter()),
+                        Direction::HostToDevice => {
+                            self.write(0, [].into_iter());
+                        }
                     }
                 }
 
                 fn ack(&self, endpoint_number: u8, direction: Direction) {
                     match direction {
                         // If this is an IN request, read a zero-length packet (ZLP) from the host..
-                        Direction::DeviceToHost => self.ep_out_prime_receive(endpoint_number),
+                        Direction::DeviceToHost => {
+                            self.ep_out_prime_receive(endpoint_number);
+                        }
                         // ... otherwise, send a ZLP.
-                        Direction::HostToDevice => self.write(endpoint_number, [].into_iter()),
+                        Direction::HostToDevice => {
+                            self.write(endpoint_number, [].into_iter());
+                        }
                     }
                 }
 
@@ -541,12 +549,12 @@ macro_rules! impl_usb {
             }
 
             impl WriteEndpoint for $USBX {
-                fn write_packets<'a, I>(&self, endpoint_number: u8, iter: I, packet_size: usize)
+                fn write_packets<'a, I>(&self, endpoint_number: u8, iter: I, packet_size: usize) -> usize
                 where
                     I: Iterator<Item = u8>
                 {
                     // reset output fifo if needed
-                    // TODO rather return an error
+                    // FIXME rather return an error
                     if self.ep_in.have.read().have().bit() {
                         warn!("  clear tx");
                         self.ep_in.reset.write(|w| w.reset().bit(true));
@@ -564,6 +572,7 @@ macro_rules! impl_usb {
                                 .epno
                                 .write(|w| unsafe { w.epno().bits(endpoint_number) });
                             // wait for transmission to complete
+                            // FIXME it may be better if this blocked on the USB_EP_IN interrupt.
                             while self.ep_in.have.read().have().bit() { }
                             //unsafe { riscv::asm::delay(10000); }
                         }
@@ -573,10 +582,12 @@ macro_rules! impl_usb {
                     self.ep_in
                         .epno
                         .write(|w| unsafe { w.epno().bits(endpoint_number) });
+
+                    bytes_written
                 }
 
                 #[inline(always)]
-                fn write<I>(&self, endpoint_number: u8, iter: I)
+                fn write<I>(&self, endpoint_number: u8, iter: I) -> usize
                 where
                     I: Iterator<Item = u8>,
                 {
@@ -602,12 +613,14 @@ macro_rules! impl_usb {
                     if bytes_written > 60 {
                         log::debug!("  TX {} bytes", bytes_written);
                     }
+
+                    bytes_written
                 }
             }
 
             impl WriteRefEndpoint for $USBX {
                 #[inline(always)]
-                fn write_ref<'a, I>(&self, endpoint_number: u8, iter: I)
+                fn write_ref<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
                 where
                     I: Iterator<Item = &'a u8>,
                 {
@@ -631,6 +644,8 @@ macro_rules! impl_usb {
                         .write(|w| unsafe { w.epno().bits(endpoint_number) });
 
                     trace!("  TX {} bytes", bytes_written);
+
+                    bytes_written
                 }
             }
 
