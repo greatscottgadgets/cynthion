@@ -212,6 +212,7 @@ fn main_loop() -> GreatResult<()> {
     };
 
     // prime the usb OUT endpoints we'll be using
+    usb0.ep_out_prime_receive(0);
     usb0.ep_out_prime_receive(1);
     usb0.ep_out_prime_receive(2);
 
