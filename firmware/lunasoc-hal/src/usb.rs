@@ -1,4 +1,6 @@
-//! Simple USB implementation
+//! HAL implementation for LUNA EPTRI devices.
+//!
+//! Reference: https://github.com/hathach/tinyusb/compare/master...ktemkin:tinyusb:luna_riscv
 
 mod error;
 pub use error::ErrorKind;
@@ -486,19 +488,19 @@ macro_rules! impl_usb {
                 /// Prepare OUT endpoint to receive a single packet.
                 #[inline(always)]
                 fn ep_out_prime_receive(&self, endpoint_number: u8) {
-                    // clear receive buffer
-                    self.ep_out.reset.write(|w| w.reset().bit(true));
+                    // 0. clear receive buffer
+                    //self.ep_out.reset.write(|w| w.reset().bit(true));
 
-                    // select endpoint
+                    // 3. re-enable ep_out interface
+                    self.ep_out.enable.write(|w| w.enable().bit(true));
+
+                    // 1. select endpoint
                     self.ep_out
                         .epno
                         .write(|w| unsafe { w.epno().bits(endpoint_number) });
 
-                    // prime endpoint
+                    // 2. prime endpoint
                     self.ep_out.prime.write(|w| w.prime().bit(true));
-
-                    // enable it
-                    self.ep_out.enable.write(|w| w.enable().bit(true));
                 }
 
                 #[inline(always)]
@@ -561,6 +563,7 @@ macro_rules! impl_usb {
                     }
 
                     // write data as multiple packets
+                    let mut timeout = 0;
                     let mut bytes_written: usize = 0;
                     for byte in iter {
                         self.ep_in.data.write(|w| unsafe { w.data().bits(byte) });
@@ -573,7 +576,17 @@ macro_rules! impl_usb {
                                 .write(|w| unsafe { w.epno().bits(endpoint_number) });
                             // wait for transmission to complete
                             // FIXME it may be better if this blocked on the USB_EP_IN interrupt.
-                            while self.ep_in.have.read().have().bit() { }
+                            while self.ep_in.have.read().have().bit() {
+                                timeout += 1;
+                                if timeout > 5_000_000 {
+                                    log::error!(
+                                        "{}::write_packets timed out after {} bytes",
+                                        stringify!($USBX),
+                                        bytes_written
+                                    );
+                                    break;
+                                }
+                            }
                             //unsafe { riscv::asm::delay(10000); }
                         }
                     }
