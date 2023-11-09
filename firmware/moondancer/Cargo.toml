@@ -30,7 +30,14 @@ default = [
     "vexriscv_dcache",
 
     #"nightly",
+
+    "chonky_events",
+    "ladybug",
 ]
+
+# pack setup packet and rx packet buffers into event queue
+chonky_events = ["smolusb/chonky_events"]
+ladybug = ["ladybug/enable"]
 
 # select softcore
 minerva = [
@@ -52,7 +59,7 @@ nightly = [
 
 [dependencies]
 cynthion = { path = "../../cynthion/rust" }
-ladybug = { path = "../ladybug", features = ["enable"] }
+ladybug = { path = "../ladybug" }
 libgreat = { path = "../libgreat-rs", features = ["errno_minimal"] }
 lunasoc-pac = { path = "../lunasoc-pac", default-features = false, features = ["critical-section"]}
 lunasoc-hal = { path = "../lunasoc-hal", default-features = false, features = ["usb"]}

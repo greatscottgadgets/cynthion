@@ -19,6 +19,7 @@ bench = false
 [features]
 default = []
 ladybug = ["ladybug/enable"]
+chonky_events = []
 
 [dependencies]
 heapless = { version = "=0.7.16" } # TODO 0.8.0 is en-route...

@@ -220,22 +220,13 @@ where
         &mut self,
         event: UsbEvent,
     ) -> SmolResult<Option<ControlEvent<'a, MAX_RECEIVE_SIZE>>> {
-        trace!("DEVICE dispatch_control({:?})", event);
-
-        //let response = self.control.dispatch(&self.hal_driver, event)?;
-        //trace!("  {:?} got response: {:?}", event, response);
-
         match self.control.dispatch(&self.hal_driver, event)? {
-            Some(
-                response @ ControlEvent {
-                    endpoint_number,
-                    setup_packet,
-                    //data,
-                    bytes_read,
-                    //_marker,
-                    ..
-                },
-            ) => {
+            Some(response @ ControlEvent {
+                endpoint_number,
+                setup_packet,
+                bytes_read,
+                ..
+            }) => {
                 // probably a standard request that can be handled by UsbDevice
                 // TODO check direction and split setup_request into in/out
                 if bytes_read == 0 {
@@ -475,13 +466,13 @@ where
             }
         }
 
-        self.hal_driver.ack_status_stage(setup_packet);
+        self.hal_driver.ack(0, setup_packet.direction());
 
         Ok(())
     }
 
     fn setup_set_configuration(&self, setup_packet: &SetupPacket) -> SmolResult<()> {
-        self.hal_driver.ack_status_stage(setup_packet);
+        self.hal_driver.ack(0, setup_packet.direction());
 
         let configuration: u8 = setup_packet.value as u8;
 
@@ -524,7 +515,7 @@ where
         let current_configuration = self.current_configuration.load(Ordering::Relaxed);
 
         self.hal_driver.write_ref(0, [current_configuration].iter());
-        self.hal_driver.ack_status_stage(setup_packet);
+        self.hal_driver.ack(0, setup_packet.direction());
 
         Ok(())
     }
@@ -550,7 +541,7 @@ where
                 let endpoint_address = setup_packet.index as u8;
                 self.hal_driver
                     .clear_feature_endpoint_halt(endpoint_address);
-                self.hal_driver.ack_status_stage(setup_packet);
+                self.hal_driver.ack(0, setup_packet.direction());
                 trace!(
                     "SETUP setup_clear_feature EndpointHalt: 0x{:x}",
                     endpoint_address
@@ -611,7 +602,7 @@ where
         let status: u16 = 0b00; // TODO bit 1:remote-wakeup bit 0:self-powered
 
         self.hal_driver.write_ref(0, status.to_le_bytes().iter());
-        self.hal_driver.ack_status_stage(setup_packet);
+        self.hal_driver.ack(0, setup_packet.direction());
 
         Ok(())
     }

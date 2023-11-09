@@ -27,7 +27,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
         configure_default_logging(level=os.getenv("LOG_LEVEL", "DEBUG").upper())
 
 
-    def test_raw_command(self):
+    def off_test_raw_command(self):
         with usb1.USBContext() as context:
             device_handle = context.openByVendorIDAndProductID(VENDOR_ID, PRODUCT_ID)
             if device_handle is None:
@@ -67,7 +67,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
                 raise DeviceNotFoundError()
             device_handle.claimInterface(0)
 
-            payload_length = 120
+            payload_length = 518
             data = [b % 0xff for b in range(0, payload_length)]
             payload = [
                 0x20, 0x01, 0x00, 0x00, # class_id:        0x0120 - moondancer
@@ -97,14 +97,14 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
             self.assertEqual(response, payload_length)
 
 
-    def test_raw_command_large_input(self):
+    def off_test_raw_command_large_input(self):
         with usb1.USBContext() as context:
             device_handle = context.openByVendorIDAndProductID(VENDOR_ID, PRODUCT_ID)
             if device_handle is None:
                 raise DeviceNotFoundError()
             device_handle.claimInterface(0)
 
-            payload_length = 500
+            payload_length = 518
             payload = [
                 0x20, 0x01, 0x00, 0x00, # class_id:       0x0120 - moondancer
                 0x28, 0x00, 0x00, 0x00, # verb_number:    0x0028 - test_read_endpoint

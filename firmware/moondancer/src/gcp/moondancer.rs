@@ -112,6 +112,7 @@ impl Moondancer {
                 event
             }
 
+            #[cfg(feature="chonky_events")]
             InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveSetupPacket(endpoint, setup_packet)) => {
                 self.event_counter += 1;
 

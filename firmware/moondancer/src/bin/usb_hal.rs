@@ -25,7 +25,7 @@ use ladybug::Channel;
 
 // - configuration ------------------------------------------------------------
 
-const DEVICE_SPEED: Speed = Speed::Full;
+const DEVICE_SPEED: Speed = Speed::High;
 
 // - global static state ------------------------------------------------------
 
@@ -49,60 +49,96 @@ fn dispatch_event(event: InterruptEvent) {
 fn MachineExternal() {
     use moondancer::UsbInterface::Target;
 
-    let usb0 = unsafe { hal::Usb0::summon() };
+    let usb1 = unsafe { hal::Usb1::summon() };
 
-    // - usb0 interrupts - "target_phy" --
+    // - usb1 interrupts - "aux_phy" --
 
-    // USB0 BusReset
-    if usb0.is_pending(pac::Interrupt::USB0) {
+    // USB1 BusReset
+    if usb1.is_pending(pac::Interrupt::USB1) {
         ladybug::trace(Channel::A, 0, || {
-            usb0.bus_reset();
+            usb1.bus_reset();
             dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
-        });
-        usb0.clear_pending(pac::Interrupt::USB0);
 
-    // USB0_EP_CONTROL ReceiveControl
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
+            usb1.clear_pending(pac::Interrupt::USB1);
+        });
+
+    // USB1_EP_CONTROL ReceiveControl
+    } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
         ladybug::trace(Channel::A, 1, || {
-            /*let endpoint = usb0.ep_control.epno.read().bits() as u8;
-            usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-            dispatch_event(InterruptEvent::Usb(
-            Target,
-            UsbEvent::ReceiveControl(endpoint),
-            ));*/
+            let endpoint = usb1.ep_control.epno.read().bits() as u8;
 
-            let endpoint = usb0.ep_control.epno.read().bits() as u8;
-            let mut buffer = [0_u8; 8];
-            let _bytes_read = usb0.read_control(&mut buffer);
-            let setup_packet = SetupPacket::from(buffer);
-            dispatch_event(InterruptEvent::Usb(
-                Target,
-                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
-            ));
+            #[cfg(not(feature="chonky_events"))]
+            {
+                dispatch_event(InterruptEvent::Usb(
+                    Target,
+                    UsbEvent::ReceiveControl(endpoint),
+                ));
+            }
+
+            #[cfg(feature="chonky_events")]
+            {
+                let endpoint = usb1.ep_control.epno.read().bits() as u8;
+                let mut buffer = [0_u8; 8];
+                let _bytes_read = usb1.read_control(&mut buffer);
+                let setup_packet = SetupPacket::from(buffer);
+                dispatch_event(InterruptEvent::Usb(
+                    Target,
+                    UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
+                ));
+            }
+
+            usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
         });
-        usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
 
-        // USB0_EP_OUT ReceivePacket
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
+    // USB1_EP_OUT ReceivePacket
+    } else if usb1.is_pending(pac::Interrupt::USB1_EP_OUT) {
         ladybug::trace(Channel::A, 2, || {
-            let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
-            dispatch_event(InterruptEvent::Usb(
-                Target,
-                UsbEvent::ReceivePacket(endpoint),
-            ));
-        });
-        usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
+            let endpoint = usb1.ep_out.data_ep.read().bits() as u8;
 
-    // USB0_EP_IN SendComplete
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
+            #[cfg(not(feature="chonky_events"))]
+            {
+                dispatch_event(InterruptEvent::Usb(
+                    Target,
+                    UsbEvent::ReceivePacket(endpoint),
+                ));
+            }
+
+            #[cfg(feature="chonky_events")]
+            {
+                // #1 empty fifo into a receive buffer
+                let mut packet_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] = [0; moondancer::EP_MAX_PACKET_SIZE];
+                let bytes_read = usb1.read(endpoint, &mut packet_buffer);
+                // pulse zlp reads
+                if bytes_read == 0 {
+                    ladybug::trace(Channel::B, 7, || {
+                    });
+                }
+
+                // #2 dispatch receive buffer to the main loop
+                dispatch_event(InterruptEvent::Usb(
+                    Target,
+                    UsbEvent::ReceiveBuffer(endpoint, bytes_read, packet_buffer),
+                ));
+
+                // #3 tell eptri we're ready to receive another packet
+                //usb1.ep_out_prime_receive(endpoint);
+            }
+
+            // #4 tell the cpu we're ready for another rx interrupt
+            usb1.clear_pending(pac::Interrupt::USB1_EP_OUT);
+        });
+
+    // USB1_EP_IN SendComplete
+    } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
         ladybug::trace(Channel::A, 3, || {
-            let endpoint = usb0.ep_in.epno.read().bits() as u8;
+            let endpoint = usb1.ep_in.epno.read().bits() as u8;
             dispatch_event(InterruptEvent::Usb(
                 Target,
                 UsbEvent::SendComplete(endpoint),
             ));
+
+            usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
         });
-        usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
 
     // - Unknown Interrupt --
     } else {
@@ -147,16 +183,16 @@ fn main_loop() -> GreatResult<()> {
     // initialize ladybug
     moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
-    // usb0: Target
-    let usb0 = hal::Usb0::new(
-        peripherals.USB0,
-        peripherals.USB0_EP_CONTROL,
-        peripherals.USB0_EP_IN,
-        peripherals.USB0_EP_OUT,
+    // usb1: Target
+    let usb1 = hal::Usb1::new(
+        peripherals.USB1,
+        peripherals.USB1_EP_CONTROL,
+        peripherals.USB1_EP_IN,
+        peripherals.USB1_EP_OUT,
     );
 
     // control
-    let mut control = Control::<_, { moondancer::EP_MAX_PACKET_SIZE }>::new(
+    let mut control = Control::<_, { moondancer::EP_MAX_PACKET_SIZE * 4 }>::new(
         0,
         Descriptors {
             device_speed: DEVICE_SPEED,
@@ -170,11 +206,11 @@ fn main_loop() -> GreatResult<()> {
     );
 
     // set controller speed
-    usb0.set_speed(DEVICE_SPEED);
+    usb1.set_speed(DEVICE_SPEED);
 
     // connect device
-    usb0.connect();
-    info!("Connected usb0 device");
+    usb1.connect();
+    info!("Connected usb1 device");
 
     // enable interrupts
     unsafe {
@@ -184,17 +220,17 @@ fn main_loop() -> GreatResult<()> {
         // set mie register: machine external interrupts enable
         riscv::register::mie::set_mext();
 
-        // write csr: enable usb0 interrupts and events
-        pac::csr::interrupt::enable(pac::Interrupt::USB0);
-        pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_CONTROL);
-        pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_IN);
-        pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_OUT);
-        usb0.enable_interrupts();
+        // write csr: enable usb1 interrupts and events
+        pac::csr::interrupt::enable(pac::Interrupt::USB1);
+        pac::csr::interrupt::enable(pac::Interrupt::USB1_EP_CONTROL);
+        pac::csr::interrupt::enable(pac::Interrupt::USB1_EP_IN);
+        pac::csr::interrupt::enable(pac::Interrupt::USB1_EP_OUT);
+        usb1.enable_interrupts();
     }
 
     // prime the usb OUT endpoint(s) we'll be using
-    usb0.ep_out_prime_receive(1);
-    usb0.ep_out_prime_receive(2);
+    //usb1.ep_out_prime_receive(0);
+    //usb1.ep_out_prime_receive(1);
 
     use moondancer::{event::InterruptEvent::*, UsbInterface::Target};
     use smolusb::event::UsbEvent::*;
@@ -202,330 +238,97 @@ fn main_loop() -> GreatResult<()> {
     info!("Peripherals initialized, entering main loop.");
 
     loop {
-        let event = EVENT_QUEUE.dequeue();
-        if matches!(event, None) {
-            continue;
-        }
-        let event = event.unwrap();
 
-        // Usb0 received a control event
-        match event {
-            Usb(Target, event @ BusReset)                 |
-            Usb(Target, event @ ReceiveControl(0))        |
-            Usb(Target, event @ ReceiveSetupPacket(0, _)) |
-            Usb(Target, event @ ReceivePacket(0))         |
-            Usb(Target, event @ SendComplete(0)) => {
-                ladybug::trace(Channel::B, 0, || {
-                    control.handle_event(&usb0, event);
-                });
-            }
-            Usb(Target, ReceivePacket(endpoint)) => {
-                log::info!("USB0 Event: {:?}", event);
-            }
-            Usb(Target, SendComplete(_endpoint)) => {
-                log::info!("USB0 Event: {:?}", event);
-            }
-            _ => {
-                error!("Unhandled event: {:?}", event);
-            }
-        }
-
-        /*if let Usb(Target, usb_event) = event {
-            ladybug::trace(Channel::B, 0, || {
-                control.handle_event(&usb0, usb_event);
-            });
-        }*/
-
-        /*match event {
-            // USB0 - bus reset
-            Usb(Target, BusReset) => {
-                // handled in MachineExternal
-            }
-
-            // USB0_EP_CONTROL - received a control event
-            //Usb(Target, ReceiveControl(endpoint)) => {
-            Usb(Target, ReceiveSetupPacket(endpoint, setup_packet)) => {
-                //let mut buffer = [0_u8; 8];
-                //let _bytes_read = usb0.read_control(&mut buffer);
-
-                // parse setup packet
-                //let setup_packet = SetupPacket::from(buffer);
-                let request_type = setup_packet.request_type();
-                let request = setup_packet.request();
-
-                //info!("  SETUP {:?}", request);
-
-                // handle setup request
-                match (&request_type, &request) {
-                    (RequestType::Standard, Request::SetAddress) => {
-                        let address: u8 = (setup_packet.value & 0x7f) as u8;
-
-                        // set tx_ack_active flag
-                        // TODO a slighty safer approach would be nice
-                        unsafe {
-                            usb0.set_tx_ack_active();
+        // 100uS from interrupt to dequeued
+        if let Some(event) = EVENT_QUEUE.dequeue() {
+            // Usb1 received a control event
+            match event {
+                #[cfg(feature="chonky_events")]
+                Usb(Target, event @ BusReset)                 |
+                Usb(Target, event @ ReceiveControl(0))        |
+                Usb(Target, event @ ReceiveSetupPacket(0, _)) |
+                Usb(Target, event @ ReceivePacket(0))         |
+                Usb(Target, event @ ReceiveBuffer(0, _, _))   |
+                Usb(Target, event @ SendComplete(0)) => {
+                    let result = ladybug::trace(Channel::B, 0, || {
+                        control.handle_event(&usb1, event)
+                    });
+                    match result {
+                        // vendor requests are not handled by control
+                        Some((setup_packet, rx_buffer)) => {
+                            ladybug::trace(Channel::B, 6, || {
+                                handle_vendor_request(&usb1, setup_packet, rx_buffer);
+                            });
                         }
-
-                        // end status stage first before changing device address
-                        //usb0.ack_status_stage(&setup_packet);
-                        // send ZLP to host to end status stage
-                        usb0.ack(0, Direction::HostToDevice);
-
-                        // wait for SendComplete
-                        // TODO a slightly safer approach would be nice
-                        loop {
-                            let active = unsafe { usb0.is_tx_ack_active() };
-                            if active == false {
-                                break;
-                            }
-                        }
-
-                        // activate new address
-                        usb0.set_address(address);
-                    }
-                    (RequestType::Standard, Request::GetDescriptor) => {
-                        // extract the descriptor type and number from our SETUP request
-                        let [descriptor_number, descriptor_type] = setup_packet.value.to_le_bytes();
-                        let descriptor_type = match DescriptorType::try_from(descriptor_type) {
-                            Ok(descriptor_type) => descriptor_type,
-                            Err(e) => {
-                                warn!(
-                                    "USB0_EP_CONTROL stall: invalid descriptor type: {} {}",
-                                    descriptor_type, descriptor_number
-                                );
-                                usb0.stall_control_request();
-                                continue;
-                            }
-                        };
-
-                        //info!("    GetDescriptor {:?} {}", descriptor_type, descriptor_number);
-
-                        // if the host is requesting less than the maximum amount of data,
-                        // only respond with the amount requested
-                        let requested_length = setup_packet.length as usize;
-
-                        // respond with the requested descriptor
-                        match (&descriptor_type, descriptor_number) {
-                            (DescriptorType::Device, 0) => {
-                                usb0.write_ref(
-                                    endpoint,
-                                    USB_DEVICE_DESCRIPTOR.as_iter().take(requested_length),
-                                );
-                            }
-                            (DescriptorType::Configuration, 0) => {
-                                usb0.write_ref(
-                                    endpoint,
-                                    usb_configuration_descriptor_0.iter().take(requested_length),
-                                );
-                            }
-                            (DescriptorType::DeviceQualifier, 0) => {
-                                if DEVICE_SPEED == Speed::High {
-                                    usb0.write_ref(
-                                        endpoint,
-                                        USB_DEVICE_QUALIFIER_DESCRIPTOR
-                                            .as_iter()
-                                            .take(requested_length),
-                                    );
-                                } else {
-                                    usb0.ack(0, Direction::HostToDevice);
-                                }
-                            }
-                            (DescriptorType::OtherSpeedConfiguration, 0) => {
-                                info!("OtherSpeedConfiguration");
-                                // optional
-                                /*warn!("USB0_EP_CONTROL stall: no other speed configuration descriptor");
-                                //usb0.stall_endpoint_out(endpoint);
-                                //usb0.ack_status_stage(&setup_packet);
-                                usb0.ack(0, Direction::HostToDevice);*/
-
-                                usb0.write_ref(
-                                    endpoint,
-                                    usb_other_speed_configuration_descriptor_0
-                                        .iter()
-                                        .take(requested_length),
-                                );
-                            }
-                            (DescriptorType::String, 0) => {
-                                usb0.write_ref(
-                                    endpoint,
-                                    USB_STRING_DESCRIPTOR_0.iter().take(requested_length),
-                                );
-                            }
-                            (DescriptorType::String, index) => {
-                                let offset_index: usize = (index - 1).into();
-                                if offset_index > USB_STRING_DESCRIPTORS.len() {
-                                    warn!(
-                                        "USB0_EP_CONTROL stall: unknown string descriptor {}",
-                                        index
-                                    );
-                                    usb0.stall_control_request();
-                                    continue;
-                                }
-                                usb0.write(
-                                    endpoint,
-                                    USB_STRING_DESCRIPTORS[offset_index]
-                                        .iter()
-                                        .take(requested_length),
-                                );
-                            }
-                            _ => {
-                                warn!(
-                                    "USB0_EP_CONTROL stall: unhandled descriptor request {:?}, {}",
-                                    descriptor_type, descriptor_number
-                                );
-                                usb0.stall_control_request();
-                                continue;
-                            }
-                        }
-
-                        // finally, ack status stage - all this does for DeviceToHost is to prime
-                        // ep_out 0 to receive the zlp from the host
-                        //usb0.ack_status_stage(&setup_packet);
-                        usb0.ack(0, Direction::DeviceToHost); // host will send zlp
-                    }
-                    (RequestType::Standard, Request::SetConfiguration) => {
-                        let configuration: u8 = setup_packet.value as u8;
-                        info!("Request::SetConfiguration {}", configuration);
-
-                        if configuration > 1 {
-                            warn!(
-                                "USB0_EP_CONTROL stall: unknown configuration {}",
-                                configuration
-                            );
-                            current_configuration = 0;
-                            usb0.stall_control_request();
-                            continue;
-                        } else {
-                            current_configuration = configuration;
-                        }
-
-                        //usb0.ack_status_stage(&setup_packet); // TODO immediately, really?
-                        usb0.ack(0, Direction::HostToDevice); // device sends zlp
-                    }
-                    (RequestType::Standard, Request::GetConfiguration) => {
-                        info!("Request::GetConfiguration");
-                        usb0.write_ref(0, [current_configuration].iter());
-                        usb0.ack_status_stage(&setup_packet); // TODO direction?
-                    }
-                    (RequestType::Standard, Request::ClearFeature) => {
-                        info!("Request::ClearFeature");
-                        let recipient = setup_packet.recipient();
-                        let feature_bits = setup_packet.value;
-                        let feature = match Feature::try_from(feature_bits) {
-                            Ok(feature) => feature,
-                            Err(e) => {
-                                warn!(
-                                    "USB0_EP_CONTROL stall: invalid clear feature type: {}",
-                                    feature_bits
-                                );
-                                usb0.stall_control_request();
-                                continue;
-                            }
-                        };
-
-                        use smolusb::setup::{Feature, Recipient};
-                        match (&recipient, &feature) {
-                            (Recipient::Device, Feature::DeviceRemoteWakeup) => {
-                                // self.feature_remote_wakeup = false;
-                            }
-                            (Recipient::Endpoint, Feature::EndpointHalt) => {
-                                let endpoint_address = setup_packet.index as u8;
-                                usb0
-                                    .clear_feature_endpoint_halt(endpoint_address);
-                                usb0.ack_status_stage(&setup_packet);
-                            }
-                            _ => {
-                                warn!(
-                                    "USB0_EP_CONTROL stall: unhandled clear feature {:?}, {:?}",
-                                    recipient, feature
-                                );
-                                usb0.stall_control_request();
-                                return Ok(());
-                            }
-                        };
-                    }
-                    (RequestType::Standard, Request::SetFeature) => {
-                        info!("Request::SetFeature");
-                        let recipient = setup_packet.recipient();
-                        let feature_bits = setup_packet.value;
-                        let feature = match Feature::try_from(feature_bits) {
-                            Ok(feature) => feature,
-                            Err(e) => {
-                                warn!(
-                                    "USB0_EP_CONTROL stall: invalid clear feature type: {}",
-                                    feature_bits
-                                );
-                                usb0.stall_control_request();
-                                continue;
-                            }
-                        };
-                        use smolusb::setup::{Feature, Recipient};
-                        match (&recipient, &feature) {
-                            (Recipient::Device, Feature::DeviceRemoteWakeup) => {
-                                // self.feature_remote_wakeup = true;
-                            }
-                            _ => {
-                                warn!(
-                                    "USB0_EP_CONTROL stall: unhandled set feature {:?}, {:?}",
-                                    recipient, feature
-                                );
-                                usb0.stall_control_request();
-                                return Ok(());
-                            }
-                        };
-
-                        // TODO ack?
-                    }
-                    (RequestType::Standard, Request::GetStatus) => {
-                        info!("Request::GetStatus");
-                        let _recipient = setup_packet.recipient();
-                        let status: u16 = 0b00; // TODO bit 1:remote-wakeup bit 0:self-powered
-                        usb0.write_ref(0, status.to_le_bytes().iter());
-                        usb0.ack_status_stage(&setup_packet);
-                    }
-                    _ => {
-                        log::warn!(
-                            "USB_EP_CONTROL unhandled request {:?} {:?}",
-                            request_type,
-                            request
-                        );
+                        // control event was handled
+                        None => (),
                     }
                 }
-            }
-
-            // USB0_EP_OUT n - received packet on endpoint
-            Usb(Target, ReceivePacket(endpoint)) => {
-                let mut rx_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] =
-                    [0; moondancer::EP_MAX_PACKET_SIZE];
-                let bytes_read = usb0.read(endpoint, &mut rx_buffer);
-                if bytes_read == 0 {
-                    // it's an ack
-                } else {
-                    info!(
-                        "USB0_EP_OUT received packet on endpoint:{} bytes_read:{}",
-                        endpoint, bytes_read
-                    );
+                #[cfg(not(feature="chonky_events"))]
+                Usb(Target, event @ BusReset)                 |
+                Usb(Target, event @ ReceiveControl(0))        |
+                Usb(Target, event @ ReceivePacket(0))         |
+                Usb(Target, event @ SendComplete(0)) => {
+                    let result = ladybug::trace(Channel::B, 0, || {
+                        control.handle_event(&usb1, event)
+                    });
+                    match result {
+                        // vendor requests are not handled by control
+                        Some((setup_packet, rx_buffer)) => {
+                            ladybug::trace(Channel::B, 6, || {
+                                handle_vendor_request(&usb1, setup_packet, rx_buffer);
+                            });
+                        }
+                        // control event was handled
+                        None => (),
+                    }
                 }
-                usb0.ep_out_prime_receive(endpoint);
+                Usb(Target, ReceivePacket(endpoint)) => {
+                    log::info!("USB1 Event: {:?}", event);
+                }
+                Usb(Target, SendComplete(_endpoint)) => {
+                    log::info!("USB1 Event: {:?}", event);
+                }
+                _ => {
+                    error!("Unhandled event: {:?}", event);
+                }
             }
-
-            // USB0_EP_IN - transfer complete
-            Usb(Target, SendComplete(_endpoint)) => {}
-
-            // Error Message
-            ErrorMessage(message) => {
-                error!("MachineExternal Error - {}", message);
-            }
-
-            // Unhandled event
-            _ => {
-                error!("Unhandled event: {:?}", event);
-            }
-        } // end match
-        */
-
+        }
     } // end loop
 }
+
+// - vendor request handler ---------------------------------------------------
+
+fn handle_vendor_request<'a, D>(
+    usb: &D,
+    setup_packet: SetupPacket,
+    rx_buffer: &[u8],
+) where
+    D: ReadControl + ReadEndpoint + WriteEndpoint + WriteRefEndpoint + UsbDriverOperations,
+{
+    let direction = setup_packet.direction();
+    let request_type = setup_packet.request_type();
+    let vendor_request = setup_packet.request;
+    let vendor_value = setup_packet.value;
+
+    /*if rx_buffer.len() != 518 {
+        error!("handle_vendor_request() unexpected transfer length of {} bytes", rx_buffer.len());
+    }*/
+
+    info!(
+        "handle_vendor_request: {:?} {:?} vendor_request:{} vendor_value:{} rx_buffer:{}",
+        direction, request_type, vendor_request, vendor_value, rx_buffer.len()
+    );
+
+    if rx_buffer.len() > 0 {
+        info!("{:?} ... {:?}", &rx_buffer[..8], &rx_buffer[rx_buffer.len()-8..]);
+        //let bytes_written = usb.write_packets(0, rx_buffer.iter().cloned(), 64);
+        //let bytes_written = usb.write_ref(0, rx_buffer.iter());
+        //info!("Wrote {} bytes", bytes_written);
+    }
+
+}
+
 
 // - usb descriptors ----------------------------------------------------------
 

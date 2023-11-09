@@ -372,8 +372,7 @@ fn main() -> ! {
     }
 }
 
-// - vendor request handlers --------------------------------------------------
-
+// - vendor request handler ---------------------------------------------------
 
 fn handle_vendor_request<'a, D>(
     usb: &D,

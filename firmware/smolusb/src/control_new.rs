@@ -2,7 +2,7 @@
 
 use core::marker::PhantomData;
 
-use log::{error, info, warn};
+use log::{debug, error, info, warn};
 
 use crate::device::Speed;
 use crate::event::UsbEvent;
@@ -28,62 +28,49 @@ impl Callback {
         D: UsbDriver
     {
         use Callback::*;
-        match *self {
-            SetAddress(address) => {
-                usb.set_address(address);
-                State::Idle
+        //info!("  callback {:?}", self);
+        ladybug::trace(Channel::B, 5, || {
+            match *self {
+                SetAddress(address) => {
+                    usb.set_address(address);
+                    State::Idle
+                }
+                Ack(endpoint_number, Direction::DeviceToHost) |
+                EndpointOutPrimeReceive(endpoint_number) => {
+                    // DeviceToHost - IN request,  prime the endpoint because the host will send a zlp to the device
+                    usb.ack(endpoint_number, Direction::DeviceToHost);
+                    control_state
+                }
+                Ack(endpoint_number, Direction::HostToDevice) |
+                EndpointInSendZLP(endpoint_number) => {
+                    // HostToDevice - OUT request, send a ZLP from the device to the host
+                    usb.ack(endpoint_number, Direction::HostToDevice);
+                    control_state
+                }
             }
-            Ack(endpoint_number, Direction::DeviceToHost) |
-            EndpointOutPrimeReceive(endpoint_number) => {
-                // DeviceToHost - IN request,  prime the endpoint because the host will send a zlp to the device
-                ladybug::trace(Channel::B, 2, || {
-                    usb.ep_out_prime_receive(endpoint_number);
-                });
-                control_state
-            }
-            Ack(endpoint_number, Direction::HostToDevice) |
-            EndpointInSendZLP(endpoint_number) => {
-                // HostToDevice - OUT request, send a ZLP from the device to the host
-                ladybug::trace(Channel::B, 1, || {
-                    usb.write(endpoint_number, [].into_iter());
-                });
-                control_state
-            }
-        }
+        })
     }
-}
-
-// debug enabled wrappers
-#[inline(always)]
-fn usb_ack<D>(usb: &D, endpoint_number: u8, direction: Direction)
-where
-    D: UsbDriver
-{
-    ladybug::trace(Channel::B, 5, || {
-        match direction {
-            Direction::DeviceToHost => {
-                // DeviceToHost - IN request,  prime the endpoint because the host will send a zlp to the device
-                ladybug::trace(Channel::B, 2, || {
-                    usb.ep_out_prime_receive(endpoint_number);
-                });
-            }
-            Direction::HostToDevice => {
-                // HostToDevice - OUT request, send a ZLP from the device to the host
-                ladybug::trace(Channel::B, 1, || {
-                    usb.write(endpoint_number, [].into_iter());
-                });
-            }
-        }
-    });
 }
 
 #[derive(Clone, Copy, Debug)]
 pub enum State {
     Idle,
-    Setup,
-    Data(SetupPacket),
-    Status,
+    Data(Direction, SetupPacket),
+    Status(Direction),
     Stalled,
+}
+
+impl core::fmt::Display for State {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            State::Data(direction, _) => {
+                write!(f, "Data({:?})", direction)
+            }
+            state => {
+                core::fmt::Debug::fmt(self, f)
+            }
+        }
+    }
 }
 
 pub struct Control<'a, D, const RX_BUFFER_SIZE: usize> {
@@ -123,13 +110,11 @@ where
         }
     }
 
-    fn set_state(&mut self, state: State) {
+    fn set_state(& mut self, state: State) {
         self.state = state;
     }
 
     pub fn handle_event(&mut self, usb: &D, event: UsbEvent) -> Option<(SetupPacket, &[u8])> {
-        //info!("Control::handle_event() {:?} => {:?} ", self.state, event);
-
         if matches!(self.state, State::Stalled) {
             // unstall endpoint?
             error!("Control::handle_event() is in stalled state. Dropping event: {:?}", event);
@@ -137,24 +122,19 @@ where
         }
 
         use UsbEvent::*;
-        let result = match event {
+        match event {
             BusReset => {
                 self.bus_reset();
                 None
             }
-
             ReceiveControl(endpoint_number) => {
                 if endpoint_number != self.endpoint_number {
                     error!("event endpoint does not match control endpoint");
                 }
-
                 let mut buffer = [0_u8; 8];
                 let bytes_read = usb.read_control(&mut buffer);
                 if bytes_read != 8 {
-                    error!("Received {} bytes for Setup packet.", bytes_read);
-                    error!("Dropping control event");
-                    // FIXME are we in error state now?
-                    // won't know until we can replicate the double ep_control irq...
+                    error!("Received {} bytes for Setup packet. Dropping control event.", bytes_read);
                     return None;
                 }
                 let setup_packet = SetupPacket::from(buffer);
@@ -162,45 +142,47 @@ where
                     (setup_packet, &[] as &[u8])
                 })
             }
-
+            #[cfg(feature="chonky_events")]
             ReceiveSetupPacket(endpoint_number, setup_packet) => {
                 if endpoint_number != self.endpoint_number {
                     error!("event endpoint does not match control endpoint");
                 }
-
                 self.receive_control(usb, setup_packet).map(|setup_packet| {
                     (setup_packet, &[] as &[u8])
                 })
             }
-
             ReceivePacket(endpoint_number) => {
                 if endpoint_number != self.endpoint_number {
                     error!("event endpoint does not match control endpoint");
                 }
+                let mut packet_buffer: [u8; 512] = [0; 512];
+                let bytes_read = usb.read(self.endpoint_number, &mut packet_buffer);
 
-                match self.receive_packet(usb) {
-                    None => {
-                        // consumed
-                        None
-                    }
-                    Some((setup_packet, rx_buffer)) => {
-                        // this was a control transfer with data, give it back
-                        Some((setup_packet, rx_buffer))
-                    }
+                // pulse zlp reads
+                if bytes_read == 0 {
+                    ladybug::trace(Channel::B, 7, || {
+                    });
                 }
-            }
 
+                let result = self.receive_packet(usb, &packet_buffer[..bytes_read]);
+
+                result
+            }
+            #[cfg(feature="chonky_events")]
+            ReceiveBuffer(endpoint_number, bytes_read, packet_buffer) => {
+                if endpoint_number != self.endpoint_number {
+                    error!("event endpoint does not match control endpoint");
+                }
+                self.receive_packet(usb, &packet_buffer[..bytes_read])
+            }
             SendComplete(endpoint_number) => {
                 if endpoint_number != self.endpoint_number {
                     error!("event endpoint does not match control endpoint");
                 }
-
                 self.send_complete(usb);
                 None
             }
-        };
-
-        result
+        }
     }
 
 
@@ -219,75 +201,56 @@ where
     // - receive control ------------------------------------------------------
 
     fn receive_control(&mut self, usb: &D, setup_packet: SetupPacket) -> Option<SetupPacket> {
-        // TODO if not idle, stall ?
-        /*if !matches!(self.state, State::Idle) {
-            error!("Control::receive_control() stall - not idle");
-            self.set_state(State::Stalled);
-            return Some(setup_packet);
-        }*/
+        if !matches!(self.state, State::Idle) {
+            warn!("Control::receive_control() not idle");
+        }
 
-        // enter setup stage
-        self.set_state(State::Setup);
-
-        // check for data stage
         let direction = setup_packet.direction();
         let length: usize = setup_packet.length as usize;
 
-        match direction {
-            Direction::HostToDevice => {
-                if length > RX_BUFFER_SIZE {
-                    error!("Host wants to initiate a control transfer of {} bytes but Control receive buffer is only {} bytes", length, RX_BUFFER_SIZE);
-                    self.set_state(State::Stalled); // TODO ?
-                    return Some(setup_packet); // TODO ?
-                } else if length > 0 {
-                    // transaction has data stage, enter it
-                    self.set_state(State::Data(setup_packet));
-                }
-            }
-            Direction::DeviceToHost => {
-                if length > 0 {
-                    // transaction has data stage, enter it
-                    self.set_state(State::Data(setup_packet));
-                }
-            }
+        // check for data stage
+        if length > 0 {
+            self.set_state(State::Data(direction, setup_packet));
+        } else {
+            self.set_state(State::Status(direction));
         }
 
         // try to handle setup packet
         let request_type = setup_packet.request_type();
         let request = setup_packet.request();
-        info!("Starting transaction: {:?} {:?}", request_type, request);
 
-        match (&request_type, &request) {
-            (RequestType::Standard, Request::GetDescriptor) => { // DeviceToHost
+        debug!(
+            "Starting {} {} bytes, {:?} {:?} {:?} ",
+            self.state, length, request_type, request, setup_packet.value.to_le_bytes()
+        );
+
+        match (direction, &request_type, &request) {
+            (Direction::DeviceToHost, RequestType::Standard, Request::GetDescriptor) => {
                 // register callback for successful transmission to host -> Prime ep_out for host zlp
                 self.cb_send_complete = Some(Callback::EndpointOutPrimeReceive(self.endpoint_number));
 
                 // write descriptor
-                ladybug::trace(Channel::B, 1, || {
-                    match self.descriptors.write(usb, self.endpoint_number, setup_packet) {
-                        None => {
-                            // request handled, consumed
-                            None
-                        }
-                        Some(setup_packet) => {
-                            // not handled, pass back to caller
-                            return Some(setup_packet);
-                        }
+                match self.descriptors.write(usb, self.endpoint_number, setup_packet) {
+                    None => {
+                        // request handled, consumed
                     }
-                });
+                    Some(setup_packet) => {
+                        // unknown so we need to pass it back to the caller for handling
+                        return Some(setup_packet);
+                    }
+                }
             }
 
-            (RequestType::Standard, Request::SetAddress) => { // HostToDevice
+            (Direction::HostToDevice, RequestType::Standard, Request::SetAddress) => {
                 // register callback for successful zlp to host -> Set device address
                 let address: u8 = (setup_packet.value & 0x7f) as u8;
                 self.cb_send_complete = Some(Callback::SetAddress(address));
 
                 // send ZLP to host to end status stage
-                self.set_state(State::Status);
-                usb_ack(usb, 0, Direction::HostToDevice);
+                usb.ack(self.endpoint_number, Direction::HostToDevice);
             }
 
-            (RequestType::Standard, Request::SetConfiguration) => { // HostToDevice
+            (Direction::HostToDevice, RequestType::Standard, Request::SetConfiguration) => {
                 let configuration: u8 = setup_packet.value as u8;
                 if configuration > 1 {
                     warn!(
@@ -296,53 +259,57 @@ where
                     );
                     self.configuration = None;
                     usb.stall_control_request();
-                    self.set_state(State::Stalled); // TODO is any of this right?
+                    self.set_state(State::Stalled);
                     return None;
                 } else {
                     self.configuration = Some(configuration);
                 }
 
                 // send ZLP to host to end status stage
-                self.set_state(State::Status);
-                usb_ack(usb, 0, Direction::HostToDevice);
+                usb.ack(self.endpoint_number, Direction::HostToDevice);
             }
 
-            (RequestType::Standard, Request::GetConfiguration) => { // DeviceToHost
-                ladybug::trace(Channel::B, 1, || {
-                    if let Some(configuration) = self.configuration {
-                        usb.write_ref(0, [configuration].iter());
-                    } else {
-                        usb.write_ref(0, [0].iter());
-                    }
-                });
+            (Direction::DeviceToHost, RequestType::Standard, Request::GetConfiguration) => {
+                if let Some(configuration) = self.configuration {
+                    usb.write_ref(self.endpoint_number, [configuration].iter());
+                } else {
+                    usb.write_ref(self.endpoint_number, [0].iter());
+                }
 
                 // prepare to receive ZLP from host to end status stage
-                self.set_state(State::Status);
-                usb_ack(usb, 0, Direction::DeviceToHost);
+                usb.ack(self.endpoint_number, Direction::DeviceToHost);
             }
 
-            (RequestType::Standard, Request::ClearFeature) => { // TODO Direction ?
-                info!("Request::ClearFeature {:?}", direction);
+            (_, RequestType::Standard, Request::ClearFeature) => { // TODO Direction ?
+                info!("  Request::ClearFeature {:?}", direction);
                 // TODO
             }
 
-            (RequestType::Standard, Request::SetFeature) => { // TODO Direction ?
-                info!("Request::SetFeature {:?}", direction);
+            (_, RequestType::Standard, Request::SetFeature) => { // TODO Direction ?
+                info!("  Request::SetFeature {:?}", direction);
                 // TODO
             }
 
-            (RequestType::Standard, Request::GetStatus) => { // TODO Direction ?
-                info!("Request::GetStatus {:?}", direction);
+            (_, RequestType::Standard, Request::GetStatus) => { // TODO Direction ?
+                info!("  Request::GetStatus {:?}", direction);
                 // TODO
             }
 
-            _ => {
-                // not supported, pass it back to the caller for handling
-                log::debug!(
-                    "Control::receive_control() - unsupported request {:?} {:?}",
-                    request_type,
-                    request
-                );
+            // unknown requests
+            (Direction::HostToDevice, _, _) => {
+                if length == 0 {
+                    // no incoming data from host so we can pass it back to the caller for handling
+                    warn!("  TODO should this ever happen?");
+                    return Some(setup_packet);
+                } else {
+                    // has incoming data from host so we should hold on to it for now
+                    // ... and prime for reception
+                    self.rx_buffer_position = 0;
+                    usb.ep_out_prime_receive(self.endpoint_number);
+                }
+            }
+            (Direction::DeviceToHost, _, _) => {
+                // no incoming data from host so we can pass it back to the caller for handling
                 return Some(setup_packet);
             }
         }
@@ -353,106 +320,180 @@ where
 
     // - receive packet -------------------------------------------------------
 
-    fn receive_packet(&mut self, usb: &D) -> Option<(SetupPacket, &[u8])> {
-        // read packet TODO support reading packet in irq handler
-        let mut packet_buffer: [u8; crate::EP_MAX_PACKET_SIZE] = [0; crate::EP_MAX_PACKET_SIZE];
-        let bytes_read = ladybug::trace(Channel::B, 3, || {
-            usb.read(self.endpoint_number, &mut packet_buffer)
-        });
-
-        // FIXME make sure we always prime for next packet, at the moment it's getting lost
-        ladybug::trace(Channel::B, 2, || {
-            usb.ep_out_prime_receive(self.endpoint_number);
-        });
-
-        // handle packet
-        let result = match self.state {
-            State::Data(setup_packet) => {
-                // append packet to Control rx_buffer
-                let offset = self.rx_buffer_position;
-                if offset + bytes_read > RX_BUFFER_SIZE {
-                    // TODO hrmmm... discard or keep what we have?
-                    error!(
-                        "Control::receive_packet() buffer would overflow, discarding packet of {} bytes",
-                        bytes_read
-                    );
-                } else {
-                    self.rx_buffer[offset..offset + bytes_read].copy_from_slice(&packet_buffer[..bytes_read]);
-                    self.rx_buffer_position += bytes_read;
-                }
-
-                let bytes_expected = setup_packet.length as usize;
-                if bytes_read == 0 || // the host has ended the data stage early or...
-                    self.rx_buffer_position >= bytes_expected // all data has been received
-                {
-                    let rx_length = self.rx_buffer_position;
-                    self.rx_buffer_position = 0;
-                    self.rx_buffer = [0; RX_BUFFER_SIZE];
-                    self.set_state(State::Status);
-                    Some((setup_packet, &self.rx_buffer[..rx_length]))
-                } else {
-                    // the host is still sending data, buffer it and carry on
-                    self.set_state(State::Data(setup_packet));
-                    None
-                }
-            }
-            State::Status => {
-                // if the host ended the status stage by sending a ZLP we can end the status stage
-                // and go back to idle
-                self.set_state(State::Idle);
-                if bytes_read > 0 {
-                    // TODO - this should never happen
-                    warn!("Control::receive_packet() received a weird packet of {} bytes", bytes_read);
-                }
-                None
-            }
-            _ => {
-                warn!("Control::receive_packet() is in a weird state: {:?}", self.state);
-                None
-            }
-        };
-
+    fn receive_packet(&mut self, usb: &D, packet_buffer: &[u8]) -> Option<(SetupPacket, &[u8])> {
         // execute any receive packet callback we may have registered
         if let Some(callback) = self.cb_receive_packet.take() {
-            ladybug::trace(Channel::B, 4, || {
-                let new_state = callback.call(usb, self.state);
-                self.set_state(new_state);
-            });
-            return None;
+            let new_state = callback.call(usb, self.state);
+            self.set_state(new_state);
+            if matches!(self.state, State::Idle) {
+                // we are done here
+                return None;
+            }
+        }
+
+        let bytes_read = packet_buffer.len();
+
+        debug!("  receive_packet() {} ({} bytes)", self.state, bytes_read);
+
+        // handle the packet
+        match self.state {
+            State::Data(Direction::DeviceToHost, setup_packet) => {
+                // this should NOT be firing after GetDescriptor
+                warn!("  receive_packet() TODO Data(DeviceToHost) {} bytes", bytes_read);
+                /*if bytes_read != 0 {
+                    warn!("  TODO this should not have happened");
+                }
+                self.set_state(State::Idle);*/
+            }
+            State::Status(Direction::DeviceToHost) => {
+                // we received a zlp from the host acknowledging the successful
+                // completion of an IN data stage. TODO check bytes_read == 0?
+                // e.g. after receipt of GetDescriptor data
+                if bytes_read != 0 {
+                    warn!("  TODO this should also not have happened");
+                }
+                self.set_state(State::Idle);
+            }
+
+            State::Data(Direction::HostToDevice, setup_packet) => {
+                if bytes_read == 0 { // && rx_buffer_position > 0
+                    info!("  zlp from host in {} - TODO early abort?", self.state);
+                    /*self.set_state(State::Idle);
+                    let offset = self.rx_buffer_position;
+                    let rx_buffer = &self.rx_buffer[..offset];
+                    self.rx_buffer_position = 0;
+                    return Some((setup_packet, rx_buffer))*/
+                }
+
+                // we received a data packet from the host as part of an OUT control transfer.
+                let endpoint_number = self.endpoint_number;
+                let result = self.append_packet(setup_packet, packet_buffer);
+                match result {
+                    Some(rx_buffer) => {
+                        // transfer is complete
+                        // send ZLP to host to end data/status??? stage
+                        usb.ack(endpoint_number, Direction::HostToDevice);
+                        debug!("  OUT control transfer done, sent zlp");
+                        return Some((setup_packet, rx_buffer))
+                    }
+                    None => {
+                        // still expecting more data, prime for reception
+                        usb.ep_out_prime_receive(endpoint_number);
+                    }
+                }
+            }
+            State::Status(Direction::HostToDevice) => {
+                warn!("  receive_packet() TODO Status(HostToDevice)");
+            }
+
+            State::Stalled => {
+                warn!("  receive_packet() TODO Stalled state");
+            }
+            State::Idle => {
+                warn!("  receive_packet() should not be in Idle state");
+            }
         }
 
         None
     }
 
+    fn append_packet(
+        &mut self,
+        setup_packet: SetupPacket,
+        packet_buffer: &[u8]
+    ) -> Option<&[u8]> {
+        let bytes_read = packet_buffer.len();
+        let bytes_expected = setup_packet.length as usize;
+
+        debug!("  append_packet() {} bytes ({}/{})", bytes_read, bytes_read + self.rx_buffer_position, bytes_expected);
+
+        // guards
+        if bytes_read == 0 { // && rx_buffer_position > 0
+            warn!("  TODO host has ended data stage early");
+        } else if self.rx_buffer_position + bytes_read > RX_BUFFER_SIZE {
+            error!("  TODO receive buffer overflow");
+        }
+
+        // append packet to Control rx_buffer
+        let mut offset = self.rx_buffer_position;
+        self.rx_buffer[offset..offset + bytes_read].copy_from_slice(&packet_buffer[..bytes_read]);
+        offset += bytes_read;
+
+        // are we done yet?
+        if offset >= bytes_expected {
+            self.rx_buffer_position = 0;
+            // should be set from send_complete for the zlp we're sending
+            //self.set_state(State::Idle);
+            Some(&self.rx_buffer[..bytes_expected])
+        } else {
+            // still waiting for more data...
+            self.rx_buffer_position = offset;
+            None
+        }
+    }
+
     // - send complete --------------------------------------------------------
 
     fn send_complete(&mut self, usb: &D) {
+        debug!("  send_complete()  {}", self.state);
+
         // execute any send complete callback we may have registered
         if let Some(callback) = self.cb_send_complete.take() {
-            ladybug::trace(Channel::B, 4, || {
-                let new_state = callback.call(usb, self.state);
-                self.set_state(new_state);
-            });
-            return;
+            let new_state = callback.call(usb, self.state);
+            self.set_state(new_state);
+            if matches!(self.state, State::Idle) {
+                // we are done here
+                return;
+            }
         }
 
-        // TODO check below
+        match self.state {
+            State::Data(Direction::DeviceToHost, setup_packet) => {
+                // we sent a packet of IN data
+                // e.g. after sending GetDescriptor data
+                self.set_state(State::Status(Direction::DeviceToHost))
+            }
+            State::Status(Direction::DeviceToHost) => {
+                warn!("  send_complete() TODO Status(DeviceToHost)");
+            }
 
+            State::Data(Direction::HostToDevice, setup_packet) => {
+                // we sent a zlp to the host ackowledging the completiong of a
+                // transaction with an OUT data stage
+                // e.g. after receiving an OUT control transfer
+                self.set_state(State::Idle);
+            }
+            State::Status(Direction::HostToDevice) => {
+                // we sent a zlp to the host acknowledging the completion of an OUT status stage
+                // e.g. after SetAddress, SetConfiguration
+                self.set_state(State::Idle);
+            }
+
+            State::Stalled => {
+                warn!("  send_complete() TODO Stalled state");
+            }
+            State::Idle => {
+                warn!("  send_complete() should not be in Idle state");
+            }
+        }
+
+        /*
         match self.state {
             // we sent a ZLP to end the status stage
-            State::Idle => {
+            State::Status(direction) => {
                 self.set_state(State::Idle);
             }
 
             // we sent some data and now we can enter the Status stage
-            State::Data(_setup_packet) => {
-                self.set_state(State::Status);
+            State::Data(direction, setup_packet) => {
+                self.set_state(State::InStatus);
             }
 
             _ => {
                 // TODO
+                info!("send_complete() unhandled state: {:?}", self.state);
             }
-        }
+        }*/
 
     }
 
@@ -505,18 +546,18 @@ impl<'a> Descriptors<'a> {
         // only respond with the amount requested
         let requested_length = setup_packet.length as usize;
 
-        match (&descriptor_type, descriptor_number) {
+        let bytes_written = match (&descriptor_type, descriptor_number) {
             (DescriptorType::Device, 0) => {
                 usb.write_ref(
                     endpoint_number,
                     self.device_descriptor.as_iter().take(requested_length)
-                );
+                )
             },
             (DescriptorType::Configuration, _) => {
                 usb.write_ref(
                     endpoint_number,
                     self.configuration_descriptor.iter().take(requested_length),
-                );
+                )
             },
             (DescriptorType::DeviceQualifier, _) => {
                 if self.device_speed == Speed::High {
@@ -524,32 +565,32 @@ impl<'a> Descriptors<'a> {
                         usb.write_ref(
                             endpoint_number,
                             descriptor.as_iter().take(requested_length)
-                        );
+                        )
                     } else {
                         // no device qualifier configured, ack HostToDevice instead - TODO check check on mac/windows
-                        warn!("No device qualifier configured for high-speed device");
-                        usb.write(endpoint_number, [].into_iter());
+                        debug!("  No device qualifier configured for high-speed device");
+                        usb.write(endpoint_number, [].into_iter())
                     }
                 } else {
                     // for full/low speed devices, ack HostToDevice instead - TODO check on mac/windows
-                    warn!("Device qualifier request is not supported for full/low-speed devices");
-                    usb.write(endpoint_number, [].into_iter());
+                    debug!("  Device qualifier request is not supported for full/low-speed devices");
+                    usb.write(endpoint_number, [].into_iter())
                 }
             }
             (DescriptorType::OtherSpeedConfiguration, _) => {
                 if let Some(descriptor) = self.other_speed_configuration_descriptor {
-                    usb.write_ref(endpoint_number, descriptor.iter().take(requested_length));
+                    usb.write_ref(endpoint_number, descriptor.iter().take(requested_length))
                 } else {
                     // no other speed configuration, ack HostToDevice instead - TODO check check on mac/windows
-                    warn!("Descriptors::write_descriptor() - no other speed configuration descriptor configured");
-                    usb.write(endpoint_number, [].into_iter());
+                    debug!("  Descriptors::write_descriptor() - no other speed configuration descriptor configured");
+                    usb.write(endpoint_number, [].into_iter())
                 }
             }
             (DescriptorType::String, 0) => {
                 usb.write_ref(
                     endpoint_number,
                     self.string_descriptor_zero.iter().take(requested_length)
-                );
+                )
             },
             (DescriptorType::String, number) => {
                 let offset_index: usize = (number - 1).into();
@@ -562,16 +603,18 @@ impl<'a> Descriptors<'a> {
                     self.string_descriptors[offset_index]
                         .iter()
                         .take(requested_length),
-                );
+                )
             }
             _ => {
                 warn!(
-                    "Descriptors::write_descriptor() stall - unhandled descriptor request {:?}, {}",
+                    "  Descriptors::write_descriptor() stall - unhandled descriptor request {:?}, {}",
                     descriptor_type, descriptor_number
                 );
                 return Some(setup_packet);
             }
-        }
+        };
+
+        debug!("  wrote {} byte descriptor", bytes_written);
 
         // consumed
         None

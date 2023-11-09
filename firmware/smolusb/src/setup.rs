@@ -96,7 +96,7 @@ impl From<u8> for RequestType {
 }
 
 /// Represents bit 7 of the `[SetupPacket]` `request`_type field.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Direction {
     /// Host to device (OUT)

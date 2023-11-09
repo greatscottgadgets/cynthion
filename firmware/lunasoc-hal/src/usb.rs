@@ -15,6 +15,7 @@ use smolusb::traits::{
 use crate::pac;
 use pac::interrupt::Interrupt;
 
+use ladybug::Channel;
 use log::{trace, warn};
 
 /// Macro to generate hal wrappers for pac::USBx peripherals
@@ -298,30 +299,19 @@ macro_rules! impl_usb {
                 }
 
                 /// Acknowledge the status stage of an incoming control request.
-                fn ack_status_stage(&self, packet: &SetupPacket) {
-                    match Direction::from(packet.request_type) {
-                        // If this is an IN request, read a zero-length packet (ZLP) from the host..
-                        Direction::DeviceToHost => {
-                            self.ep_out_prime_receive(0);
-                        }
-                        // ... otherwise, send a ZLP.
-                        Direction::HostToDevice => {
-                            self.write(0, [].into_iter());
-                        }
-                    }
-                }
-
                 fn ack(&self, endpoint_number: u8, direction: Direction) {
-                    match direction {
-                        // If this is an IN request, read a zero-length packet (ZLP) from the host..
-                        Direction::DeviceToHost => {
-                            self.ep_out_prime_receive(endpoint_number);
+                    ladybug::trace(Channel::B, 4, || {
+                        match direction {
+                            // DeviceToHost - IN request, prime the endpoint so we can receive a zlp from the host
+                            Direction::DeviceToHost => {
+                                self.ep_out_prime_receive(endpoint_number);
+                            }
+                            // HostToDevice - OUT request, send a ZLP from the device to the host
+                            Direction::HostToDevice => {
+                                self.write(endpoint_number, [].into_iter());
+                            }
                         }
-                        // ... otherwise, send a ZLP.
-                        Direction::HostToDevice => {
-                            self.write(endpoint_number, [].into_iter());
-                        }
-                    }
+                    })
                 }
 
                 fn set_address(&self, address: u8) {
@@ -488,65 +478,71 @@ macro_rules! impl_usb {
                 /// Prepare OUT endpoint to receive a single packet.
                 #[inline(always)]
                 fn ep_out_prime_receive(&self, endpoint_number: u8) {
-                    // 0. clear receive buffer
-                    //self.ep_out.reset.write(|w| w.reset().bit(true));
+                    ladybug::trace(Channel::B, 2, || {
+                        // 0. clear receive buffer
+                        self.ep_out.reset.write(|w| w.reset().bit(true));
 
-                    // 3. re-enable ep_out interface
-                    self.ep_out.enable.write(|w| w.enable().bit(true));
+                        // 1. select endpoint
+                        self.ep_out
+                            .epno
+                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
 
-                    // 1. select endpoint
-                    self.ep_out
-                        .epno
-                        .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                        // 2. prime endpoint
+                        self.ep_out.prime.write(|w| w.prime().bit(true));
 
-                    // 2. prime endpoint
-                    self.ep_out.prime.write(|w| w.prime().bit(true));
+                        // 3. re-enable ep_out interface
+                        self.ep_out.enable.write(|w| w.enable().bit(true));
+                    });
                 }
 
                 #[inline(always)]
                 fn read(&self, endpoint_number: u8, buffer: &mut [u8]) -> usize {
-                    /*let mut bytes_read = 0;
-                    let mut overflow = 0;
-                    while self.ep_out.have.read().have().bit() {
-                        if bytes_read >= buffer.len() {
-                            // drain fifo
+                    ladybug::trace(Channel::B, 3, || {
+                        /*let mut bytes_read = 0;
+                        let mut overflow = 0;
+                        while self.ep_out.have.read().have().bit() {
+                            if bytes_read >= buffer.len() {
+                                // drain fifo
+                                let _drain = self.ep_out.data.read().data().bits();
+                                overflow += 1;
+                            } else {
+                                buffer[bytes_read] = self.ep_out.data.read().data().bits();
+                                bytes_read += 1;
+                            }
+                        }*/
+
+                        // getting a little better performance with an
+                        // iterator, probably because it doesn't need to
+                        // do a bounds check.
+                        let mut bytes_read = 0;
+                        let mut did_overflow = true;
+                        for b in buffer.iter_mut() {
+                            if self.ep_out.have.read().have().bit() {
+                                *b = self.ep_out.data.read().data().bits();
+                                bytes_read += 1;
+                            } else {
+                                did_overflow = false;
+                                break;
+                            }
+                        }
+
+                        // drain fifo if needed
+                        let mut overflow = 0;
+                        while did_overflow && self.ep_out.have.read().have().bit() {
                             let _drain = self.ep_out.data.read().data().bits();
                             overflow += 1;
-                        } else {
-                            buffer[bytes_read] = self.ep_out.data.read().data().bits();
-                            bytes_read += 1;
                         }
-                    }*/
 
-                    // getting a little better performance with an
-                    // iterator, probably because it doesn't need to
-                    // do a bounds check.
-                    let mut bytes_read = 0;
-                    for b in buffer.iter_mut() {
-                        if self.ep_out.have.read().have().bit() {
-                            *b = self.ep_out.data.read().data().bits();
-                            bytes_read += 1;
+                        if overflow == 0 {
+                            trace!("  RX {} OUT {} {} bytes read", stringify!($USBX), endpoint_number, bytes_read);
                         } else {
-                            break;
+                            warn!("  RX {} OUT {} {} bytes read + {} bytes overflow",
+                                  stringify!($USBX),
+                                  endpoint_number, bytes_read, overflow);
                         }
-                    }
 
-                    // drain fifo if needed
-                    let mut overflow = 0;
-                    while self.ep_out.have.read().have().bit() {
-                        let _drain = self.ep_out.data.read().data().bits();
-                        overflow += 1;
-                    }
-
-                    if overflow == 0 {
-                        trace!("  RX {} OUT {} {} bytes read", stringify!($USBX), endpoint_number, bytes_read);
-                    } else {
-                        warn!("  RX {} OUT {} {} bytes read + {} bytes overflow",
-                              stringify!($USBX),
-                              endpoint_number, bytes_read, overflow);
-                    }
-
-                    bytes_read + overflow
+                        bytes_read + overflow
+                    })
                 }
             }
 
@@ -555,48 +551,50 @@ macro_rules! impl_usb {
                 where
                     I: Iterator<Item = u8>
                 {
-                    // reset output fifo if needed
-                    // FIXME rather return an error
-                    if self.ep_in.have.read().have().bit() {
-                        warn!("  clear tx");
-                        self.ep_in.reset.write(|w| w.reset().bit(true));
-                    }
-
-                    // write data as multiple packets
-                    let mut timeout = 0;
-                    let mut bytes_written: usize = 0;
-                    for byte in iter {
-                        self.ep_in.data.write(|w| unsafe { w.data().bits(byte) });
-                        bytes_written += 1;
-                        // end of chunk - transmit packet
-                        if bytes_written % packet_size == 0 {
-                            // prime IN endpoint
-                            self.ep_in
-                                .epno
-                                .write(|w| unsafe { w.epno().bits(endpoint_number) });
-                            // wait for transmission to complete
-                            // FIXME it may be better if this blocked on the USB_EP_IN interrupt.
-                            while self.ep_in.have.read().have().bit() {
-                                timeout += 1;
-                                if timeout > 5_000_000 {
-                                    log::error!(
-                                        "{}::write_packets timed out after {} bytes",
-                                        stringify!($USBX),
-                                        bytes_written
-                                    );
-                                    break;
-                                }
-                            }
-                            //unsafe { riscv::asm::delay(10000); }
+                    ladybug::trace(Channel::B, 1, || {
+                        // reset output fifo if needed
+                        // FIXME rather return an error
+                        if self.ep_in.have.read().have().bit() {
+                            warn!("  clear tx");
+                            self.ep_in.reset.write(|w| w.reset().bit(true));
                         }
-                    }
 
-                    // finally prime IN endpoint
-                    self.ep_in
-                        .epno
-                        .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                        // write data as multiple packets
+                        let mut timeout = 0;
+                        let mut bytes_written: usize = 0;
+                        for byte in iter {
+                            self.ep_in.data.write(|w| unsafe { w.data().bits(byte) });
+                            bytes_written += 1;
+                            // end of chunk - transmit packet
+                            if bytes_written % packet_size == 0 {
+                                // prime IN endpoint
+                                self.ep_in
+                                    .epno
+                                    .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                                // wait for transmission to complete
+                                // FIXME it may be better if this blocked on the USB_EP_IN interrupt.
+                                while self.ep_in.have.read().have().bit() {
+                                    timeout += 1;
+                                    if timeout > 5_000_000 {
+                                        log::error!(
+                                            "{}::write_packets timed out after {} bytes",
+                                            stringify!($USBX),
+                                            bytes_written
+                                        );
+                                        break;
+                                    }
+                                }
+                                //unsafe { riscv::asm::delay(10000); }
+                            }
+                        }
 
-                    bytes_written
+                        // finally prime IN endpoint
+                        self.ep_in
+                            .epno
+                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
+
+                        bytes_written
+                    })
                 }
 
                 #[inline(always)]
@@ -604,30 +602,32 @@ macro_rules! impl_usb {
                 where
                     I: Iterator<Item = u8>,
                 {
-                    // reset output fifo if needed
-                    // TODO rather return an error
-                    if self.ep_in.have.read().have().bit() {
-                        warn!("  clear tx");
-                        self.ep_in.reset.write(|w| w.reset().bit(true));
-                    }
+                    ladybug::trace(Channel::B, 1, || {
+                        // reset output fifo if needed
+                        // TODO rather return an error
+                        if self.ep_in.have.read().have().bit() {
+                            warn!("  clear tx");
+                            self.ep_in.reset.write(|w| w.reset().bit(true));
+                        }
 
-                    // write data
-                    let mut bytes_written: usize = 0;
-                    for byte in iter {
-                        self.ep_in.data.write(|w| unsafe { w.data().bits(byte) });
-                        bytes_written += 1;
-                    }
+                        // write data
+                        let mut bytes_written: usize = 0;
+                        for byte in iter {
+                            self.ep_in.data.write(|w| unsafe { w.data().bits(byte) });
+                            bytes_written += 1;
+                        }
 
-                    // finally, prime IN endpoint
-                    self.ep_in
-                        .epno
-                        .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                        // finally, prime IN endpoint
+                        self.ep_in
+                            .epno
+                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
 
-                    if bytes_written > 60 {
-                        log::debug!("  TX {} bytes", bytes_written);
-                    }
+                        if bytes_written > 60 {
+                            log::debug!("  TX {} bytes", bytes_written);
+                        }
 
-                    bytes_written
+                        bytes_written
+                    })
                 }
             }
 
@@ -637,28 +637,30 @@ macro_rules! impl_usb {
                 where
                     I: Iterator<Item = &'a u8>,
                 {
-                    // reset output fifo if needed
-                    // TODO rather return an error
-                    if self.ep_in.have.read().have().bit() {
-                        warn!("  clear tx");
-                        self.ep_in.reset.write(|w| w.reset().bit(true));
-                    }
+                    ladybug::trace(Channel::B, 1, || {
+                        // reset output fifo if needed
+                        // TODO rather return an error
+                        if self.ep_in.have.read().have().bit() {
+                            warn!("  clear tx");
+                            self.ep_in.reset.write(|w| w.reset().bit(true));
+                        }
 
-                    // write data
-                    let mut bytes_written: usize = 0;
-                    for byte in iter {
-                        self.ep_in.data.write(|w| unsafe { w.data().bits(*byte) });
-                        bytes_written += 1;
-                    }
+                        // write data
+                        let mut bytes_written: usize = 0;
+                        for byte in iter {
+                            self.ep_in.data.write(|w| unsafe { w.data().bits(*byte) });
+                            bytes_written += 1;
+                        }
 
-                    // finally, prime IN endpoint
-                    self.ep_in
-                        .epno
-                        .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                        // finally, prime IN endpoint
+                        self.ep_in
+                            .epno
+                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
 
-                    trace!("  TX {} bytes", bytes_written);
+                        trace!("  TX {} bytes", bytes_written);
 
-                    bytes_written
+                        bytes_written
+                    })
                 }
             }
 

@@ -59,8 +59,11 @@ impl core::convert::From<InterruptEvent> for [u8; 3] {
                 ReceiveControl(endpoint_number) => {
                     [event.into(), interface as u8, endpoint_number]
                 }
+                #[cfg(feature="chonky_events")]
                 ReceiveSetupPacket(endpoint_number, _setup_packet) => [event.into(), interface as u8, endpoint_number],
                 ReceivePacket(endpoint_number) => [event.into(), interface as u8, endpoint_number],
+                #[cfg(feature="chonky_events")]
+                ReceiveBuffer(endpoint_number, _, _) => [event.into(), interface as u8, endpoint_number],
                 SendComplete(endpoint_number) => [event.into(), interface as u8, endpoint_number],
             },
             _ => [0, 0, 0],

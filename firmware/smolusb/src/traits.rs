@@ -1,5 +1,5 @@
 use crate::device::Speed;
-use crate::setup::{Direction, SetupPacket};
+use crate::setup::Direction;
 
 use zerocopy::AsBytes;
 
@@ -19,19 +19,19 @@ pub trait UsbDriver:
 }
 
 pub trait UsbDriverOperations {
-    /// Speed
+    /// Set the device speed
     fn set_speed(&self, device_speed: Speed);
     /// Connect
     fn connect(&self);
     /// Disconnect
     fn disconnect(&self);
     /// Reset
-    fn reset(&self);
+    fn reset(&self); // FIXME deprecate in favour of bus_reset
     /// Bus Reset
     fn bus_reset(&self);
     /// Acknowledge the status stage of an incoming control request.
-    fn ack_status_stage(&self, packet: &SetupPacket);
     fn ack(&self, endpoint_number: u8, direction: Direction);
+    /// Set the device address
     fn set_address(&self, address: u8);
     /// Stall the current control request.
     fn stall_control_request(&self);

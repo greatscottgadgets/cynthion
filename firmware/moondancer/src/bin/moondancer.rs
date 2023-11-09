@@ -18,6 +18,8 @@ use smolusb::traits::{
     WriteRefEndpoint,
 };
 
+use ladybug::Channel;
+
 use libgreat::gcp::{iter_to_response, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
 use libgreat::{GreatError, GreatResult};
 
@@ -26,6 +28,10 @@ use moondancer::usb::vendor::{VendorRequest, VendorValue};
 use moondancer::{hal, pac};
 
 use pac::csr::interrupt;
+
+// - configuration ------------------------------------------------------------
+
+const DEVICE_SPEED: Speed = Speed::High;
 
 // - MachineExternal interrupt handler ----------------------------------------
 
@@ -120,6 +126,9 @@ impl<'a> Firmware<'a> {
         );
         info!("Logging initialized");
 
+        // initialize ladybug
+        moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
+
         // usb1: aux (host on r0.4)
         let mut usb1 = UsbDevice::new(
             hal::Usb1::new(
@@ -174,6 +183,9 @@ impl<'a> Firmware<'a> {
         self.leds
             .output
             .write(|w| unsafe { w.output().bits(1 << 2) });
+
+        // set usb1 speed
+        self.usb1.hal_driver.set_speed(DEVICE_SPEED);
 
         // connect usb1
         self.usb1.connect();
@@ -254,15 +266,15 @@ impl<'a> Firmware<'a> {
                     | Usb(Aux, event @ ReceivePacket(0))
                     | Usb(Aux, event @ SendComplete(0)) => {
                         trace!("Usb(Aux, {:?})", event);
-                        // TODO better error?
-                        match self
-                            .usb1
-                            .dispatch_control(event)
-                            .map_err(|_| GreatError::IoError)?
-                        {
+                        let result = ladybug::trace(Channel::B, 0, || {
+                            self.usb1.dispatch_control(event).map_err(|_| GreatError::IoError)
+                        })?;
+                        match result  {
                             Some(control_event) => {
                                 // handle any events control couldn't
-                                self.handle_control_event(control_event)?;
+                                ladybug::trace(Channel::B, 6, || {
+                                    self.handle_control_event(control_event)
+                                })?
                             }
                             None => {
                                 // control event was handled by UsbDevice

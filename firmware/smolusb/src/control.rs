@@ -1,6 +1,9 @@
 #![allow(dead_code, unused_imports, unused_variables)] // TODO
 
 ///! USB control interface
+
+use ladybug::Channel;
+
 use log::{debug, error, trace};
 
 use crate::error::{SmolError, SmolResult};
@@ -127,11 +130,8 @@ where
                 self.handle_send_complete(driver, endpoint_number)?;
                 Ok(None)
             }
-            event => {
-                // TODO handle ReceiveSetupPacket
-                log::warn!("CONTROL dispatch() unhandled event: {:?}", event);
-                Ok(None)
-            }
+            #[cfg(feature="chonky_events")]
+            UsbEvent::ReceiveSetupPacket(_, _) | UsbEvent::ReceiveBuffer(_, _, _) => todo!()
         }
     }
 
@@ -236,6 +236,9 @@ where
 
                 self.rx_buffer_position += bytes_read;
                 if self.rx_buffer_position >= length {
+                    if self.rx_buffer_position != length {
+                        log::info!("Expected {} got {}", length, self.rx_buffer_position);
+                    }
                     self.rx_buffer_position = 0;
                     self.state = State::Idle;
                     return Ok(Some((setup_packet, &self.rx_buffer[..length])));
