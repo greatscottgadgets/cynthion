@@ -71,7 +71,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
             data = [b % 0xff for b in range(0, payload_length)]
             payload = [
                 0x20, 0x01, 0x00, 0x00, # class_id:        0x0120 - moondancer
-                0x29, 0x00, 0x00, 0x00, # verb_number:     0x0027 - test_write_endpoint
+                0x2a, 0x00, 0x00, 0x00, # verb_number:     0x002a - test_write_endpoint
                 0x01,                   # endpoint_number: 0x01
             ] + data                    # payload
             response = device_handle.controlWrite(
@@ -107,7 +107,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
             payload_length = 500
             payload = [
                 0x20, 0x01, 0x00, 0x00, # class_id:       0x0120 - moondancer
-                0x27, 0x00, 0x00, 0x00, # verb_number:    0x0027 - test_read_endpoint
+                0x28, 0x00, 0x00, 0x00, # verb_number:    0x0028 - test_read_endpoint
             ] + list(int(payload_length).to_bytes(4, byteorder="little", signed=False)) # payload_length
             response = device_handle.controlWrite(
                 request_type=usb1.TYPE_VENDOR | usb1.RECIPIENT_ENDPOINT,
