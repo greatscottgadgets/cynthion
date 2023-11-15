@@ -43,7 +43,7 @@ class TestTransfers(unittest.TestCase):
 
             device_handle.claimInterface(0)
 
-            payload_length = 128
+            payload_length = 150
             payload = bytes([b % 0xff for b in range(payload_length)])
             flags = 0
 

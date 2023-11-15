@@ -202,7 +202,7 @@ where
 
     fn receive_control(&mut self, usb: &D, setup_packet: SetupPacket) -> Option<SetupPacket> {
         if !matches!(self.state, State::Idle) {
-            warn!("Control::receive_control() not idle");
+            // TODO warn!("Control::receive_control() not idle");
         }
 
         let direction = setup_packet.direction();

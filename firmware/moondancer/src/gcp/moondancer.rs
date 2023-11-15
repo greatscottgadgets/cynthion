@@ -76,12 +76,12 @@ impl Moondancer {
                 event
             }
 
-            InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveControl(_)) => {
+            /*InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveControl(_)) => {
                 self.event_counter += 1;
 
                 // FIXME why are we getting USB0_EP0_CONTROL interrupts that don't show up on packetry and have no data in the FIFO?
                 if self.usb0.ep_control.have.read().have().bit() {
-                    log::info!("MD => #{} {:?}  OKAY", self.event_counter, event);
+                    //log::info!("MD => #{} {:?}  OKAY", self.event_counter, event);
                 } else {
                     log::info!("MD => #{} {:?} dropping GetStatus 1", self.event_counter, event);
                     return;
@@ -110,7 +110,7 @@ impl Moondancer {
                     }
                 }
                 event
-            }
+            }*/
 
             #[cfg(feature="chonky_events")]
             InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveSetupPacket(endpoint, setup_packet)) => {
@@ -138,7 +138,7 @@ impl Moondancer {
                 InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveControl(endpoint))
             }
 
-            InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceivePacket(0)) => {
+            /*InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceivePacket(0)) => {
                 // handle ACK's locally for lower latency
                 if !self.usb0.ep_out.have.read().have().bit() {
                     self.usb0.ep_out_prime_receive(0);
@@ -146,7 +146,7 @@ impl Moondancer {
                     return;
                 }
                 event
-            }
+            }*/
 
             _ => {
                 //log::info!("\n\nMD => #{} {:?}", self.event_counter, event);
@@ -207,7 +207,8 @@ impl Moondancer {
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let ep0_max_packet_size = args.ep0_max_packet_size.into();
-        let device_speed = Speed::from_libusb(args.device_speed);
+        //let device_speed = Speed::from_libusb(args.device_speed);
+        let device_speed = Speed::Full;
         let quirk_flags = args.quirk_flags.into();
 
         self.ep_in_max_packet_size[0] = ep0_max_packet_size;
@@ -286,12 +287,16 @@ impl Moondancer {
 impl Moondancer {
     /// Read a control packet from SetupFIFOInterface.
     pub fn read_control(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-/*
+
+        if !self.usb0.ep_control.have.read().have().bit() {
+            log::warn!("MD => no setup packet data");
+        }
+
         let mut setup_packet_buffer = [0_u8; 8];
         self.usb0.read_control(&mut setup_packet_buffer);
-        let setup_packet = SetupPacketfrom(setup_packet_buffer);
-*/
-        let setup_packet = match self.control_queue.dequeue() {
+        let setup_packet = SetupPacket::from(setup_packet_buffer);
+
+        /*let setup_packet = match self.control_queue.dequeue() {
             Some(setup_packet) => setup_packet,
             None => {
                 error!("Moondancer - no packets in control queue");
@@ -301,7 +306,7 @@ impl Moondancer {
                     }
                 }
             }
-        };
+        };*/
 
         //log::info!("MD #{} moondancer::read_control() -> {:?}", self.event_counter, setup_packet);
 

@@ -25,7 +25,7 @@ use ladybug::Channel;
 
 // - configuration ------------------------------------------------------------
 
-const DEVICE_SPEED: Speed = Speed::High;
+const DEVICE_SPEED: Speed = Speed::Full;
 
 // - global static state ------------------------------------------------------
 
