@@ -1,7 +1,6 @@
 #![allow(dead_code, unused_imports, unused_variables)] // TODO
 
 ///! USB control interface
-
 use ladybug::Channel;
 
 use log::{debug, error, trace};
@@ -130,8 +129,9 @@ where
                 self.handle_send_complete(driver, endpoint_number)?;
                 Ok(None)
             }
-            #[cfg(feature="chonky_events")]
-            UsbEvent::ReceiveSetupPacket(_, _) | UsbEvent::ReceiveBuffer(_, _, _) => todo!()
+            UsbEvent::ReceiveSetupPacket(_, _) => todo!(),
+            #[cfg(feature = "chonky_events")]
+            UsbEvent::ReceiveBuffer(_, _, _) => todo!(),
         }
     }
 

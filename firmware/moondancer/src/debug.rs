@@ -1,10 +1,9 @@
 ///! ladybug implementation for cynthion
-
 use crate::pac;
 
 #[allow(unused_variables)]
 pub fn init(gpioa: pac::GPIOA, gpiob: pac::GPIOB) {
-    #[cfg(feature="ladybug")]
+    #[cfg(feature = "ladybug")]
     unsafe {
         use crate::debug::ladybug_impl::*;
         LADYBUG_CYNTHION = Some(LadybugCynthion::new(gpioa, gpiob));
@@ -12,15 +11,15 @@ pub fn init(gpioa: pac::GPIOA, gpiob: pac::GPIOB) {
     }
 }
 
-#[cfg(feature="ladybug")]
+#[cfg(feature = "ladybug")]
 mod ladybug_impl {
+    use crate::pac;
     use core::sync::atomic::{AtomicU8, Ordering};
     use ladybug::{Channel, LogicAnalyzer};
-    use crate::pac;
 
     pub static mut LADYBUG_CYNTHION: Option<LadybugCynthion> = None;
 
-    #[cfg(feature="ladybug")]
+    #[cfg(feature = "ladybug")]
     pub struct LadybugCynthion {
         gpioa: pac::GPIOA,
         gpiob: pac::GPIOB,

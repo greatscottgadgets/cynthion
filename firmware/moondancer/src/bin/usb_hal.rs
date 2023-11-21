@@ -9,7 +9,7 @@ use libgreat::{GreatError, GreatResult};
 
 use smolusb::control::{Control, Descriptors};
 use smolusb::descriptor::*;
-use smolusb::device::{Speed, UsbDevice};
+use smolusb::device::Speed;
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Direction, Request, RequestType, SetupPacket};
 use smolusb::traits::AsByteSliceIterator;
@@ -21,7 +21,7 @@ use smolusb::traits::{
 use moondancer::event::InterruptEvent;
 use moondancer::{hal, pac};
 
-use ladybug::Channel;
+use ladybug::{Bit, Channel};
 
 // - configuration ------------------------------------------------------------
 
@@ -55,7 +55,7 @@ fn MachineExternal() {
 
     // USB1 BusReset
     if usb1.is_pending(pac::Interrupt::USB1) {
-        ladybug::trace(Channel::A, 0, || {
+        ladybug::trace(Channel::B, Bit::IRQ_BUS_RESET, || {
             // handle bus reset in interrupt handler for lowest latency
             usb1.bus_reset();
             dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
@@ -65,10 +65,10 @@ fn MachineExternal() {
 
     // USB1_EP_CONTROL ReceiveControl
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
-        ladybug::trace(Channel::A, 1, || {
+        ladybug::trace(Channel::B, Bit::IRQ_EP_CONTROL, || {
             let endpoint = usb1.ep_control.epno.read().bits() as u8;
 
-            #[cfg(not(feature="chonky_events"))]
+            #[cfg(not(feature = "chonky_events"))]
             {
                 dispatch_event(InterruptEvent::Usb(
                     Target,
@@ -76,7 +76,7 @@ fn MachineExternal() {
                 ));
             }
 
-            #[cfg(feature="chonky_events")]
+            #[cfg(feature = "chonky_events")]
             {
                 let endpoint = usb1.ep_control.epno.read().bits() as u8;
                 let mut buffer = [0_u8; 8];
@@ -93,10 +93,10 @@ fn MachineExternal() {
 
     // USB1_EP_OUT ReceivePacket
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_OUT) {
-        ladybug::trace(Channel::A, 2, || {
+        ladybug::trace(Channel::B, Bit::IRQ_EP_OUT, || {
             let endpoint = usb1.ep_out.data_ep.read().bits() as u8;
 
-            #[cfg(not(feature="chonky_events"))]
+            #[cfg(not(feature = "chonky_events"))]
             {
                 dispatch_event(InterruptEvent::Usb(
                     Target,
@@ -104,16 +104,12 @@ fn MachineExternal() {
                 ));
             }
 
-            #[cfg(feature="chonky_events")]
+            #[cfg(feature = "chonky_events")]
             {
                 // #1 empty fifo into a receive buffer
-                let mut packet_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] = [0; moondancer::EP_MAX_PACKET_SIZE];
+                let mut packet_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] =
+                    [0; moondancer::EP_MAX_PACKET_SIZE];
                 let bytes_read = usb1.read(endpoint, &mut packet_buffer);
-                // pulse zlp reads
-                if bytes_read == 0 {
-                    ladybug::trace(Channel::B, 7, || {
-                    });
-                }
 
                 // #2 dispatch receive buffer to the main loop
                 dispatch_event(InterruptEvent::Usb(
@@ -131,7 +127,7 @@ fn MachineExternal() {
 
     // USB1_EP_IN SendComplete
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
-        ladybug::trace(Channel::A, 3, || {
+        ladybug::trace(Channel::B, Bit::IRQ_EP_IN, || {
             let endpoint = usb1.ep_in.epno.read().bits() as u8;
             dispatch_event(InterruptEvent::Usb(
                 Target,
@@ -203,7 +199,7 @@ fn main_loop() -> GreatResult<()> {
             device_qualifier_descriptor: Some(USB_DEVICE_QUALIFIER_DESCRIPTOR),
             string_descriptor_zero: USB_STRING_DESCRIPTOR_0,
             string_descriptors: USB_STRING_DESCRIPTORS,
-        }//.set_total_lengths() // TODO figure out a better solution
+        }, //.set_total_lengths() // TODO figure out a better solution
     );
 
     // set controller speed
@@ -239,25 +235,23 @@ fn main_loop() -> GreatResult<()> {
     info!("Peripherals initialized, entering main loop.");
 
     loop {
-
         // 100uS from interrupt to dequeued
         if let Some(event) = EVENT_QUEUE.dequeue() {
             // Usb1 received a control event
             match event {
-                #[cfg(feature="chonky_events")]
-                Usb(Target, event @ BusReset)                 |
-                Usb(Target, event @ ReceiveControl(0))        |
-                Usb(Target, event @ ReceiveSetupPacket(0, _)) |
-                Usb(Target, event @ ReceivePacket(0))         |
-                Usb(Target, event @ ReceiveBuffer(0, _, _))   |
-                Usb(Target, event @ SendComplete(0)) => {
-                    let result = ladybug::trace(Channel::B, 0, || {
-                        control.handle_event(&usb1, event)
-                    });
+                #[cfg(feature = "chonky_events")]
+                Usb(Target, event @ BusReset)
+                | Usb(Target, event @ ReceiveControl(0))
+                | Usb(Target, event @ ReceiveSetupPacket(0, _))
+                | Usb(Target, event @ ReceivePacket(0))
+                | Usb(Target, event @ ReceiveBuffer(0, _, _))
+                | Usb(Target, event @ SendComplete(0)) => {
+                    let result =
+                        ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || control.handle_event(&usb1, event));
                     match result {
                         // vendor requests are not handled by control
                         Some((setup_packet, rx_buffer)) => {
-                            ladybug::trace(Channel::B, 6, || {
+                            ladybug::trace(Channel::A, Bit::MD_HANDLE_VENDOR, || {
                                 handle_vendor_request(&usb1, setup_packet, rx_buffer);
                             });
                         }
@@ -265,18 +259,17 @@ fn main_loop() -> GreatResult<()> {
                         None => (),
                     }
                 }
-                #[cfg(not(feature="chonky_events"))]
-                Usb(Target, event @ BusReset)                 |
-                Usb(Target, event @ ReceiveControl(0))        |
-                Usb(Target, event @ ReceivePacket(0))         |
-                Usb(Target, event @ SendComplete(0)) => {
-                    let result = ladybug::trace(Channel::B, 0, || {
-                        control.handle_event(&usb1, event)
-                    });
+                #[cfg(not(feature = "chonky_events"))]
+                Usb(Target, event @ BusReset)
+                | Usb(Target, event @ ReceiveControl(0))
+                | Usb(Target, event @ ReceivePacket(0))
+                | Usb(Target, event @ SendComplete(0)) => {
+                    let result =
+                        ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || control.handle_event(&usb1, event));
                     match result {
                         // vendor requests are not handled by control
                         Some((setup_packet, rx_buffer)) => {
-                            ladybug::trace(Channel::B, 6, || {
+                            ladybug::trace(Channel::A, Bit::MD_HANDLE_VENDOR, || {
                                 handle_vendor_request(&usb1, setup_packet, rx_buffer);
                             });
                         }
@@ -300,11 +293,8 @@ fn main_loop() -> GreatResult<()> {
 
 // - vendor request handler ---------------------------------------------------
 
-fn handle_vendor_request<'a, D>(
-    usb: &D,
-    setup_packet: SetupPacket,
-    rx_buffer: &[u8],
-) where
+fn handle_vendor_request<'a, D>(usb: &D, setup_packet: SetupPacket, rx_buffer: &[u8])
+where
     D: ReadControl + ReadEndpoint + WriteEndpoint + WriteRefEndpoint + UsbDriverOperations,
 {
     let direction = setup_packet.direction();
@@ -318,18 +308,24 @@ fn handle_vendor_request<'a, D>(
 
     info!(
         "handle_vendor_request: {:?} {:?} vendor_request:{} vendor_value:{} rx_buffer:{}",
-        direction, request_type, vendor_request, vendor_value, rx_buffer.len()
+        direction,
+        request_type,
+        vendor_request,
+        vendor_value,
+        rx_buffer.len()
     );
 
     if rx_buffer.len() > 0 {
-        info!("{:?} ... {:?}", &rx_buffer[..8], &rx_buffer[rx_buffer.len()-8..]);
+        info!(
+            "{:?} ... {:?}",
+            &rx_buffer[..8],
+            &rx_buffer[rx_buffer.len() - 8..]
+        );
         //let bytes_written = usb.write_packets(0, rx_buffer.iter().cloned(), 64);
         //let bytes_written = usb.write_ref(0, rx_buffer.iter());
         //info!("Wrote {} bytes", bytes_written);
     }
-
 }
-
 
 // - usb descriptors ----------------------------------------------------------
 
@@ -461,7 +457,6 @@ pub static USB_STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("co
 pub static USB_STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("interface0"); // interface #0
 pub static USB_STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("interface1"); // interface #1
 pub static USB_STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("config1"); // configuration #1
-
 
 static USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &USB_STRING_DESCRIPTOR_1,

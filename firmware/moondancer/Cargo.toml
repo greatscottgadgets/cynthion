@@ -32,7 +32,9 @@ default = [
     #"nightly",
 
     #"chonky_events",
-    #"ladybug",
+    #"chonky_control_events",
+    #"chonky_receive_events",
+    "ladybug",
 ]
 
 # pack setup packet and rx packet buffers into event queue

@@ -1,20 +1,17 @@
 #![allow(dead_code, unused_imports, unused_variables)] // TODO
 
-use core::any::Any;
-use core::cell::RefCell;
-use core::slice;
-use core::{array, iter};
-
 use log::{debug, error, trace, warn};
-use zerocopy::{AsBytes, BigEndian, FromBytes, LittleEndian, Unaligned, U16, U32};
+use zerocopy::{FromBytes, LittleEndian, Unaligned, U16, U32};
 
-use smolusb::device::{Speed, UsbDevice};
+use smolusb::device::Speed;
 use smolusb::event::UsbEvent;
-use smolusb::setup::{Direction, RequestType, SetupPacket};
+use smolusb::setup::{Direction, SetupPacket};
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
     WriteRefEndpoint,
 };
+
+use ladybug::{Bit, Channel};
 
 use libgreat::error::{GreatError, GreatResult};
 use libgreat::gcp::{self, iter_to_response, GreatResponse, Verb, LIBGREAT_MAX_COMMAND_SIZE};
@@ -33,97 +30,53 @@ pub mod QuirkFlag {
 
 // - Moondancer --------------------------------------------------------------
 
-use crate::event::InterruptEvent; // TODO use smolusb::event::UsbEvent instead
+use crate::event::InterruptEvent;
 use heapless::spsc::Queue;
 
 /// Moondancer
 pub struct Moondancer {
-    pub usb0: hal::Usb0, // TODO needs to be private
-    pub queue: Queue<InterruptEvent, 64>,
+    usb0: hal::Usb0,
     quirk_flags: u16,
     ep_in_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
     ep_out_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
+    irq_queue: Queue<InterruptEvent, 64>,
     control_queue: Queue<SetupPacket, 8>,
-    event_counter: usize,
 }
 
 impl Moondancer {
     pub fn new(usb0: hal::Usb0) -> Self {
         Self {
             usb0,
-            queue: Queue::new(),
             quirk_flags: 0,
             ep_in_max_packet_size: [0; crate::EP_MAX_ENDPOINTS],
             ep_out_max_packet_size: [0; crate::EP_MAX_ENDPOINTS],
+            irq_queue: Queue::new(),
             control_queue: Queue::new(),
-            event_counter: 0,
         }
     }
 
     #[inline(always)]
     pub fn dispatch_event(&mut self, event: InterruptEvent) {
-
-        // - filter interrupt events --
-
+        // filter interrupt events
         let event = match event {
-            InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::BusReset) => {
-                // handle bus resets immediately for lower latency
-                // flush queues
-                //while let Some(_) = self.queue.dequeue() { }
-                //while let Some(_) = self.control_queue.dequeue() { }
-                //self.usb0.bus_reset();
-                //log::info!("MD => UsbEvent::BusReset");
+            InterruptEvent::Usb(_, UsbEvent::BusReset) => {
+                // flush queues, the actual bus reset is handled in the irq handler for lower latency
+                while let Some(_) = self.irq_queue.dequeue() {}
+                while let Some(_) = self.control_queue.dequeue() {}
                 event
             }
 
-            /*InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveControl(_)) => {
-                self.event_counter += 1;
+            InterruptEvent::Usb(
+                interface,
+                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
+            ) => {
+                // queue setup packet and convert to a control event
 
-                // FIXME why are we getting USB0_EP0_CONTROL interrupts that don't show up on packetry and have no data in the FIFO?
-                if self.usb0.ep_control.have.read().have().bit() {
-                    //log::info!("MD => #{} {:?}  OKAY", self.event_counter, event);
-                } else {
-                    log::info!("MD => #{} {:?} dropping GetStatus 1", self.event_counter, event);
-                    return;
-                }
-
-                // read and queue setup packets immediately for lower latency
-                let mut setup_packet_buffer = [0_u8; 8];
-                self.usb0.read_control(&mut setup_packet_buffer);
-
-                if setup_packet_buffer[0] == 0 && setup_packet_buffer[1] == 0 {
-                    log::info!("MD => #{} {:?} dropping GetStatus 2", self.event_counter, event);
-                    return;
-                }
-
-                let setup_packet = SetupPacket::from(setup_packet_buffer);
-                log::info!("    {:?}", setup_packet);
-                match self.control_queue.enqueue(setup_packet) {
-                    Ok(()) => (),
-                    Err(_) => {
-                        error!("Moondancer - control queue overflow");
-                        loop {
-                            unsafe {
-                                riscv::asm::nop();
-                            }
-                        }
-                    }
-                }
-                event
-            }*/
-
-            #[cfg(feature="chonky_events")]
-            InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveSetupPacket(endpoint, setup_packet)) => {
-                self.event_counter += 1;
-
+                // TODO this should no longer be necessary
                 if setup_packet.request_type == 0 && setup_packet.request == 0 {
-                    // TODO
-                    log::info!("MD => #{} {:?} dropping GetStatus", self.event_counter, event);
+                    log::warn!("MD => {:?} dropping GetStatus", event);
                     return;
-                } else {
-                    log::info!("MD => #{} {:?}  OKAY", self.event_counter, event);
                 }
-
                 match self.control_queue.enqueue(setup_packet) {
                     Ok(()) => (),
                     Err(_) => {
@@ -135,27 +88,14 @@ impl Moondancer {
                         }
                     }
                 }
-                InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceiveControl(endpoint))
+                InterruptEvent::Usb(interface, UsbEvent::ReceiveControl(endpoint))
             }
 
-            /*InterruptEvent::Usb(crate::UsbInterface::Target, UsbEvent::ReceivePacket(0)) => {
-                // handle ACK's locally for lower latency
-                if !self.usb0.ep_out.have.read().have().bit() {
-                    self.usb0.ep_out_prime_receive(0);
-                    //log::info!("MD => #{} UsbEvent::ReceivePacket(0) dropping ACK", self.event_counter);
-                    return;
-                }
-                event
-            }*/
-
-            _ => {
-                //log::info!("\n\nMD => #{} {:?}", self.event_counter, event);
-                event
-            }
+            _ => event,
         };
 
-        // enqueue event
-        match self.queue.enqueue(event) {
+        // enqueue interrupt event
+        match self.irq_queue.enqueue(event) {
             Ok(()) => (),
             Err(_) => {
                 error!("Moondancer - event queue overflow");
@@ -215,31 +155,17 @@ impl Moondancer {
         self.ep_out_max_packet_size[0] = ep0_max_packet_size;
         self.quirk_flags = quirk_flags;
 
-        match device_speed {
-            Speed::High => {
-                self.usb0.controller.full_speed_only.write(|w| w.full_speed_only().bit(false));
-                self.usb0.controller.low_speed_only.write(|w| w.low_speed_only().bit(false));
-            },
-            Speed::Full => {
-                self.usb0.controller.full_speed_only.write(|w| w.full_speed_only().bit(true));
-                self.usb0.controller.low_speed_only.write(|w| w.low_speed_only().bit(false));
-            },
-            Speed::Low => {
-                // FIXME still connects at full speed
-                self.usb0.controller.full_speed_only.write(|w| w.full_speed_only().bit(false));
-                self.usb0.controller.low_speed_only.write(|w| w.low_speed_only().bit(true));
-            },
-            _ => {
-                log::warn!("Requested unsupported device speed, ignoring: {:?}", device_speed);
-            }
-        }
+        // set device speed
+        self.usb0.set_speed(device_speed);
 
         // connect usb0 device and enable interrupts
         self.usb0.connect();
         unsafe { self.enable_usb_interrupts() };
 
         // wait for things to settle and get connection speed
-        unsafe { riscv::asm::delay(5_000_000); }
+        unsafe {
+            riscv::asm::delay(5_000_000);
+        }
         let speed: Speed = self.usb0.controller.speed.read().speed().bits().into();
 
         log::info!(
@@ -251,11 +177,8 @@ impl Moondancer {
     }
 
     /// Terminate all existing communication and disconnects the USB interface.
-    pub fn disconnect(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        // disable speed registers
-        self.usb0.controller.full_speed_only.write(|w| w.full_speed_only().bit(false));
-        self.usb0.controller.low_speed_only.write(|w| w.low_speed_only().bit(false));
-
+    pub fn disconnect(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        // disconnect USB interface
         self.usb0.disconnect();
 
         // reset state
@@ -269,14 +192,11 @@ impl Moondancer {
     }
 
     /// Perform a USB bus reset.
-    pub fn bus_reset(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        //while let Some(_) = self.queue.dequeue() { }
-        //while let Some(_) = self.control_queue.dequeue() { }
+    pub fn bus_reset(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        // We sent the event to facedancer but the actual bus reset already happened locally
+        // in the interrupt handler.
 
-        // we send the event to facedancer but the actual reset happens locally
-        //self.usb0.bus_reset();
-
-        trace!("MD moondancer::bus_reset()");
+        debug!("MD moondancer::bus_reset()");
 
         Ok([].into_iter())
     }
@@ -286,17 +206,8 @@ impl Moondancer {
 
 impl Moondancer {
     /// Read a control packet from SetupFIFOInterface.
-    pub fn read_control(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-
-        if !self.usb0.ep_control.have.read().have().bit() {
-            log::warn!("MD => no setup packet data");
-        }
-
-        let mut setup_packet_buffer = [0_u8; 8];
-        self.usb0.read_control(&mut setup_packet_buffer);
-        let setup_packet = SetupPacket::from(setup_packet_buffer);
-
-        /*let setup_packet = match self.control_queue.dequeue() {
+    pub fn read_control(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        let setup_packet = match self.control_queue.dequeue() {
             Some(setup_packet) => setup_packet,
             None => {
                 error!("Moondancer - no packets in control queue");
@@ -306,9 +217,9 @@ impl Moondancer {
                     }
                 }
             }
-        };*/
+        };
 
-        //log::info!("MD #{} moondancer::read_control() -> {:?}", self.event_counter, setup_packet);
+        debug!("MD moondancer::read_control() -> {:?}", setup_packet);
 
         Ok(SetupPacket::as_bytes(setup_packet).into_iter())
     }
@@ -374,7 +285,10 @@ impl Moondancer {
 
             // endpoint zero is always the control endpoint, and can't be configured
             if endpoint_number == 0x00 {
-                warn!("  ignoring request to reconfigure control endpoint address: 0x{:x}", endpoint.address);
+                warn!(
+                    "  ignoring request to reconfigure control endpoint address: 0x{:x}",
+                    endpoint.address
+                );
                 continue;
             }
 
@@ -391,9 +305,11 @@ impl Moondancer {
 
             // configure endpoint max packet sizes
             if Direction::from_endpoint_address(endpoint.address) == Direction::HostToDevice {
-                self.ep_out_max_packet_size[endpoint_number as usize] = endpoint.max_packet_size.into();
+                self.ep_out_max_packet_size[endpoint_number as usize] =
+                    endpoint.max_packet_size.into();
             } else {
-                self.ep_in_max_packet_size[endpoint_number as usize] = endpoint.max_packet_size.into();
+                self.ep_in_max_packet_size[endpoint_number as usize] =
+                    endpoint.max_packet_size.into();
             }
 
             // prime any OUT endpoints
@@ -441,7 +357,10 @@ impl Moondancer {
         // stall OUT end
         self.usb0.stall_endpoint_out(endpoint_number);
 
-        log::info!("MD moondancer::stall_endpoint_out({})", args.endpoint_number);
+        log::debug!(
+            "MD moondancer::stall_endpoint_out({})",
+            args.endpoint_number
+        );
 
         Ok([].into_iter())
     }
@@ -461,14 +380,16 @@ impl Moondancer {
         let mut rx_buffer: [u8; crate::EP_MAX_PACKET_SIZE] = [0; crate::EP_MAX_PACKET_SIZE];
         let bytes_read = self.usb0.read(args.endpoint_number, &mut rx_buffer);
         if bytes_read > rx_buffer.len() {
-            error!("MD moondancer::read_endpoint({}) -> bytes_read:{} buffer overflow",
-                   args.endpoint_number,
-                   bytes_read);
+            error!(
+                "MD moondancer::read_endpoint({}) -> bytes_read:{} buffer overflow",
+                args.endpoint_number, bytes_read
+            );
         }
 
         log::debug!(
-            "MD #{} moondancer::read_endpoint({}) -> bytes_read:{}",
-            self.event_counter, args.endpoint_number, bytes_read
+            "MD moondancer::read_endpoint({}) -> bytes_read:{}",
+            args.endpoint_number,
+            bytes_read
         );
 
         Ok(rx_buffer.into_iter().take(bytes_read))
@@ -534,10 +455,9 @@ impl Moondancer {
         }
         let (endpoint_number, arguments) =
             zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
-            .ok_or(GreatError::InvalidArgument)?;
-        let (blocking, payload) =
-            zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
                 .ok_or(GreatError::InvalidArgument)?;
+        let (blocking, payload) = zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
+            .ok_or(GreatError::InvalidArgument)?;
         let args = Args {
             endpoint_number,
             blocking,
@@ -551,8 +471,6 @@ impl Moondancer {
 
         // TODO better handling for blocking
         if blocking {
-            // set tx_ack_active flag
-            // TODO a slighty safer approach would be nice
             unsafe {
                 self.usb0.set_tx_ack_active();
             }
@@ -570,7 +488,6 @@ impl Moondancer {
         // TODO better handling for blocking
         if blocking {
             // wait for the response packet to get sent
-            // TODO a slightly safer approach would be nice
             loop {
                 let active = unsafe { self.usb0.is_tx_ack_active() };
                 if active == false {
@@ -631,12 +548,12 @@ impl Moondancer {
     /// [(type, interface, endpoint)]
     pub fn get_interrupt_events(
         &mut self,
-        arguments: &[u8],
+        _arguments: &[u8],
     ) -> GreatResult<impl Iterator<Item = u8>> {
         let mut tx_buffer = [0_u8; LIBGREAT_MAX_COMMAND_SIZE];
 
-        let clone = self.queue.clone();
-        self.queue = Queue::new();
+        let clone = self.irq_queue.clone();
+        self.irq_queue = Queue::new();
 
         let length = clone.len() * 3;
         let response = clone.iter().flat_map(|message| message.into_bytes());
@@ -660,16 +577,16 @@ impl Moondancer {
         debug!("MD moondancer::test_get_interrupt_events()");
 
         use crate::UsbInterface::{Aux, Control, Target};
-        self.queue
+        self.irq_queue
             .enqueue(InterruptEvent::Usb(Target, UsbEvent::BusReset))
             .ok();
-        self.queue
+        self.irq_queue
             .enqueue(InterruptEvent::Usb(Aux, UsbEvent::ReceiveControl(1)))
             .ok();
-        self.queue
+        self.irq_queue
             .enqueue(InterruptEvent::Usb(Control, UsbEvent::ReceivePacket(2)))
             .ok();
-        self.queue
+        self.irq_queue
             .enqueue(InterruptEvent::Usb(Target, UsbEvent::SendComplete(3)))
             .ok();
 
@@ -938,7 +855,7 @@ impl Moondancer {
                 Ok(response)
             }
 
-            verb_number => Err(GreatError::InvalidArgument),
+            _verb_number => Err(GreatError::InvalidArgument),
         }
     }
 }

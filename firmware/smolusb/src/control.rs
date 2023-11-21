@@ -1,12 +1,10 @@
-#![allow(dead_code, unused_imports, unused_mut, unused_variables)]
-
 use core::marker::PhantomData;
 
 use log::{debug, error, info, trace, warn};
 
+use crate::descriptor::*;
 use crate::device::Speed;
 use crate::event::UsbEvent;
-use crate::descriptor::*;
 use crate::setup::{Direction, Request, RequestType, SetupPacket};
 use crate::traits::{AsByteSliceIterator, UsbDriver};
 
@@ -25,7 +23,7 @@ pub enum Callback {
 impl Callback {
     pub fn call<D>(&self, usb: &D, control_state: State) -> State
     where
-        D: UsbDriver
+        D: UsbDriver,
     {
         use Callback::*;
         trace!("  callback {:?}", self);
@@ -35,14 +33,14 @@ impl Callback {
                     usb.set_address(address);
                     State::Idle
                 }
-                Ack(endpoint_number, Direction::DeviceToHost) |
-                EndpointOutPrimeReceive(endpoint_number) => {
+                Ack(endpoint_number, Direction::DeviceToHost)
+                | EndpointOutPrimeReceive(endpoint_number) => {
                     // DeviceToHost - IN request,  prime the endpoint because the host will send a zlp to the device
                     usb.ack(endpoint_number, Direction::DeviceToHost);
                     control_state
                 }
-                Ack(endpoint_number, Direction::HostToDevice) |
-                EndpointInSendZLP(endpoint_number) => {
+                Ack(endpoint_number, Direction::HostToDevice)
+                | EndpointInSendZLP(endpoint_number) => {
                     // HostToDevice - OUT request, send a ZLP from the device to the host
                     usb.ack(endpoint_number, Direction::HostToDevice);
                     control_state
@@ -66,9 +64,7 @@ impl core::fmt::Display for State {
             State::Data(direction, _) => {
                 write!(f, "Data({:?})", direction)
             }
-            state => {
-                core::fmt::Debug::fmt(self, f)
-            }
+            _state => core::fmt::Debug::fmt(self, f),
         }
     }
 }
@@ -88,10 +84,9 @@ pub struct Control<'a, D, const RX_BUFFER_SIZE: usize> {
     _marker: PhantomData<&'a D>,
 }
 
-
 impl<'a, D, const RX_BUFFER_SIZE: usize> Control<'a, D, RX_BUFFER_SIZE>
 where
-    D: UsbDriver
+    D: UsbDriver,
 {
     pub fn new(endpoint_number: u8, descriptors: Descriptors<'a>) -> Self {
         Self {
@@ -110,14 +105,17 @@ where
         }
     }
 
-    fn set_state(& mut self, state: State) {
+    fn set_state(&mut self, state: State) {
         self.state = state;
     }
 
     pub fn handle_event(&mut self, usb: &D, event: UsbEvent) -> Option<(SetupPacket, &[u8])> {
         if matches!(self.state, State::Stalled) {
             // unstall endpoint?
-            error!("Control::handle_event() is in stalled state. Dropping event: {:?}", event);
+            error!(
+                "Control::handle_event() is in stalled state. Dropping event: {:?}",
+                event
+            );
             return None;
         }
 
@@ -135,22 +133,22 @@ where
                 let mut buffer = [0_u8; 8];
                 let bytes_read = usb.read_control(&mut buffer);
                 if bytes_read != 8 {
-                    error!("Received {} bytes for Setup packet. Dropping control event.", bytes_read);
+                    error!(
+                        "Received {} bytes for Setup packet. Dropping control event.",
+                        bytes_read
+                    );
                     return None;
                 }
                 let setup_packet = SetupPacket::from(buffer);
-                self.receive_control(usb, setup_packet).map(|setup_packet| {
-                    (setup_packet, &[] as &[u8])
-                })
+                self.receive_control(usb, setup_packet)
+                    .map(|setup_packet| (setup_packet, &[] as &[u8]))
             }
-            #[cfg(feature="chonky_events")]
             ReceiveSetupPacket(endpoint_number, setup_packet) => {
                 if endpoint_number != self.endpoint_number {
                     error!("event endpoint does not match control endpoint");
                 }
-                self.receive_control(usb, setup_packet).map(|setup_packet| {
-                    (setup_packet, &[] as &[u8])
-                })
+                self.receive_control(usb, setup_packet)
+                    .map(|setup_packet| (setup_packet, &[] as &[u8]))
             }
             ReceivePacket(endpoint_number) => {
                 if endpoint_number != self.endpoint_number {
@@ -161,15 +159,14 @@ where
 
                 // pulse zlp reads
                 if bytes_read == 0 {
-                    ladybug::trace(Channel::B, 7, || {
-                    });
+                    ladybug::trace(Channel::B, 7, || {});
                 }
 
                 let result = self.receive_packet(usb, &packet_buffer[..bytes_read]);
 
                 result
             }
-            #[cfg(feature="chonky_events")]
+            #[cfg(feature = "chonky_events")]
             ReceiveBuffer(endpoint_number, bytes_read, packet_buffer) => {
                 if endpoint_number != self.endpoint_number {
                     error!("event endpoint does not match control endpoint");
@@ -185,7 +182,6 @@ where
             }
         }
     }
-
 
     // - bus reset ------------------------------------------------------------
 
@@ -223,17 +219,25 @@ where
         if !matches!(request, Request::SetAddress) {
             debug!(
                 "Starting {} {} bytes, {:?} {:?} {:?} ",
-                self.state, length, request_type, request, setup_packet.value.to_le_bytes()
+                self.state,
+                length,
+                request_type,
+                request,
+                setup_packet.value.to_le_bytes()
             );
         }
 
         match (direction, &request_type, &request) {
             (Direction::DeviceToHost, RequestType::Standard, Request::GetDescriptor) => {
                 // register callback for successful transmission to host -> Prime ep_out for host zlp
-                self.cb_send_complete = Some(Callback::EndpointOutPrimeReceive(self.endpoint_number));
+                self.cb_send_complete =
+                    Some(Callback::EndpointOutPrimeReceive(self.endpoint_number));
 
                 // write descriptor
-                match self.descriptors.write(usb, self.endpoint_number, setup_packet) {
+                match self
+                    .descriptors
+                    .write(usb, self.endpoint_number, setup_packet)
+                {
                     None => {
                         // request handled, consumed
                     }
@@ -283,17 +287,20 @@ where
                 usb.ack(self.endpoint_number, Direction::DeviceToHost);
             }
 
-            (_, RequestType::Standard, Request::ClearFeature) => { // TODO Direction ?
+            (_, RequestType::Standard, Request::ClearFeature) => {
+                // TODO Direction ?
                 info!("  TODO Request::ClearFeature {:?}", direction);
                 // TODO
             }
 
-            (_, RequestType::Standard, Request::SetFeature) => { // TODO Direction ?
+            (_, RequestType::Standard, Request::SetFeature) => {
+                // TODO Direction ?
                 info!("  TODO Request::SetFeature {:?}", direction);
                 // TODO
             }
 
-            (_, RequestType::Standard, Request::GetStatus) => { // TODO Direction ?
+            (_, RequestType::Standard, Request::GetStatus) => {
+                // TODO Direction ?
                 info!("  TODO Request::GetStatus {:?}", direction);
                 // TODO
             }
@@ -340,11 +347,14 @@ where
 
         // handle the packet
         match self.state {
-            State::Data(Direction::DeviceToHost, setup_packet) => {
+            State::Data(Direction::DeviceToHost, _setup_packet) => {
                 // we received a zlp from the host acknowledging the successful
                 // completion of an IN data stage.
                 // e.g. FIXME after receipt of libgreat responses ?!@?@!!
-                debug!("  receive_packet() TODO Data(DeviceToHost) {} bytes", bytes_read);
+                debug!(
+                    "  receive_packet() TODO Data(DeviceToHost) {} bytes",
+                    bytes_read
+                );
                 if bytes_read != 0 {
                     warn!("  TODO this should not have happened");
                 }
@@ -361,7 +371,8 @@ where
             }
 
             State::Data(Direction::HostToDevice, setup_packet) => {
-                if bytes_read == 0 { // && rx_buffer_position > 0
+                if bytes_read == 0 {
+                    // && rx_buffer_position > 0
                     info!("  zlp from host in {} - TODO early abort?", self.state);
                     /*self.set_state(State::Idle);
                     let offset = self.rx_buffer_position;
@@ -379,7 +390,7 @@ where
                         // send ZLP to host to end data/status??? stage
                         usb.ack(endpoint_number, Direction::HostToDevice);
                         debug!("  OUT control transfer done, sent zlp");
-                        return Some((setup_packet, rx_buffer))
+                        return Some((setup_packet, rx_buffer));
                     }
                     None => {
                         // still expecting more data, prime for reception
@@ -402,18 +413,20 @@ where
         None
     }
 
-    fn append_packet(
-        &mut self,
-        setup_packet: SetupPacket,
-        packet_buffer: &[u8]
-    ) -> Option<&[u8]> {
+    fn append_packet(&mut self, setup_packet: SetupPacket, packet_buffer: &[u8]) -> Option<&[u8]> {
         let bytes_read = packet_buffer.len();
         let bytes_expected = setup_packet.length as usize;
 
-        trace!("  append_packet() {} bytes ({}/{})", bytes_read, self.rx_buffer_position, bytes_expected);
+        trace!(
+            "  append_packet() {} bytes ({}/{})",
+            bytes_read,
+            self.rx_buffer_position,
+            bytes_expected
+        );
 
         // guards
-        if bytes_read == 0 { // && rx_buffer_position > 0
+        if bytes_read == 0 {
+            // && rx_buffer_position > 0
             warn!("  TODO host has ended data stage early");
         } else if self.rx_buffer_position + bytes_read > RX_BUFFER_SIZE {
             error!("  TODO receive buffer overflow");
@@ -453,7 +466,7 @@ where
         }
 
         match self.state {
-            State::Data(Direction::DeviceToHost, setup_packet) => {
+            State::Data(Direction::DeviceToHost, _setup_packet) => {
                 // we sent a packet of IN data
                 // e.g. after sending GetDescriptor data
                 self.set_state(State::Status(Direction::DeviceToHost))
@@ -462,7 +475,7 @@ where
                 debug!("  send_complete() TODO Status(DeviceToHost)");
             }
 
-            State::Data(Direction::HostToDevice, setup_packet) => {
+            State::Data(Direction::HostToDevice, _setup_packet) => {
                 // we sent a zlp to the host ackowledging the completiong of a
                 // transaction with an OUT data stage
                 // e.g. after receiving an OUT control transfer
@@ -499,12 +512,8 @@ where
                 info!("send_complete() unhandled state: {:?}", self.state);
             }
         }*/
-
     }
-
 }
-
-
 
 // - Descriptors --------------------------------------------------------------
 
@@ -523,21 +532,28 @@ impl<'a> Descriptors<'a> {
     // TODO ugly hack because I haven't figured out how to do this at compile time yet
     pub fn set_total_lengths(mut self) -> Self {
         self.configuration_descriptor.set_total_length();
-        if let Some(mut other_speed_configuration_descriptor) = self.other_speed_configuration_descriptor.as_mut() {
+        if let Some(other_speed_configuration_descriptor) =
+            self.other_speed_configuration_descriptor.as_mut()
+        {
             other_speed_configuration_descriptor.set_total_length();
         }
         self
     }
 
-    pub fn write<D>(&self, usb: &D, endpoint_number: u8, setup_packet: SetupPacket) -> Option<SetupPacket>
+    pub fn write<D>(
+        &self,
+        usb: &D,
+        endpoint_number: u8,
+        setup_packet: SetupPacket,
+    ) -> Option<SetupPacket>
     where
-        D: UsbDriver
+        D: UsbDriver,
     {
         // extract the descriptor type and number from our SETUP request
         let [descriptor_number, descriptor_type_bits] = setup_packet.value.to_le_bytes();
         let descriptor_type = match DescriptorType::try_from(descriptor_type_bits) {
             Ok(descriptor_type) => descriptor_type,
-            Err(e) => {
+            Err(_e) => {
                 warn!(
                     "Descriptors::write_descriptor() stall - invalid descriptor type: {} {}",
                     descriptor_type_bits, descriptor_number
@@ -552,25 +568,18 @@ impl<'a> Descriptors<'a> {
         let requested_length = setup_packet.length as usize;
 
         let bytes_written = match (&descriptor_type, descriptor_number) {
-            (DescriptorType::Device, 0) => {
-                usb.write_ref(
-                    endpoint_number,
-                    self.device_descriptor.as_iter().take(requested_length)
-                )
-            },
-            (DescriptorType::Configuration, _) => {
-                usb.write_ref(
-                    endpoint_number,
-                    self.configuration_descriptor.iter().take(requested_length),
-                )
-            },
+            (DescriptorType::Device, 0) => usb.write_ref(
+                endpoint_number,
+                self.device_descriptor.as_iter().take(requested_length),
+            ),
+            (DescriptorType::Configuration, _) => usb.write_ref(
+                endpoint_number,
+                self.configuration_descriptor.iter().take(requested_length),
+            ),
             (DescriptorType::DeviceQualifier, _) => {
                 if self.device_speed == Speed::High {
                     if let Some(descriptor) = &self.device_qualifier_descriptor {
-                        usb.write_ref(
-                            endpoint_number,
-                            descriptor.as_iter().take(requested_length)
-                        )
+                        usb.write_ref(endpoint_number, descriptor.as_iter().take(requested_length))
                     } else {
                         // no device qualifier configured, ack HostToDevice instead - TODO check check on mac/windows
                         debug!("  No device qualifier configured for high-speed device");
@@ -578,7 +587,9 @@ impl<'a> Descriptors<'a> {
                     }
                 } else {
                     // for full/low speed devices, ack HostToDevice instead - TODO check on mac/windows
-                    debug!("  Device qualifier request is not supported for full/low-speed devices");
+                    debug!(
+                        "  Device qualifier request is not supported for full/low-speed devices"
+                    );
                     usb.write(endpoint_number, [].into_iter())
                 }
             }
@@ -591,16 +602,17 @@ impl<'a> Descriptors<'a> {
                     usb.write(endpoint_number, [].into_iter())
                 }
             }
-            (DescriptorType::String, 0) => {
-                usb.write_ref(
-                    endpoint_number,
-                    self.string_descriptor_zero.iter().take(requested_length)
-                )
-            },
+            (DescriptorType::String, 0) => usb.write_ref(
+                endpoint_number,
+                self.string_descriptor_zero.iter().take(requested_length),
+            ),
             (DescriptorType::String, number) => {
                 let offset_index: usize = (number - 1).into();
                 if offset_index > self.string_descriptors.len() {
-                    warn!("Descriptors::write_descriptor() stall - unknown string descriptor {}", number);
+                    warn!(
+                        "Descriptors::write_descriptor() stall - unknown string descriptor {}",
+                        number
+                    );
                     return Some(setup_packet);
                 }
                 usb.write(

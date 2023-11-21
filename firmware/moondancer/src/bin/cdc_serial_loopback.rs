@@ -96,7 +96,7 @@ fn MachineExternal() {
         usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
         dispatch_event(InterruptEvent::Usb(
             Target,
-            UsbEvent::SendComplete(endpoint)
+            UsbEvent::SendComplete(endpoint),
         ));
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
         // read data from endpoint
@@ -126,10 +126,7 @@ fn MachineExternal() {
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
         let endpoint = usb1.ep_in.epno.read().bits() as u8;
         usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
-        dispatch_event(InterruptEvent::Usb(
-            Aux,
-            UsbEvent::SendComplete(endpoint)
-        ));
+        dispatch_event(InterruptEvent::Usb(Aux, UsbEvent::SendComplete(endpoint)));
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_OUT) {
         // read data from endpoint
         let endpoint = usb1.ep_out.data_ep.read().bits() as u8;
@@ -311,7 +308,7 @@ fn main() -> ! {
                 // unhandled
                 _ => {
                     info!("Unhandled event: {:?}", event);
-                },
+                }
             }
         }
 
@@ -374,10 +371,8 @@ fn main() -> ! {
 
 // - vendor request handler ---------------------------------------------------
 
-fn handle_vendor_request<'a, D>(
-    usb: &D,
-    setup_packet: SetupPacket,
-) where
+fn handle_vendor_request<'a, D>(usb: &D, setup_packet: SetupPacket)
+where
     D: ReadControl + ReadEndpoint + WriteEndpoint + WriteRefEndpoint + UsbDriverOperations,
 {
     let request_type = setup_packet.request_type();
@@ -385,9 +380,11 @@ fn handle_vendor_request<'a, D>(
 
     match (request_type, request) {
         (RequestType::Vendor, Request::ClassOrVendor(vendor_request)) => {
-            let vendor_request =
-                cdc::ch34x::VendorRequest::from(vendor_request);
-            info!("CDC-SERIAL vendor request: {:?} {} {}", vendor_request, setup_packet.value, setup_packet.index);
+            let vendor_request = cdc::ch34x::VendorRequest::from(vendor_request);
+            info!(
+                "CDC-SERIAL vendor request: {:?} {} {}",
+                vendor_request, setup_packet.value, setup_packet.index
+            );
 
             // we can just spoof these
             usb.write(0, [0, 0].into_iter());

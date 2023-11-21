@@ -15,7 +15,7 @@ use smolusb::traits::{ReadEndpoint, UsbDriverOperations};
 use moondancer::event::InterruptEvent;
 use moondancer::{hal, pac};
 
-use ladybug::Channel;
+use ladybug::{Bit, Channel};
 
 // - constants ----------------------------------------------------------------
 
@@ -50,7 +50,7 @@ fn MachineExternal() {
 
     // USB0 BusReset
     if usb0.is_pending(pac::Interrupt::USB0) {
-        ladybug::trace(Channel::A, 0, || {
+        ladybug::trace(Channel::B, Bit::IRQ_BUS_RESET, || {
             usb0.clear_pending(pac::Interrupt::USB0);
             usb0.bus_reset();
             dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
@@ -58,10 +58,10 @@ fn MachineExternal() {
 
     // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
-        ladybug::trace(Channel::A, 1, || {
+        ladybug::trace(Channel::B, Bit::IRQ_EP_CONTROL, || {
             let endpoint = usb0.ep_control.epno.read().bits() as u8;
 
-            #[cfg(not(feature="chonky_events"))]
+            #[cfg(not(feature = "chonky_events"))]
             {
                 dispatch_event(InterruptEvent::Usb(
                     Target,
@@ -69,7 +69,7 @@ fn MachineExternal() {
                 ));
             }
 
-            #[cfg(feature="chonky_events")]
+            #[cfg(feature = "chonky_events")]
             {
                 use smolusb::setup::SetupPacket;
                 use smolusb::traits::ReadControl;
@@ -87,7 +87,7 @@ fn MachineExternal() {
 
     // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
-        ladybug::trace(Channel::A, 2, || {
+        ladybug::trace(Channel::B, Bit::IRQ_EP_IN, || {
             let endpoint = usb0.ep_in.epno.read().bits() as u8;
             usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
 
@@ -99,7 +99,7 @@ fn MachineExternal() {
 
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
-        ladybug::trace(Channel::A, 3, || {
+        ladybug::trace(Channel::B, Bit::IRQ_EP_OUT, || {
             let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
 
             // discard packets from Bulk OUT transfer endpoint
@@ -183,7 +183,8 @@ fn main_loop() -> GreatResult<()> {
             device_qualifier_descriptor: Some(USB_DEVICE_QUALIFIER_DESCRIPTOR),
             string_descriptor_zero: USB_STRING_DESCRIPTOR_0,
             string_descriptors: USB_STRING_DESCRIPTORS,
-        }.set_total_lengths() // TODO figure out a better solution
+        }
+        .set_total_lengths(), // TODO figure out a better solution
     );
 
     // set device speed
@@ -246,7 +247,7 @@ fn main_loop() -> GreatResult<()> {
                 // - usb0 event handlers --
 
                 // Usb0 received a control event
-                #[cfg(feature="chonky_events")]
+                #[cfg(feature = "chonky_events")]
                 Usb(Target, event @ BusReset)
                 | Usb(Target, event @ ReceiveControl(0))
                 | Usb(Target, event @ ReceiveSetupPacket(0, _))
@@ -254,11 +255,11 @@ fn main_loop() -> GreatResult<()> {
                 | Usb(Target, event @ SendComplete(0)) => {
                     control.handle_event(&usb0, event);
                 }
-                #[cfg(not(feature="chonky_events"))]
-                Usb(Target, event @ BusReset)                 |
-                Usb(Target, event @ ReceiveControl(0))        |
-                Usb(Target, event @ ReceivePacket(0))         |
-                Usb(Target, event @ SendComplete(0)) => {
+                #[cfg(not(feature = "chonky_events"))]
+                Usb(Target, event @ BusReset)
+                | Usb(Target, event @ ReceiveControl(0))
+                | Usb(Target, event @ ReceivePacket(0))
+                | Usb(Target, event @ SendComplete(0)) => {
                     control.handle_event(&usb0, event);
                 }
 

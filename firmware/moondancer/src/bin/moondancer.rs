@@ -2,26 +2,18 @@
 #![no_std]
 #![no_main]
 
-use core::any::Any;
-use core::{array, iter, slice};
-
 use heapless::mpmc::MpMcQueue as Queue;
 use log::{debug, error, info, trace, warn};
 
-use smolusb::class;
-use smolusb::control_deprecated::ControlEvent; // TODO lose
 use smolusb::control::{Control, Descriptors};
-use smolusb::device::{Speed, UsbDevice};
-use smolusb::event::UsbEvent;
+use smolusb::device::Speed;
+
 use smolusb::setup::{Direction, RequestType, SetupPacket};
-use smolusb::traits::{
-    ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
-    WriteRefEndpoint,
-};
+use smolusb::traits::{UsbDriverOperations, WriteEndpoint};
 
-use ladybug::Channel;
+use ladybug::{Bit, Channel};
 
-use libgreat::gcp::{iter_to_response, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
+use libgreat::gcp::{GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
 use libgreat::{GreatError, GreatResult};
 
 use moondancer::event::InterruptEvent;
@@ -133,7 +125,7 @@ impl<'a> Firmware<'a> {
         moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
         // usb1: aux (host on r0.4)
-        let mut usb1 = hal::Usb1::new(
+        let usb1 = hal::Usb1::new(
             peripherals.USB1,
             peripherals.USB1_EP_CONTROL,
             peripherals.USB1_EP_IN,
@@ -169,7 +161,7 @@ impl<'a> Firmware<'a> {
             libgreat_response_last_error: None,
             core,
             moondancer,
-            _marker: core::marker::PhantomData
+            _marker: core::marker::PhantomData,
         }
     }
 
@@ -219,11 +211,13 @@ impl<'a> Firmware<'a> {
                 device_speed: DEVICE_SPEED,
                 device_descriptor: moondancer::usb::DEVICE_DESCRIPTOR,
                 configuration_descriptor: moondancer::usb::CONFIGURATION_DESCRIPTOR_0,
-                other_speed_configuration_descriptor: Some(moondancer::usb::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0),
+                other_speed_configuration_descriptor: Some(
+                    moondancer::usb::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0,
+                ),
                 device_qualifier_descriptor: Some(moondancer::usb::DEVICE_QUALIFIER_DESCRIPTOR),
                 string_descriptor_zero: moondancer::usb::STRING_DESCRIPTOR_0,
                 string_descriptors: moondancer::usb::STRING_DESCRIPTORS,
-            }
+            },
         );
 
         let mut max_queue_length: usize = 0;
@@ -274,42 +268,24 @@ impl<'a> Firmware<'a> {
                     | Usb(Aux, event @ SendComplete(0)) => {
                         trace!("Usb(Aux, {:?})", event);
 
-                        let result = ladybug::trace(Channel::B, 0, || {
-                            usb1_control.handle_event(&self.usb1, event)
-                        });
-                        match result {
+                        match usb1_control.handle_event(&self.usb1, event) {
                             // vendor requests are not handled by control
                             Some((setup_packet, rx_buffer)) => {
-                                ladybug::trace(Channel::B, 6, || {
-                                    self.handle_vendor_request(setup_packet, rx_buffer)
-                                })?
+                                self.handle_vendor_request(setup_packet, rx_buffer)?
                             }
                             // control event was handled
                             None => (),
                         }
-
-                        /*let result = ladybug::trace(Channel::B, 0, || {
-                            self.usb1.dispatch_control(event).map_err(|_| GreatError::IoError)
-                        })?;
-                        match result  {
-                            Some(control_event) => {
-                                // handle any events control couldn't
-                                ladybug::trace(Channel::B, 6, || {
-                                    self.handle_control_event(control_event)
-                                })?
-                            }
-                            None => {
-                                // control event was handled by UsbDevice
-                            }
-                        }*/
                     }
 
                     // - usb0 Target event handlers --
 
                     // enqueue moondancer events
-                    Usb(Target, event) => self
-                        .moondancer
-                        .dispatch_event(interrupt_event),
+                    Usb(Target, _event) => {
+                        ladybug::trace(Channel::A, Bit::GCP_HANDLE_EVENT, || {
+                            self.moondancer.dispatch_event(interrupt_event)
+                        })
+                    },
 
                     // Unhandled event
                     _ => {
@@ -338,7 +314,10 @@ impl<'a> Firmware<'a> {
         let vendor_request = VendorRequest::from(setup_packet.request);
         let vendor_value = VendorValue::from(setup_packet.value);
 
-        debug!("handle_vendor_request: {:?} {:?} {:?}", vendor_request, vendor_value, direction);
+        debug!(
+            "handle_vendor_request: {:?} {:?} {:?}",
+            vendor_request, vendor_value, direction
+        );
 
         match (&request_type, &vendor_request) {
             (RequestType::Vendor, VendorRequest::UsbCommandRequest) => {
@@ -392,121 +371,6 @@ impl<'a> Firmware<'a> {
                     "handle_control_event Legacy libgreat vendor request '{:?}'",
                     vendor_request
                 );
-
-            }
-            _ => {
-                error!(
-                    "handle_control_event Unknown control packet '{:?}'",
-                    setup_packet
-                );
-                self.usb1.stall_control_request();
-            }
-        }
-
-        Ok(())
-    }
-
-
-    /// Handle any control packets that weren't handled by UsbDevice
-    fn handle_control_deprecated_event(
-        &mut self,
-        control_event: ControlEvent<'a, { libgreat::gcp::LIBGREAT_MAX_COMMAND_SIZE }>,
-    ) -> GreatResult<()> {
-        let ControlEvent {
-            setup_packet,
-            data,
-            bytes_read,
-            ..
-        } = control_event;
-        let data = &data[..bytes_read];
-        let direction = setup_packet.direction();
-        let request_type = setup_packet.request_type();
-        let vendor_request = VendorRequest::from(setup_packet.request);
-        let vendor_value = VendorValue::from(setup_packet.value);
-
-        trace!(
-            "handle_control_event direction:{:?} packet:{:?} request_type:{:?} vendor_request:{:?} vendor_value:{:?} data:{:?}",
-            direction,
-            setup_packet,
-            request_type,
-            vendor_request,
-            vendor_value,
-            data,
-        );
-
-        match (&request_type, &vendor_request) {
-            (RequestType::Vendor, VendorRequest::UsbCommandRequest) => {
-                match (&vendor_value, &direction) {
-                    // host is starting a new command sequence
-                    (VendorValue::Execute, Direction::HostToDevice) => {
-                        trace!("  GOT COMMAND data:{:?}", data);
-                        self.dispatch_libgreat_request(data)?;
-                    }
-
-                    // host is ready to receive a response
-                    (VendorValue::Execute, Direction::DeviceToHost) => {
-                        trace!("  GOT RESPONSE REQUEST");
-                        self.dispatch_libgreat_response(&setup_packet)?;
-                    }
-
-                    // host would like to abort the current command sequence
-                    (VendorValue::Cancel, Direction::DeviceToHost) => {
-                        debug!("  GOT ABORT");
-                        self.dispatch_libgreat_abort(&setup_packet)?;
-                    }
-
-                    _ => {
-                        error!(
-                            "handle_control stall: unknown vendor request and/or value direction{:?} vendor_request{:?} vendor_value:{:?}",
-                            direction, vendor_request, vendor_value
-                        );
-                        self.usb1.stall_control_request();
-                    }
-                }
-            }
-            (RequestType::Vendor, VendorRequest::Unknown(vendor_request)) => {
-                error!(
-                    "handle_control_event Unknown vendor request '{}'",
-                    vendor_request
-                );
-                self.usb1.stall_control_request();
-            }
-            (RequestType::Vendor, vendor_request) => {
-                // TODO this is from one of the legacy boards which we
-                // need to support to get `greatfet info` to finish
-                // enumerating through the supported devices.
-                //
-                // see: host/greatfet/boards/legacy.py
-
-                // The greatfet board scan code expects the IN endpoint
-                // to be stalled if this is not a legacy device.
-                self.usb1.stall_endpoint_in(0);
-
-                warn!(
-                    "handle_control_event Legacy libgreat vendor request '{:?}'",
-                    vendor_request
-                );
-
-                // enable these if you want to pretend to be a legacy greatfet device :-)
-                /*match vendor_request {
-                    VendorRequest::LegacyReadBoardId => {
-                        self.usb1.write(0, [0].into_iter());
-                    }
-                    VendorRequest::LegacyReadVersionString => {
-                        let version_string =
-                            moondancer::BOARD_INFORMATION.version_string.as_bytes();
-                        self.usb1
-
-                            .write(0, version_string.into_iter().copied());
-                    }
-                    VendorRequest::LegacyReadPartId => {
-                        let part_id = moondancer::BOARD_INFORMATION.part_id;
-                        self.usb1.write(0, part_id.into_iter());
-                    }
-                    _ => {
-                        error!("TODO");
-                    }
-                }*/
             }
             _ => {
                 error!(
@@ -535,7 +399,10 @@ impl<'a> Firmware<'a> {
             }
         };
 
-        debug!("dispatch_libgreat_request {:?}.0x{:x}", class_id, verb_number);
+        debug!(
+            "dispatch_libgreat_request {:?}.0x{:x}",
+            class_id, verb_number
+        );
 
         // dispatch command
         let response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
@@ -583,7 +450,9 @@ impl<'a> Firmware<'a> {
 
                 // TODO this is... weird...
                 self.usb1.stall_endpoint_in(0);
-                unsafe { riscv::asm::delay(2000); }
+                unsafe {
+                    riscv::asm::delay(2000);
+                }
                 self.usb1.ep_in.reset.write(|w| w.reset().bit(true));
             }
         }
@@ -591,28 +460,25 @@ impl<'a> Firmware<'a> {
         Ok(())
     }
 
-    fn dispatch_libgreat_response(&mut self, setup_packet: &SetupPacket) -> GreatResult<()> {
+    fn dispatch_libgreat_response(&mut self, _setup_packet: &SetupPacket) -> GreatResult<()> {
         // do we have a response ready?
         if let Some(response) = &mut self.libgreat_response {
-            let bytes_to_send = response.len();
+            let _bytes_to_send = response.len();
 
             debug!("dispatch_libgreat_response -> {} bytes", response.len());
             self.usb1.write_packets(0, response, 64);
 
-            // prime to receive host zlp TODO TODO TODO - should control do this?
+            // prime to receive host zlp - TODO should control do this in send_complete?
             self.usb1.ack(0, Direction::DeviceToHost);
 
             self.libgreat_response = None;
-
         } else if let Some(error) = self.libgreat_response_last_error {
             warn!("dispatch_libgreat_response error result: {:?}", error);
-            self.usb1
-                .write(0, (error as u32).to_le_bytes().into_iter());
+            self.usb1.write(0, (error as u32).to_le_bytes().into_iter());
             self.libgreat_response_last_error = None;
 
-            // prime to receive host zlp TODO TODO TODO - should control do this?
+            // prime to receive host zlp - TODO should control do this in send_complete?
             self.usb1.ack(0, Direction::DeviceToHost);
-
         } else {
             // TODO figure out what to do if we don't have a response or error
             error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");
@@ -622,7 +488,7 @@ impl<'a> Firmware<'a> {
         Ok(())
     }
 
-    fn dispatch_libgreat_abort(&mut self, setup_packet: &SetupPacket) -> GreatResult<()> {
+    fn dispatch_libgreat_abort(&mut self, _setup_packet: &SetupPacket) -> GreatResult<()> {
         error!("dispatch_libgreat_response abort");
 
         // cancel any queued response
