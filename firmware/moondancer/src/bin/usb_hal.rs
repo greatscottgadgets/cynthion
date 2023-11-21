@@ -56,6 +56,7 @@ fn MachineExternal() {
     // USB1 BusReset
     if usb1.is_pending(pac::Interrupt::USB1) {
         ladybug::trace(Channel::A, 0, || {
+            // handle bus reset in interrupt handler for lowest latency
             usb1.bus_reset();
             dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
 

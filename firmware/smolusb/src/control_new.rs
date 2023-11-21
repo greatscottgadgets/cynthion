@@ -2,7 +2,7 @@
 
 use core::marker::PhantomData;
 
-use log::{debug, error, info, warn};
+use log::{debug, error, info, trace, warn};
 
 use crate::device::Speed;
 use crate::event::UsbEvent;
@@ -28,7 +28,7 @@ impl Callback {
         D: UsbDriver
     {
         use Callback::*;
-        //info!("  callback {:?}", self);
+        trace!("  callback {:?}", self);
         ladybug::trace(Channel::B, 5, || {
             match *self {
                 SetAddress(address) => {
@@ -124,6 +124,7 @@ where
         use UsbEvent::*;
         match event {
             BusReset => {
+                // TODO if latency allows, do this here: usb.bus_reset();
                 self.bus_reset();
                 None
             }
@@ -202,7 +203,7 @@ where
 
     fn receive_control(&mut self, usb: &D, setup_packet: SetupPacket) -> Option<SetupPacket> {
         if !matches!(self.state, State::Idle) {
-            // TODO warn!("Control::receive_control() not idle");
+            debug!("TODO Control::receive_control() not idle");
         }
 
         let direction = setup_packet.direction();
@@ -219,10 +220,12 @@ where
         let request_type = setup_packet.request_type();
         let request = setup_packet.request();
 
-        debug!(
-            "Starting {} {} bytes, {:?} {:?} {:?} ",
-            self.state, length, request_type, request, setup_packet.value.to_le_bytes()
-        );
+        if !matches!(request, Request::SetAddress) {
+            debug!(
+                "Starting {} {} bytes, {:?} {:?} {:?} ",
+                self.state, length, request_type, request, setup_packet.value.to_le_bytes()
+            );
+        }
 
         match (direction, &request_type, &request) {
             (Direction::DeviceToHost, RequestType::Standard, Request::GetDescriptor) => {
@@ -281,17 +284,17 @@ where
             }
 
             (_, RequestType::Standard, Request::ClearFeature) => { // TODO Direction ?
-                info!("  Request::ClearFeature {:?}", direction);
+                info!("  TODO Request::ClearFeature {:?}", direction);
                 // TODO
             }
 
             (_, RequestType::Standard, Request::SetFeature) => { // TODO Direction ?
-                info!("  Request::SetFeature {:?}", direction);
+                info!("  TODO Request::SetFeature {:?}", direction);
                 // TODO
             }
 
             (_, RequestType::Standard, Request::GetStatus) => { // TODO Direction ?
-                info!("  Request::GetStatus {:?}", direction);
+                info!("  TODO Request::GetStatus {:?}", direction);
                 // TODO
             }
 
@@ -338,16 +341,18 @@ where
         // handle the packet
         match self.state {
             State::Data(Direction::DeviceToHost, setup_packet) => {
-                // this should NOT be firing after GetDescriptor
-                warn!("  receive_packet() TODO Data(DeviceToHost) {} bytes", bytes_read);
-                /*if bytes_read != 0 {
+                // we received a zlp from the host acknowledging the successful
+                // completion of an IN data stage.
+                // e.g. FIXME after receipt of libgreat responses ?!@?@!!
+                debug!("  receive_packet() TODO Data(DeviceToHost) {} bytes", bytes_read);
+                if bytes_read != 0 {
                     warn!("  TODO this should not have happened");
                 }
-                self.set_state(State::Idle);*/
+                //self.set_state(State::Status(Direction::DeviceToHost);
             }
             State::Status(Direction::DeviceToHost) => {
                 // we received a zlp from the host acknowledging the successful
-                // completion of an IN data stage. TODO check bytes_read == 0?
+                // completion of an IN status stage.
                 // e.g. after receipt of GetDescriptor data
                 if bytes_read != 0 {
                     warn!("  TODO this should also not have happened");
@@ -383,14 +388,14 @@ where
                 }
             }
             State::Status(Direction::HostToDevice) => {
-                warn!("  receive_packet() TODO Status(HostToDevice)");
+                debug!("  receive_packet() TODO Status(HostToDevice)");
             }
 
             State::Stalled => {
                 warn!("  receive_packet() TODO Stalled state");
             }
             State::Idle => {
-                warn!("  receive_packet() should not be in Idle state");
+                debug!("  receive_packet() TODO should not be in Idle state");
             }
         }
 
@@ -405,7 +410,7 @@ where
         let bytes_read = packet_buffer.len();
         let bytes_expected = setup_packet.length as usize;
 
-        debug!("  append_packet() {} bytes ({}/{})", bytes_read, bytes_read + self.rx_buffer_position, bytes_expected);
+        trace!("  append_packet() {} bytes ({}/{})", bytes_read, self.rx_buffer_position, bytes_expected);
 
         // guards
         if bytes_read == 0 { // && rx_buffer_position > 0
@@ -454,7 +459,7 @@ where
                 self.set_state(State::Status(Direction::DeviceToHost))
             }
             State::Status(Direction::DeviceToHost) => {
-                warn!("  send_complete() TODO Status(DeviceToHost)");
+                debug!("  send_complete() TODO Status(DeviceToHost)");
             }
 
             State::Data(Direction::HostToDevice, setup_packet) => {

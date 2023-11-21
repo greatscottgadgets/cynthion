@@ -60,12 +60,12 @@ where
 
 // - helpers ------------------------------------------------------------------
 
-pub type GreatResponse<'a> = core::iter::Take<core::array::IntoIter<u8, LIBGREAT_MAX_COMMAND_SIZE>>;
+pub type GreatResponse = core::iter::Take<core::array::IntoIter<u8, LIBGREAT_MAX_COMMAND_SIZE>>;
 
-pub unsafe fn iter_to_response<'a>(
+pub unsafe fn iter_to_response(
     iter: impl Iterator<Item = u8>,
     mut response: [u8; LIBGREAT_MAX_COMMAND_SIZE],
-) -> GreatResponse<'a> {
+) -> GreatResponse {
     let mut length = 0;
     for (ret, src) in response.iter_mut().zip(iter) {
         *ret = src;

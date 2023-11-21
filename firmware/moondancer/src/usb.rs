@@ -167,25 +167,25 @@ pub static OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
         )],
     );
 
-pub static USB_STRING_DESCRIPTOR_0: StringDescriptorZero =
+pub static STRING_DESCRIPTOR_0: StringDescriptorZero =
     StringDescriptorZero::new(&[LanguageId::EnglishUnitedStates]);
 
-pub static USB_STRING_DESCRIPTOR_1: StringDescriptor =
+pub static STRING_DESCRIPTOR_1: StringDescriptor =
     StringDescriptor::new(cynthion::shared::usb::bManufacturerString::cynthion); // manufacturer
-pub static USB_STRING_DESCRIPTOR_2: StringDescriptor =
+pub static STRING_DESCRIPTOR_2: StringDescriptor =
     StringDescriptor::new(cynthion::shared::usb::bProductString::cynthion); // product
-pub static USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new(DEVICE_SERIAL_STRING); // serial
-pub static USB_STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config0"); // configuration #0
-pub static USB_STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("interface0"); // interface #0
-pub static USB_STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("interface1"); // interface #1
-pub static USB_STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("config1"); // configuration #1
+pub static STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new(DEVICE_SERIAL_STRING); // serial
+pub static STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config0"); // configuration #0
+pub static STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("interface0"); // interface #0
+pub static STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("interface1"); // interface #1
+pub static STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("config1"); // configuration #1
 
-pub static USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
-    &USB_STRING_DESCRIPTOR_1,
-    &USB_STRING_DESCRIPTOR_2,
-    &USB_STRING_DESCRIPTOR_3,
-    &USB_STRING_DESCRIPTOR_4,
-    &USB_STRING_DESCRIPTOR_5,
-    &USB_STRING_DESCRIPTOR_6,
-    &USB_STRING_DESCRIPTOR_7,
+pub static STRING_DESCRIPTORS: &[&StringDescriptor] = &[
+    &STRING_DESCRIPTOR_1,
+    &STRING_DESCRIPTOR_2,
+    &STRING_DESCRIPTOR_3,
+    &STRING_DESCRIPTOR_4,
+    &STRING_DESCRIPTOR_5,
+    &STRING_DESCRIPTOR_6,
+    &STRING_DESCRIPTOR_7,
 ];
