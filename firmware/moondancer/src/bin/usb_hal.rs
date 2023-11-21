@@ -7,7 +7,7 @@ use log::{debug, error, info, warn};
 
 use libgreat::{GreatError, GreatResult};
 
-use smolusb::control_new::{Control, Descriptors};
+use smolusb::control::{Control, Descriptors};
 use smolusb::descriptor::*;
 use smolusb::device::{Speed, UsbDevice};
 use smolusb::event::UsbEvent;

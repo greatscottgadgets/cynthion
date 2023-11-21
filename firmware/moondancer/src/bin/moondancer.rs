@@ -9,8 +9,8 @@ use heapless::mpmc::MpMcQueue as Queue;
 use log::{debug, error, info, trace, warn};
 
 use smolusb::class;
-use smolusb::control::ControlEvent; // TODO lose
-use smolusb::control_new::{Control, Descriptors};
+use smolusb::control_deprecated::ControlEvent; // TODO lose
+use smolusb::control::{Control, Descriptors};
 use smolusb::device::{Speed, UsbDevice};
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Direction, RequestType, SetupPacket};
@@ -408,7 +408,7 @@ impl<'a> Firmware<'a> {
 
 
     /// Handle any control packets that weren't handled by UsbDevice
-    fn handle_control_event(
+    fn handle_control_deprecated_event(
         &mut self,
         control_event: ControlEvent<'a, { libgreat::gcp::LIBGREAT_MAX_COMMAND_SIZE }>,
     ) -> GreatResult<()> {

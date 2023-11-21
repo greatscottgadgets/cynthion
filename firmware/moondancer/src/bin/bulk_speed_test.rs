@@ -6,7 +6,7 @@ use log::{debug, error, info};
 
 use libgreat::GreatResult;
 
-use smolusb::control_new::{Control, Descriptors};
+use smolusb::control::{Control, Descriptors};
 use smolusb::descriptor::*;
 use smolusb::device::Speed;
 use smolusb::event::UsbEvent;
@@ -61,18 +61,28 @@ fn MachineExternal() {
         ladybug::trace(Channel::A, 1, || {
             let endpoint = usb0.ep_control.epno.read().bits() as u8;
 
-            use smolusb::setup::SetupPacket;
-            use smolusb::traits::ReadControl;
-            let mut buffer = [0_u8; 8];
-            let _bytes_read = usb0.read_control(&mut buffer);
-            let setup_packet = SetupPacket::from(buffer);
-            let event = InterruptEvent::Usb(
-                Target,
-                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
-            );
+            #[cfg(not(feature="chonky_events"))]
+            {
+                dispatch_event(InterruptEvent::Usb(
+                    Target,
+                    UsbEvent::ReceiveControl(endpoint),
+                ));
+            }
+
+            #[cfg(feature="chonky_events")]
+            {
+                use smolusb::setup::SetupPacket;
+                use smolusb::traits::ReadControl;
+                let mut buffer = [0_u8; 8];
+                let _bytes_read = usb0.read_control(&mut buffer);
+                let setup_packet = SetupPacket::from(buffer);
+                dispatch_event(InterruptEvent::Usb(
+                    Target,
+                    UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
+                ));
+            }
 
             usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-            dispatch_event(event);
         });
 
     // USB0_EP_IN SendComplete
@@ -236,25 +246,19 @@ fn main_loop() -> GreatResult<()> {
                 // - usb0 event handlers --
 
                 // Usb0 received a control event
+                #[cfg(feature="chonky_events")]
                 Usb(Target, event @ BusReset)
                 | Usb(Target, event @ ReceiveControl(0))
                 | Usb(Target, event @ ReceiveSetupPacket(0, _))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
-                    //debug!("\n\nUsb(Target, {:?})", event);
-                    /*match usb0
-                        .dispatch_control(event)
-                        .map_err(|_| GreatError::IoError)?
-                    {
-                        Some(control_event) => {
-                            // handle any events control couldn't
-                            warn!("Unhandled control event: {:?}", control_event);
-                        }
-                        None => {
-                            // control event was handled by UsbDevice
-                        }
-                    }*/
-
+                    control.handle_event(&usb0, event);
+                }
+                #[cfg(not(feature="chonky_events"))]
+                Usb(Target, event @ BusReset)                 |
+                Usb(Target, event @ ReceiveControl(0))        |
+                Usb(Target, event @ ReceivePacket(0))         |
+                Usb(Target, event @ SendComplete(0)) => {
                     control.handle_event(&usb0, event);
                 }
 

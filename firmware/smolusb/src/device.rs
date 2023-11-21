@@ -5,7 +5,7 @@ use core::sync::atomic::{AtomicU8, Ordering};
 
 use log::{debug, error, info, trace, warn};
 
-use crate::control::{Control, ControlEvent};
+use crate::control_deprecated::{Control, ControlEvent};
 use crate::descriptor::*;
 use crate::error::{SmolError, SmolResult};
 use crate::event::UsbEvent;
@@ -95,6 +95,7 @@ pub enum DeviceState {
 ///     * a configuration descriptor
 ///     * a set of string descriptors
 ///
+/// TODO this is deprecated deleteme
 pub struct UsbDevice<'a, D, const MAX_RECEIVE_SIZE: usize> {
     pub hal_driver: D,
 

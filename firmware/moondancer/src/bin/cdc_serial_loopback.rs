@@ -5,7 +5,7 @@
 use log::{debug, error, info};
 
 use smolusb::class::cdc;
-use smolusb::control_new::{Control, Descriptors};
+use smolusb::control::{Control, Descriptors};
 use smolusb::descriptor::DescriptorType;
 use smolusb::device::Speed;
 use smolusb::event::UsbEvent;
