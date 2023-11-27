@@ -8,8 +8,6 @@ use crate::event::UsbEvent;
 use crate::setup::{Direction, Request, RequestType, SetupPacket};
 use crate::traits::{AsByteSliceIterator, UsbDriver};
 
-use ladybug::Channel;
-
 // - Control ------------------------------------------------------------------
 
 #[derive(Debug)]
@@ -27,26 +25,24 @@ impl Callback {
     {
         use Callback::*;
         trace!("  callback {:?}", self);
-        ladybug::trace(Channel::B, 5, || {
-            match *self {
-                SetAddress(address) => {
-                    usb.set_address(address);
-                    State::Idle
-                }
-                Ack(endpoint_number, Direction::DeviceToHost)
+        match *self {
+            SetAddress(address) => {
+                usb.set_address(address);
+                State::Idle
+            }
+            Ack(endpoint_number, Direction::DeviceToHost)
                 | EndpointOutPrimeReceive(endpoint_number) => {
                     // DeviceToHost - IN request,  prime the endpoint because the host will send a zlp to the device
                     usb.ack(endpoint_number, Direction::DeviceToHost);
                     control_state
                 }
-                Ack(endpoint_number, Direction::HostToDevice)
+            Ack(endpoint_number, Direction::HostToDevice)
                 | EndpointInSendZLP(endpoint_number) => {
                     // HostToDevice - OUT request, send a ZLP from the device to the host
                     usb.ack(endpoint_number, Direction::HostToDevice);
                     control_state
                 }
-            }
-        })
+        }
     }
 }
 
@@ -156,11 +152,6 @@ where
                 }
                 let mut packet_buffer: [u8; 512] = [0; 512];
                 let bytes_read = usb.read(self.endpoint_number, &mut packet_buffer);
-
-                // pulse zlp reads
-                if bytes_read == 0 {
-                    ladybug::trace(Channel::B, 7, || {});
-                }
 
                 let result = self.receive_packet(usb, &packet_buffer[..bytes_read]);
 

@@ -49,24 +49,24 @@ fn dispatch_event(event: InterruptEvent) {
 fn MachineExternal() {
     use moondancer::UsbInterface::Target;
 
-    let usb1 = unsafe { hal::Usb1::summon() };
+    let usb0 = unsafe { hal::Usb0::summon() };
 
-    // - usb1 interrupts - "aux_phy" --
+    // - usb0 interrupts - "target_phy" --
 
-    // USB1 BusReset
-    if usb1.is_pending(pac::Interrupt::USB1) {
+    // USB0 BusReset
+    if usb0.is_pending(pac::Interrupt::USB0) {
         ladybug::trace(Channel::B, Bit::IRQ_BUS_RESET, || {
             // handle bus reset in interrupt handler for lowest latency
-            usb1.bus_reset();
+            usb0.bus_reset();
             dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
 
-            usb1.clear_pending(pac::Interrupt::USB1);
+            usb0.clear_pending(pac::Interrupt::USB0);
         });
 
-    // USB1_EP_CONTROL ReceiveControl
-    } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
+    // USB0_EP_CONTROL ReceiveControl
+    } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         ladybug::trace(Channel::B, Bit::IRQ_EP_CONTROL, || {
-            let endpoint = usb1.ep_control.epno.read().bits() as u8;
+            let endpoint = usb0.ep_control.epno.read().bits() as u8;
 
             #[cfg(not(feature = "chonky_events"))]
             {
@@ -78,9 +78,9 @@ fn MachineExternal() {
 
             #[cfg(feature = "chonky_events")]
             {
-                let endpoint = usb1.ep_control.epno.read().bits() as u8;
+                let endpoint = usb0.ep_control.epno.read().bits() as u8;
                 let mut buffer = [0_u8; 8];
-                let _bytes_read = usb1.read_control(&mut buffer);
+                let _bytes_read = usb0.read_control(&mut buffer);
                 let setup_packet = SetupPacket::from(buffer);
                 dispatch_event(InterruptEvent::Usb(
                     Target,
@@ -88,13 +88,13 @@ fn MachineExternal() {
                 ));
             }
 
-            usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
+            usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
         });
 
-    // USB1_EP_OUT ReceivePacket
-    } else if usb1.is_pending(pac::Interrupt::USB1_EP_OUT) {
+    // USB0_EP_OUT ReceivePacket
+    } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
         ladybug::trace(Channel::B, Bit::IRQ_EP_OUT, || {
-            let endpoint = usb1.ep_out.data_ep.read().bits() as u8;
+            let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
 
             #[cfg(not(feature = "chonky_events"))]
             {
@@ -109,7 +109,7 @@ fn MachineExternal() {
                 // #1 empty fifo into a receive buffer
                 let mut packet_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] =
                     [0; moondancer::EP_MAX_PACKET_SIZE];
-                let bytes_read = usb1.read(endpoint, &mut packet_buffer);
+                let bytes_read = usb0.read(endpoint, &mut packet_buffer);
 
                 // #2 dispatch receive buffer to the main loop
                 dispatch_event(InterruptEvent::Usb(
@@ -118,23 +118,23 @@ fn MachineExternal() {
                 ));
 
                 // #3 tell eptri we're ready to receive another packet
-                //usb1.ep_out_prime_receive(endpoint);
+                //usb0.ep_out_prime_receive(endpoint);
             }
 
             // #4 tell the cpu we're ready for another rx interrupt
-            usb1.clear_pending(pac::Interrupt::USB1_EP_OUT);
+            usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
         });
 
-    // USB1_EP_IN SendComplete
-    } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
+    // USB0_EP_IN SendComplete
+    } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
         ladybug::trace(Channel::B, Bit::IRQ_EP_IN, || {
-            let endpoint = usb1.ep_in.epno.read().bits() as u8;
+            let endpoint = usb0.ep_in.epno.read().bits() as u8;
             dispatch_event(InterruptEvent::Usb(
                 Target,
                 UsbEvent::SendComplete(endpoint),
             ));
 
-            usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
+            usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
         });
 
     // - Unknown Interrupt --
@@ -180,12 +180,12 @@ fn main_loop() -> GreatResult<()> {
     // initialize ladybug
     moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
-    // usb1: Target
-    let usb1 = hal::Usb1::new(
-        peripherals.USB1,
-        peripherals.USB1_EP_CONTROL,
-        peripherals.USB1_EP_IN,
-        peripherals.USB1_EP_OUT,
+    // usb0: Target
+    let usb0 = hal::Usb0::new(
+        peripherals.USB0,
+        peripherals.USB0_EP_CONTROL,
+        peripherals.USB0_EP_IN,
+        peripherals.USB0_EP_OUT,
     );
 
     // control
@@ -203,11 +203,11 @@ fn main_loop() -> GreatResult<()> {
     );
 
     // set controller speed
-    usb1.set_speed(DEVICE_SPEED);
+    usb0.set_speed(DEVICE_SPEED);
 
     // connect device
-    usb1.connect();
-    info!("Connected usb1 device");
+    usb0.connect();
+    info!("Connected usb0 device");
 
     // enable interrupts
     unsafe {
@@ -217,17 +217,17 @@ fn main_loop() -> GreatResult<()> {
         // set mie register: machine external interrupts enable
         riscv::register::mie::set_mext();
 
-        // write csr: enable usb1 interrupts and events
-        pac::csr::interrupt::enable(pac::Interrupt::USB1);
-        pac::csr::interrupt::enable(pac::Interrupt::USB1_EP_CONTROL);
-        pac::csr::interrupt::enable(pac::Interrupt::USB1_EP_IN);
-        pac::csr::interrupt::enable(pac::Interrupt::USB1_EP_OUT);
-        usb1.enable_interrupts();
+        // write csr: enable usb0 interrupts and events
+        pac::csr::interrupt::enable(pac::Interrupt::USB0);
+        pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_CONTROL);
+        pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_IN);
+        pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_OUT);
+        usb0.enable_interrupts();
     }
 
     // prime the usb OUT endpoint(s) we'll be using
-    //usb1.ep_out_prime_receive(0);
-    //usb1.ep_out_prime_receive(1);
+    //usb0.ep_out_prime_receive(0);
+    //usb0.ep_out_prime_receive(1);
 
     use moondancer::{event::InterruptEvent::*, UsbInterface::Target};
     use smolusb::event::UsbEvent::*;
@@ -237,7 +237,7 @@ fn main_loop() -> GreatResult<()> {
     loop {
         // 100uS from interrupt to dequeued
         if let Some(event) = EVENT_QUEUE.dequeue() {
-            // Usb1 received a control event
+            // Usb0 received a control event
             match event {
                 #[cfg(feature = "chonky_events")]
                 Usb(Target, event @ BusReset)
@@ -247,12 +247,12 @@ fn main_loop() -> GreatResult<()> {
                 | Usb(Target, event @ ReceiveBuffer(0, _, _))
                 | Usb(Target, event @ SendComplete(0)) => {
                     let result =
-                        ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || control.handle_event(&usb1, event));
+                        ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || control.handle_event(&usb0, event));
                     match result {
                         // vendor requests are not handled by control
                         Some((setup_packet, rx_buffer)) => {
                             ladybug::trace(Channel::A, Bit::MD_HANDLE_VENDOR, || {
-                                handle_vendor_request(&usb1, setup_packet, rx_buffer);
+                                handle_vendor_request(&usb0, setup_packet, rx_buffer);
                             });
                         }
                         // control event was handled
@@ -265,12 +265,12 @@ fn main_loop() -> GreatResult<()> {
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
                     let result =
-                        ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || control.handle_event(&usb1, event));
+                        ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || control.handle_event(&usb0, event));
                     match result {
                         // vendor requests are not handled by control
                         Some((setup_packet, rx_buffer)) => {
                             ladybug::trace(Channel::A, Bit::MD_HANDLE_VENDOR, || {
-                                handle_vendor_request(&usb1, setup_packet, rx_buffer);
+                                handle_vendor_request(&usb0, setup_packet, rx_buffer);
                             });
                         }
                         // control event was handled
@@ -278,10 +278,10 @@ fn main_loop() -> GreatResult<()> {
                     }
                 }
                 Usb(Target, ReceivePacket(endpoint)) => {
-                    log::info!("USB1 Event: {:?}", event);
+                    log::info!("USB0 Event: {:?}", event);
                 }
                 Usb(Target, SendComplete(_endpoint)) => {
-                    log::info!("USB1 Event: {:?}", event);
+                    log::info!("USB0 Event: {:?}", event);
                 }
                 _ => {
                     error!("Unhandled event: {:?}", event);

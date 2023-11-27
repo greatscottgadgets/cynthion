@@ -30,8 +30,8 @@ impl Bit {
     pub const IRQ_EP_OUT: u8 = 3;
 
     // moondancer
-    //pub const MD_HANDLE_EVENT: u8 = 0;
-    //pub const MD_HANDLE_VENDOR: u8 = 1;
+    pub const MD_HANDLE_EVENT: u8 = 0;
+    pub const MD_HANDLE_VENDOR: u8 = 1;
 
     // gcp
     pub const GCP_HANDLE_EVENT: u8 = 0;
