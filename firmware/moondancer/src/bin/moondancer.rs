@@ -264,6 +264,7 @@ impl<'a> Firmware<'a> {
                     // Usb1 received a control event
                     Usb(Aux, event @ BusReset)
                     | Usb(Aux, event @ ReceiveControl(0))
+                    | Usb(Aux, event @ ReceiveSetupPacket(0, _))
                     | Usb(Aux, event @ ReceivePacket(0))
                     | Usb(Aux, event @ SendComplete(0)) => {
                         trace!("Usb(Aux, {:?})", event);
