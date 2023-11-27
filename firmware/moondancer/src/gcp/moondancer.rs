@@ -472,38 +472,52 @@ impl Moondancer {
         // TODO better handling for blocking
         if blocking {
             unsafe {
-                self.usb0.set_tx_ack_active();
+                self.usb0.set_tx_ack_active(endpoint_number);
             }
         }
 
         // TODO we can probably just use write_packets here
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
-        if payload_length > max_packet_size {
+        let bytes_written = if payload_length > max_packet_size {
             self.usb0
-                .write_packets(endpoint_number, payload.copied(), max_packet_size);
+                .write_packets(endpoint_number, payload.copied(), max_packet_size)
         } else {
-            self.usb0.write_ref(endpoint_number, payload);
-        }
+            self.usb0.write_ref(endpoint_number, payload)
+        };
 
         // TODO better handling for blocking
-        if blocking {
+        let mut timeout = 0;
+        /*if blocking {
             // wait for the response packet to get sent
             loop {
-                let active = unsafe { self.usb0.is_tx_ack_active() };
+                timeout += 1;
+                if timeout > 10_000_000 {
+                    log::error!("MD moondancer::write_endpoint timed out");
+                    break;
+                }
+                let active = unsafe { self.usb0.is_tx_ack_active(endpoint_number) };
                 if active == false {
                     break;
                 }
             }
+        }*/
+        while blocking && self.usb0.ep_in.have.read().have().bit() {
+            timeout += 1;
+            if timeout > 10_000_000 {
+                log::error!("MD moondancer::write_endpoint timed out");
+                break;
+            }
         }
 
         if payload_length > 0 {
-            log::debug!(
-                "MD moondancer::write_endpoint(endpoint_number:{}, blocking:{} payload.len:{} ({})) max_packet_size:{}",
+            log::info!(
+                "MD moondancer::write_endpoint(endpoint_number:{}, blocking:{} payload.len:{} ({})) max_packet_size:{} bytes_written:{}",
                 endpoint_number,
                 blocking,
                 payload_length,
                 args.payload.iter().count(),
                 max_packet_size,
+                bytes_written,
             );
         }
 

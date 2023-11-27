@@ -390,55 +390,67 @@ macro_rules! impl_usb {
             // This is not a particularly safe approach.
             #[allow(non_snake_case)]
             mod $USBX_CONTROLLER {
-                #[cfg(not(target_has_atomic))]
-                pub static mut TX_ACK_ACTIVE: bool = false;
+                use smolusb::EP_MAX_ENDPOINTS;
+
                 #[cfg(target_has_atomic)]
-                pub static TX_ACK_ACTIVE: core::sync::atomic::AtomicBool =
-                    core::sync::atomic::AtomicBool::new(false);
+                const ATOMIC_FALSE: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
+
+                #[cfg(not(target_has_atomic))]
+                pub static mut TX_ACK_ACTIVE: [bool; EP_MAX_ENDPOINTS] = [false; EP_MAX_ENDPOINTS];
+                #[cfg(target_has_atomic)]
+                pub static TX_ACK_ACTIVE: [core::sync::atomic::AtomicBool; EP_MAX_ENDPOINTS] =
+                    [ATOMIC_FALSE; EP_MAX_ENDPOINTS];
+
             }
 
             impl UnsafeUsbDriverOperations for $USBX {
                 #[inline(always)]
-                unsafe fn set_tx_ack_active(&self) {
+                unsafe fn set_tx_ack_active(&self, endpoint_number: u8) {
                     #[cfg(not(target_has_atomic))]
                     {
+                        let endpoint_number = endpoint_number as usize;
                         riscv::interrupt::free(|| {
-                            $USBX_CONTROLLER::TX_ACK_ACTIVE = true;
+                            $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number] = true;
                         });
                     }
                     #[cfg(target_has_atomic)]
                     {
+                        let endpoint_number = endpoint_number as usize;
                         use core::sync::atomic::Ordering;
-                        $USBX_CONTROLLER::TX_ACK_ACTIVE.store(true, Ordering::Relaxed);
+                        $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].store(true, Ordering::Relaxed);
                     }
                 }
                 #[inline(always)]
-                unsafe fn clear_tx_ack_active(&self) {
+                unsafe fn clear_tx_ack_active(&self, endpoint_number: u8) {
                     #[cfg(not(target_has_atomic))]
                     {
+                        let endpoint_number = endpoint_number as usize;
                         riscv::interrupt::free(|| {
-                            $USBX_CONTROLLER::TX_ACK_ACTIVE = false;
+                            $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number] = false;
                         });
                     }
                     #[cfg(target_has_atomic)]
                     {
+                        let endpoint_number = endpoint_number as usize;
                         use core::sync::atomic::Ordering;
-                        $USBX_CONTROLLER::TX_ACK_ACTIVE.store(false, Ordering::Relaxed);
+                        $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].store(false, Ordering::Relaxed);
                     }
                 }
                 #[inline(always)]
-                unsafe fn is_tx_ack_active(&self) -> bool {
+                unsafe fn is_tx_ack_active(&self, endpoint_number: u8) -> bool {
                     #[cfg(not(target_has_atomic))]
                     {
+                        let endpoint_number = endpoint_number as usize;
                         let active = riscv::interrupt::free(|| {
-                            $USBX_CONTROLLER::TX_ACK_ACTIVE
+                            $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number]
                         });
                         active
                     }
                     #[cfg(target_has_atomic)]
                     {
+                        let endpoint_number = endpoint_number as usize;
                         use core::sync::atomic::Ordering;
-                        $USBX_CONTROLLER::TX_ACK_ACTIVE.load(Ordering::Relaxed)
+                        $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].load(Ordering::Relaxed)
                     }
                 }
             }
@@ -563,7 +575,7 @@ macro_rules! impl_usb {
                 where
                     I: Iterator<Item = u8>
                 {
-                    $LADYBUG_TRACE(Channel::A, Bit::USB_WRITE, || {
+                    $LADYBUG_TRACE(Channel::B, Bit::B_USB_BULK_WRITE, || {
                         // reset output fifo if needed
                         // FIXME rather return an error
                         if self.ep_in.have.read().have().bit() {
@@ -652,6 +664,60 @@ macro_rules! impl_usb {
             }
 
             impl WriteRefEndpoint for $USBX {
+                fn write_bulk_ref<'a, I>(&self, endpoint_number: u8, iter: I, packet_size: usize) -> usize
+                where
+                    I: Iterator<Item = &'a u8>
+                {
+                    $LADYBUG_TRACE(Channel::B, Bit::B_USB_BULK_WRITE, || {
+                        // reset output fifo if needed
+                        // FIXME rather return an error
+                        if self.ep_in.have.read().have().bit() {
+                            warn!("  {} clear tx", stringify!($USBX));
+                            self.ep_in.reset.write(|w| w.reset().bit(true));
+                        }
+
+                        // write data as multiple packets
+                        let mut timeout = 0;
+                        let mut bytes_written: usize = 0;
+                        for byte in iter {
+                            self.ep_in.data.write(|w| unsafe { w.data().bits(*byte) });
+                            bytes_written += 1;
+                            // end of chunk - transmit packet
+                            if bytes_written % packet_size == 0 {
+                                // prime IN endpoint
+                                self.ep_in
+                                    .epno
+                                    .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                                // wait for transmission to complete
+                                // FIXME it may be better if this blocked on the USB_EP_IN interrupt.
+                                while self.ep_in.have.read().have().bit() {
+                                    timeout += 1;
+                                    if timeout > 5_000_000 {
+                                        log::error!(
+                                            "{}::write_packets timed out after {} bytes",
+                                            stringify!($USBX),
+                                            bytes_written
+                                        );
+                                        break;
+                                    }
+                                }
+                                //unsafe { riscv::asm::delay(10000); }
+                            }
+                        }
+
+                        // finally prime IN endpoint
+                        self.ep_in
+                            .epno
+                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
+
+                        if bytes_written == 0 {
+                            $LADYBUG_TRACE(Channel::A, Bit::USB_TX_ZLP, || {});
+                        }
+
+                        bytes_written
+                    })
+                }
+
                 #[inline(always)]
                 fn write_ref<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
                 where

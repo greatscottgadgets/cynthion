@@ -16,8 +16,10 @@ pub mod traits;
 pub use error::SmolError;
 pub use error::SmolResult;
 
-// TODO const template structs
+/// USB devices can define up to 32 endpoints. 16 IN and 16 OUT.
 pub const EP_MAX_ENDPOINTS: usize = 16;
+
+// TODO const template struct
 pub const EP_MAX_PACKET_SIZE: usize = 512;
 
 pub mod event {

@@ -49,9 +49,9 @@ pub trait UsbDriverOperations {
 }
 
 pub trait UnsafeUsbDriverOperations {
-    unsafe fn set_tx_ack_active(&self);
-    unsafe fn clear_tx_ack_active(&self);
-    unsafe fn is_tx_ack_active(&self) -> bool;
+    unsafe fn set_tx_ack_active(&self, endpoint_number: u8);
+    unsafe fn clear_tx_ack_active(&self, endpoint_number: u8);
+    unsafe fn is_tx_ack_active(&self, endpoint_number: u8) -> bool;
 }
 
 // - UsbRead/UsbWrite ---------------------------------------------------------
@@ -86,7 +86,7 @@ pub trait WriteEndpoint {
     /// Write iterator to multiple packets
     ///
     /// Returns the number of bytes written to the endpoint.
-    fn write_packets<'a, I>(&self, endpoint_number: u8, iter: I, packet_size: usize) -> usize
+    fn write_packets<'a, I>(&self, endpoint_number: u8, iter: I, max_packet_size: usize) -> usize
     where
         I: Iterator<Item = u8>;
 }
@@ -98,6 +98,14 @@ pub trait WriteRefEndpoint {
     fn write_ref<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
     where
         I: Iterator<Item = &'a u8>;
+
+    /// Write iterator in multiple packets
+    ///
+    /// Returns the number of bytes written to the endpoint.
+    fn write_bulk_ref<'a, I>(&self, endpoint_number: u8, iter: I, max_packet_size: usize) -> usize
+    where
+        I: Iterator<Item = &'a u8>;
+
 }
 
 // - AsIterator ---------------------------------------------------------------

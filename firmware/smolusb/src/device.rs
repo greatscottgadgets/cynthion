@@ -358,7 +358,7 @@ mod deprecated {
                 // set tx_ack_active flag
                 // TODO a slighty safer approach would be nice
                 unsafe {
-                    self.hal_driver.set_tx_ack_active();
+                    self.hal_driver.set_tx_ack_active(0);
                 }
 
                 // respond with ack status first before changing device address
@@ -367,7 +367,7 @@ mod deprecated {
                 // wait for the response packet to get sent
                 // TODO a slightly safer approach would be nice
                 loop {
-                    let active = unsafe { self.hal_driver.is_tx_ack_active() };
+                    let active = unsafe { self.hal_driver.is_tx_ack_active(0) };
                     if active == false {
                         break;
                     }
