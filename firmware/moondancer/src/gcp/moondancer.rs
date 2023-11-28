@@ -71,12 +71,6 @@ impl Moondancer {
                 UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
             ) => {
                 // queue setup packet and convert to a control event
-
-                // TODO this should no longer be necessary
-                if setup_packet.request_type == 0 && setup_packet.request == 0 {
-                    log::warn!("MD => {:?} dropping GetStatus", event);
-                    return;
-                }
                 match self.control_queue.enqueue(setup_packet) {
                     Ok(()) => (),
                     Err(_) => {
@@ -469,13 +463,6 @@ impl Moondancer {
         let payload_length = args.payload.len();
         let payload = args.payload.clone().iter();
 
-        // TODO better handling for blocking
-        if blocking {
-            unsafe {
-                self.usb0.set_tx_ack_active(endpoint_number);
-            }
-        }
-
         // TODO we can probably just use write_packets here
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
         let bytes_written = if payload_length > max_packet_size {
@@ -485,29 +472,29 @@ impl Moondancer {
             self.usb0.write_ref(endpoint_number, payload)
         };
 
+        // prime endpoint to receive zlp ack from host or should the remote do this?
+        self.usb0.ack(endpoint_number, Direction::DeviceToHost);
+
         // TODO better handling for blocking
         let mut timeout = 0;
-        /*if blocking {
-            // wait for the response packet to get sent
-            loop {
-                timeout += 1;
-                if timeout > 10_000_000 {
-                    log::error!("MD moondancer::write_endpoint timed out");
-                    break;
-                }
-                let active = unsafe { self.usb0.is_tx_ack_active(endpoint_number) };
-                if active == false {
-                    break;
-                }
+        while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
+            timeout += 1;
+            if timeout > 50_000_000 {
+                unsafe { self.usb0.clear_tx_ack_active(endpoint_number); }
+                log::error!(
+                    "MD moondancer::write_endpoint timed out writing {} bytes. Sent {} bytes.",
+                    payload_length, bytes_written
+                );
+                break;
             }
-        }*/
-        while blocking && self.usb0.ep_in.have.read().have().bit() {
+        }
+        /*while blocking && self.usb0.ep_in.have.read().have().bit() {
             timeout += 1;
             if timeout > 10_000_000 {
                 log::error!("MD moondancer::write_endpoint timed out");
                 break;
             }
-        }
+        }*/
 
         if payload_length > 0 {
             log::info!(

@@ -467,7 +467,14 @@ impl<'a> Firmware<'a> {
             let _bytes_to_send = response.len();
 
             debug!("dispatch_libgreat_response -> {} bytes", response.len());
-            self.usb1.write_packets(0, response, 64);
+
+            // TODO we can probably just use write_packets here
+            if response.len() > 64 {
+                info!("wp: {}", response.len());
+                self.usb1.write_packets(0, response, 64);
+            } else {
+                self.usb1.write(0, response);
+            }
 
             // prime to receive host zlp - TODO should control do this in send_complete?
             self.usb1.ack(0, Direction::DeviceToHost);
