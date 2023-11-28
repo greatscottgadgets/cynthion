@@ -278,6 +278,19 @@ where
                 usb.ack(self.endpoint_number, Direction::DeviceToHost);
             }
 
+            (Direction::DeviceToHost, RequestType::Standard, Request::GetStatus) => {
+                let recipient = setup_packet.recipient();
+
+                log::info!("  Request::GetStatus recipient:{:?}", recipient);
+
+                let status: u16 = 0b00; // TODO bit 1:remote-wakeup bit 0:self-powered
+
+                usb.write(0, status.to_le_bytes().into_iter());
+
+                // prepare to receive ZLP from host to end status stage
+                usb.ack(0, Direction::DeviceToHost);
+            }
+
             (_, RequestType::Standard, Request::ClearFeature) => {
                 // TODO Direction ?
                 info!("  TODO Request::ClearFeature {:?}", direction);
@@ -290,17 +303,10 @@ where
                 // TODO
             }
 
-            (_, RequestType::Standard, Request::GetStatus) => {
-                // TODO Direction ?
-                info!("  TODO Request::GetStatus {:?}", direction);
-                // TODO
-            }
-
             // unknown requests
             (Direction::HostToDevice, _, _) => {
                 if length == 0 {
                     // no incoming data from host so we can pass it back to the caller for handling
-                    warn!("  TODO should this ever happen?");
                     return Some(setup_packet);
                 } else {
                     // has incoming data from host so we should hold on to it for now

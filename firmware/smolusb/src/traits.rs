@@ -13,7 +13,7 @@ pub trait UsbDriver:
     + ReadEndpoint
     + WriteEndpoint
     + UsbDriverOperations
-    + UnsafeUsbDriverOperations
+    + UnsafeUsbDriverOperations // FIXME this should not be part of the default set
 {
 }
 
@@ -70,12 +70,8 @@ pub trait ReadEndpoint {
     fn read(&self, endpoint_number: u8, buffer: &mut [u8]) -> usize;
 }
 
-// TODO These two should be one trait
-// TODO write_packets() should just be write() rather than having to deal with two cases
-// TODO implementation should take max_packet_size from device speed
-
 pub trait WriteEndpoint {
-    /// Write iterator to a single packet
+    /// TODO remove once new write is stabilized
     ///
     /// Returns the number of bytes written to the endpoint.
     fn old_write<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
@@ -88,7 +84,6 @@ pub trait WriteEndpoint {
     fn write<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
     where
         I: Iterator<Item = u8>;
-
 
     /// Write iterator to endpoint using the given packet size
     ///
