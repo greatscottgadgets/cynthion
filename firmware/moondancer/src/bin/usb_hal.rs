@@ -24,7 +24,7 @@ use ladybug::{Bit, Channel};
 
 // - configuration ------------------------------------------------------------
 
-const DEVICE_SPEED: Speed = Speed::Full;
+const DEVICE_SPEED: Speed = Speed::High;
 
 const VENDOR_REQUEST: u8 = 0x65;
 const VENDOR_VALUE_CONTROL_OUT: u16 = 0x0001;
@@ -394,6 +394,9 @@ where
 
 // - usb descriptors ----------------------------------------------------------
 
+const DESCRIPTOR_MAX_PACKET_SIZE: u16 = if matches!(DEVICE_SPEED, Speed::High) {512} else {64};
+const OTHER_DESCRIPTOR_MAX_PACKET_SIZE: u16 = if matches!(DEVICE_SPEED, Speed::High) {64} else {512};
+
 static USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     descriptor_version: 0x0200,
     device_class: 0x00,
@@ -442,14 +445,14 @@ static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDe
             EndpointDescriptor {
                 endpoint_address: ENDPOINT_BULK_OUT,
                 attributes: 0x02,       // Bulk
-                max_packet_size: 512,
+                max_packet_size: DESCRIPTOR_MAX_PACKET_SIZE,
                 interval: 0,
                 ..EndpointDescriptor::new()
             },
             EndpointDescriptor {
                 endpoint_address: ENDPOINT_BULK_IN,
                 attributes: 0x02,       // Bulk
-                max_packet_size: 512,
+                max_packet_size: DESCRIPTOR_MAX_PACKET_SIZE,
                 interval: 0,
                 ..EndpointDescriptor::new()
             },
@@ -481,14 +484,14 @@ static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
                 EndpointDescriptor {
                     endpoint_address: ENDPOINT_BULK_OUT,
                     attributes: 0x02,       // Bulk
-                    max_packet_size: 64,
+                    max_packet_size: OTHER_DESCRIPTOR_MAX_PACKET_SIZE,
                     interval: 0,
                     ..EndpointDescriptor::new()
                 },
                 EndpointDescriptor {
                     endpoint_address: ENDPOINT_BULK_IN,
                     attributes: 0x02,       // Bulk
-                    max_packet_size: 64,
+                    max_packet_size: OTHER_DESCRIPTOR_MAX_PACKET_SIZE,
                     interval: 0,
                     ..EndpointDescriptor::new()
                 },
