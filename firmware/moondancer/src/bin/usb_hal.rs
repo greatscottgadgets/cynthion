@@ -32,8 +32,8 @@ const VENDOR_VALUE_CONTROL_IN: u16 = 0x0002;
 const VENDOR_VALUE_BULK_OUT: u16 = 0x0003;
 const VENDOR_VALUE_BULK_IN: u16 = 0x0004;
 
-const BULK_ENDPOINT_OUT: u8 = 0x01;
-const BULK_ENDPOINT_IN: u8 = 0x81;
+const ENDPOINT_BULK_OUT: u8 = 0x01;
+const ENDPOINT_BULK_IN: u8 = 0x81;
 
 const MAX_TRANSFER_SIZE: usize = moondancer::EP_MAX_PACKET_SIZE * 4;
 
@@ -126,6 +126,12 @@ fn MachineExternal() {
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
         ladybug::trace(Channel::B, Bit::IRQ_EP_IN, || {
             let endpoint = usb0.ep_in.epno.read().bits() as u8;
+
+            // TODO something a little safer would be nice
+            unsafe {
+                usb0.clear_tx_ack_active(endpoint);
+            }
+
             dispatch_event(InterruptEvent::Usb(
                 Target,
                 UsbEvent::SendComplete(endpoint),
@@ -220,7 +226,7 @@ fn main_loop() -> GreatResult<()> {
     }
 
     // prime the usb Bulk OUT endpoint(s) we'll be using
-    //usb0.ep_out_prime_receive(1);
+    //usb0.ep_out_prime_receive(ENDPOINT_BULK_OUT);
 
     info!("Peripherals initialized, entering main loop.");
 
@@ -235,7 +241,6 @@ fn main_loop() -> GreatResult<()> {
                 #[cfg(feature = "chonky_events")]
                 Usb(Target, event @ BusReset)
                 | Usb(Target, event @ ReceiveSetupPacket(0, _))
-                | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ ReceiveBuffer(0, _, _))
                 | Usb(Target, event @ SendComplete(0)) => {
                     let result = ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || {
@@ -271,11 +276,14 @@ fn main_loop() -> GreatResult<()> {
                         None => (),
                     }
                 }
-                Usb(Target, ReceivePacket(endpoint)) => {
-                    log::info!("USB0 Event: {:?}", event);
+                Usb(Target, ReceivePacket(endpoint @ ENDPOINT_BULK_OUT)) => {
+                    let mut rx_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] = [0; moondancer::EP_MAX_PACKET_SIZE];
+                    let bytes_read = usb0.read(endpoint, &mut rx_buffer);
+                    usb0.ep_out_prime_receive(endpoint);
+                    debug!("VENDOR_VALUE_BULK_IN received {} bytes", bytes_read);
                 }
                 Usb(Target, SendComplete(_endpoint)) => {
-                    log::info!("USB0 Event: {:?}", event);
+                    log::debug!("USB0 Event: {:?}", event);
                 }
                 _ => {
                     error!("Unhandled event: {:?}", event);
@@ -289,7 +297,7 @@ fn main_loop() -> GreatResult<()> {
 
 fn handle_vendor_request<'a, D>(usb: &D, setup_packet: SetupPacket, rx_buffer: &[u8])
 where
-    D: ReadControl + ReadEndpoint + WriteEndpoint + UsbDriverOperations,
+    D: ReadControl + ReadEndpoint + WriteEndpoint + UsbDriverOperations + UnsafeUsbDriverOperations,
 {
     let direction = setup_packet.direction();
     let request_type = setup_packet.request_type();
@@ -297,7 +305,7 @@ where
     let vendor_value = setup_packet.value;
     let payload_length = setup_packet.index as usize;
 
-    info!(
+    debug!(
         "handle_vendor_request: {:?} {:?} vendor_request:{} vendor_value:{} payload_length:{} rx_buffer:{}",
         direction,
         request_type,
@@ -309,15 +317,14 @@ where
 
     match (vendor_request, vendor_value) {
         (VENDOR_REQUEST, VENDOR_VALUE_CONTROL_OUT) => {
-            if rx_buffer.len() > 8 {
-                info!(
-                    "VENDOR_VALUE_OUT received {} bytes ({:?} ... {:?}",
-                    rx_buffer.len(),
-                    &rx_buffer[..8],
-                    &rx_buffer[rx_buffer.len() - 8..]
-                );
+            // TODO would it be better if the caller sent the zlp at this point rather than control?
+            // there's currently a subtle bug where zlp is automatic if control transfer had data
+            // but caller has to send zlp themselves if there was no data.
+            // really, either control has to always zlp or the caller has to always zlp
+            if rx_buffer.len() == payload_length {
+                debug!("VENDOR_VALUE_CONTROL_OUT received {} bytes", rx_buffer.len());
             } else {
-                error!("VENDOR_VALUE_OUT received an unexpected buffer of {} bytes.", rx_buffer.len());
+                error!("VENDOR_VALUE_CONTROL_OUT expected {} bytes but only received {} bytes.", payload_length, rx_buffer.len());
             }
         }
         (VENDOR_REQUEST, VENDOR_VALUE_CONTROL_IN) => {
@@ -330,14 +337,51 @@ where
             // prime endpoint to receive zlp ack from host
             usb.ack(0, Direction::DeviceToHost);
 
-            info!("VENDOR_VALUE_IN wrote {} bytes", bytes_written);
+            if bytes_written == payload_length {
+                debug!("VENDOR_VALUE_CONTROL_IN wrote {} bytes", bytes_written);
+            } else {
+                error!("VENDOR_VALUE_CONTROL_IN payload length is {} bytes but only wrote {} bytes", payload_length, bytes_written);
+            }
         }
         (VENDOR_REQUEST, VENDOR_VALUE_BULK_OUT) => {
-            warn!("TODO");
+            // prime bulk endpoint to receive data
+            usb.ep_out_prime_receive(ENDPOINT_BULK_OUT);
+
+            // send zlp response because there was no data TODO see above
+            usb.ack(0, Direction::HostToDevice);
+
+            debug!("VENDOR_VALUE_BULK_OUT expecting {} bytes ({})", payload_length, rx_buffer.len());
         }
         (VENDOR_REQUEST, VENDOR_VALUE_BULK_IN) => {
-            let endpoint_number = BULK_ENDPOINT_IN & 0x7f;
-            warn!("TODO");
+            let endpoint_number = ENDPOINT_BULK_IN & 0x7f;
+            let test_data: [u8; MAX_TRANSFER_SIZE] = core::array::from_fn(|x| x as u8);
+            let test_data = test_data.iter().take(payload_length);
+
+            // send zlp response because there was no data TODO see above
+            unsafe { usb.set_tx_ack_active(0); }
+            usb.ack(0, Direction::HostToDevice);
+
+            // wait for zlp to be sent
+            let mut timeout = 0;
+            while unsafe { usb.is_tx_ack_active(0) } {
+                timeout += 1;
+                if timeout > 5_000_000 {
+                    error!("VENDOR_VALUE_BULK_IN timed out sending control ack");
+                    return;
+                }
+            }
+
+            // send requested data
+            let bytes_written = usb.write(endpoint_number, test_data.copied());
+
+            // prime endpoint to receive zlp ack from host
+            usb.ack(endpoint_number, Direction::DeviceToHost);
+
+            if bytes_written == payload_length {
+                debug!("VENDOR_VALUE_BULK_IN wrote {} bytes", bytes_written);
+            } else {
+                error!("VENDOR_VALUE_BULK_IN payload length is {} bytes but only wrote {} bytes", payload_length, bytes_written);
+            }
         }
         _ => {
             error!(
@@ -396,14 +440,14 @@ static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDe
         },
         &[
             EndpointDescriptor {
-                endpoint_address: BULK_ENDPOINT_OUT,
+                endpoint_address: ENDPOINT_BULK_OUT,
                 attributes: 0x02,       // Bulk
                 max_packet_size: 512,
                 interval: 0,
                 ..EndpointDescriptor::new()
             },
             EndpointDescriptor {
-                endpoint_address: BULK_ENDPOINT_IN,
+                endpoint_address: ENDPOINT_BULK_IN,
                 attributes: 0x02,       // Bulk
                 max_packet_size: 512,
                 interval: 0,
@@ -418,7 +462,7 @@ static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
         ConfigurationDescriptorHeader {
             descriptor_type: DescriptorType::OtherSpeedConfiguration as u8,
             configuration_value: 1,
-            configuration_string_index: 7,
+            configuration_string_index: 6,
             attributes: 0x80, // 0b1000_0000 = bus-powered
             max_power: 50,    // 50 * 2 mA = 100 mA
             ..ConfigurationDescriptorHeader::new()
@@ -430,19 +474,19 @@ static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
                 interface_class: 0x00,
                 interface_subclass: 0x00,
                 interface_protocol: 0x00,
-                interface_string_index: 5,
+                interface_string_index: 7,
                 ..InterfaceDescriptorHeader::new()
             },
             &[
                 EndpointDescriptor {
-                    endpoint_address: BULK_ENDPOINT_OUT,
+                    endpoint_address: ENDPOINT_BULK_OUT,
                     attributes: 0x02,       // Bulk
                     max_packet_size: 64,
                     interval: 0,
                     ..EndpointDescriptor::new()
                 },
                 EndpointDescriptor {
-                    endpoint_address: BULK_ENDPOINT_IN,
+                    endpoint_address: ENDPOINT_BULK_IN,
                     attributes: 0x02,       // Bulk
                     max_packet_size: 64,
                     interval: 0,
@@ -460,10 +504,10 @@ static USB_STRING_DESCRIPTOR_2: StringDescriptor =
     StringDescriptor::new(cynthion::shared::usb::bProductString::example);
 static USB_STRING_DESCRIPTOR_3: StringDescriptor =
     StringDescriptor::new(moondancer::usb::DEVICE_SERIAL_STRING);
-pub static USB_STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config0"); // configuration #0
-pub static USB_STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("interface0"); // interface #0
-pub static USB_STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("interface1"); // interface #1
-pub static USB_STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("config1"); // configuration #1
+pub static USB_STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config 1");
+pub static USB_STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("interface 0");
+pub static USB_STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("other config 1");
+pub static USB_STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("other interface 0");
 
 static USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &USB_STRING_DESCRIPTOR_1,

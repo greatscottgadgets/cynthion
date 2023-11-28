@@ -644,7 +644,7 @@ macro_rules! impl_usb {
 
                         // TODO hmmm... I suspect sometimes this is acting like a zlp
                         // finally, if we haven't already, prime IN endpoint
-                        if true || is_not_primed {
+                        if is_not_primed {
                             $LADYBUG_TRACE(Channel::B, Bit::B_USB_EP_IN_EPNO, || {
                                 self.ep_in
                                     .epno
