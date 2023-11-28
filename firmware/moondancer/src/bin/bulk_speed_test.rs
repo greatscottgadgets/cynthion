@@ -212,8 +212,6 @@ fn main_loop() -> GreatResult<()> {
 
     let mut test_command = TestCommand::Stop;
     let mut test_stats = TestStats::new();
-
-    // 4 MB/s
     let test_data = {
         let mut test_data = [0_u8; moondancer::EP_MAX_PACKET_SIZE];
         for n in 0..moondancer::EP_MAX_PACKET_SIZE {

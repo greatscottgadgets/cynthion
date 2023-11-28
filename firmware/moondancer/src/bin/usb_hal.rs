@@ -27,6 +27,17 @@ use ladybug::{Bit, Channel};
 
 const DEVICE_SPEED: Speed = Speed::Full;
 
+const VENDOR_REQUEST: u8 = 0x65;
+const VENDOR_VALUE_CONTROL_OUT: u16 = 0x0001;
+const VENDOR_VALUE_CONTROL_IN: u16 = 0x0002;
+const VENDOR_VALUE_BULK_OUT: u16 = 0x0003;
+const VENDOR_VALUE_BULK_IN: u16 = 0x0004;
+
+const BULK_ENDPOINT_OUT: u8 = 0x01;
+const BULK_ENDPOINT_IN: u8 = 0x81;
+
+const MAX_TRANSFER_SIZE: usize = moondancer::EP_MAX_PACKET_SIZE * 4;
+
 // - global static state ------------------------------------------------------
 
 static EVENT_QUEUE: Queue<InterruptEvent, 32> = Queue::new();
@@ -67,26 +78,13 @@ fn MachineExternal() {
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         ladybug::trace(Channel::B, Bit::IRQ_EP_CONTROL, || {
             let endpoint = usb0.ep_control.epno.read().bits() as u8;
-
-            #[cfg(not(feature = "chonky_events"))]
-            {
-                dispatch_event(InterruptEvent::Usb(
-                    Target,
-                    UsbEvent::ReceiveControl(endpoint),
-                ));
-            }
-
-            #[cfg(feature = "chonky_events")]
-            {
-                let endpoint = usb0.ep_control.epno.read().bits() as u8;
-                let mut buffer = [0_u8; 8];
-                let _bytes_read = usb0.read_control(&mut buffer);
-                let setup_packet = SetupPacket::from(buffer);
-                dispatch_event(InterruptEvent::Usb(
-                    Target,
-                    UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
-                ));
-            }
+            let mut buffer = [0_u8; 8];
+            let _bytes_read = usb0.read_control(&mut buffer);
+            let setup_packet = SetupPacket::from(buffer);
+            dispatch_event(InterruptEvent::Usb(
+                Target,
+                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
+            ));
 
             usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
         });
@@ -189,7 +187,7 @@ fn main_loop() -> GreatResult<()> {
     );
 
     // control
-    let mut control = Control::<_, { moondancer::EP_MAX_PACKET_SIZE * 4 }>::new(
+    let mut control = Control::<_, MAX_TRANSFER_SIZE>::new(
         0,
         Descriptors {
             device_speed: DEVICE_SPEED,
@@ -229,25 +227,25 @@ fn main_loop() -> GreatResult<()> {
     //usb0.ep_out_prime_receive(0);
     //usb0.ep_out_prime_receive(1);
 
-    use moondancer::{event::InterruptEvent::*, UsbInterface::Target};
-    use smolusb::event::UsbEvent::*;
-
     info!("Peripherals initialized, entering main loop.");
 
     loop {
+        use moondancer::{event::InterruptEvent::*, UsbInterface::Target};
+        use smolusb::event::UsbEvent::*;
+
         // 100uS from interrupt to dequeued
         if let Some(event) = EVENT_QUEUE.dequeue() {
             // Usb0 received a control event
             match event {
                 #[cfg(feature = "chonky_events")]
                 Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveControl(0))
                 | Usb(Target, event @ ReceiveSetupPacket(0, _))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ ReceiveBuffer(0, _, _))
                 | Usb(Target, event @ SendComplete(0)) => {
-                    let result =
-                        ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || control.handle_event(&usb0, event));
+                    let result = ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || {
+                        control.handle_event(&usb0, event)
+                    });
                     match result {
                         // vendor requests are not handled by control
                         Some((setup_packet, rx_buffer)) => {
@@ -261,11 +259,12 @@ fn main_loop() -> GreatResult<()> {
                 }
                 #[cfg(not(feature = "chonky_events"))]
                 Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveControl(0))
+                | Usb(Target, event @ ReceiveSetupPacket(0, _))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
-                    let result =
-                        ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || control.handle_event(&usb0, event));
+                    let result = ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || {
+                        control.handle_event(&usb0, event)
+                    });
                     match result {
                         // vendor requests are not handled by control
                         Some((setup_packet, rx_buffer)) => {
@@ -301,29 +300,57 @@ where
     let request_type = setup_packet.request_type();
     let vendor_request = setup_packet.request;
     let vendor_value = setup_packet.value;
-
-    /*if rx_buffer.len() != 518 {
-        error!("handle_vendor_request() unexpected transfer length of {} bytes", rx_buffer.len());
-    }*/
+    let payload_length = setup_packet.index as usize;
 
     info!(
-        "handle_vendor_request: {:?} {:?} vendor_request:{} vendor_value:{} rx_buffer:{}",
+        "handle_vendor_request: {:?} {:?} vendor_request:{} vendor_value:{} payload_length:{} rx_buffer:{}",
         direction,
         request_type,
         vendor_request,
         vendor_value,
+        payload_length,
         rx_buffer.len()
     );
 
-    if rx_buffer.len() > 0 {
-        info!(
-            "{:?} ... {:?}",
-            &rx_buffer[..8],
-            &rx_buffer[rx_buffer.len() - 8..]
-        );
-        //let bytes_written = usb.write_packets(0, rx_buffer.iter().cloned(), 64);
-        //let bytes_written = usb.write_ref(0, rx_buffer.iter());
-        //info!("Wrote {} bytes", bytes_written);
+    match (vendor_request, vendor_value) {
+        (VENDOR_REQUEST, VENDOR_VALUE_CONTROL_OUT) => {
+            if rx_buffer.len() > 8 {
+                info!(
+                    "VENDOR_VALUE_OUT received {} bytes ({:?} ... {:?}",
+                    rx_buffer.len(),
+                    &rx_buffer[..8],
+                    &rx_buffer[rx_buffer.len() - 8..]
+                );
+            } else {
+                error!("VENDOR_VALUE_OUT received an unexpected buffer of {} bytes.", rx_buffer.len());
+            }
+        }
+        (VENDOR_REQUEST, VENDOR_VALUE_CONTROL_IN) => {
+            let test_data: [u8; MAX_TRANSFER_SIZE] = core::array::from_fn(|x| x as u8);
+            let test_data = test_data.iter().take(payload_length);
+
+            // send requested data
+            let bytes_written = usb.write_packets(0, test_data.cloned(), 64);
+            //let bytes_written = usb.write_ref(0, test_data);
+
+            // prime endpoint to receive zlp ack from host
+            usb.ack(0, Direction::DeviceToHost);
+
+            info!("VENDOR_VALUE_IN wrote {} bytes", bytes_written);
+        }
+        (VENDOR_REQUEST, VENDOR_VALUE_BULK_OUT) => {
+            warn!("TODO");
+        }
+        (VENDOR_REQUEST, VENDOR_VALUE_BULK_IN) => {
+            let endpoint_number = BULK_ENDPOINT_IN & 0x7f;
+            warn!("TODO");
+        }
+        _ => {
+            error!(
+                "Unknown vendor_request:{} vendor_value:{}",
+                vendor_request, vendor_value,
+            );
+        }
     }
 }
 
@@ -375,21 +402,14 @@ static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDe
         },
         &[
             EndpointDescriptor {
-                endpoint_address: 0x01, // OUT
+                endpoint_address: BULK_ENDPOINT_OUT,
                 attributes: 0x02,       // Bulk
                 max_packet_size: 512,
                 interval: 0,
                 ..EndpointDescriptor::new()
             },
             EndpointDescriptor {
-                endpoint_address: 0x02, // OUT - host commands
-                attributes: 0x02,       // Bulk
-                max_packet_size: 8,
-                interval: 0,
-                ..EndpointDescriptor::new()
-            },
-            EndpointDescriptor {
-                endpoint_address: 0x81, // IN
+                endpoint_address: BULK_ENDPOINT_IN,
                 attributes: 0x02,       // Bulk
                 max_packet_size: 512,
                 interval: 0,
@@ -421,21 +441,14 @@ static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
             },
             &[
                 EndpointDescriptor {
-                    endpoint_address: 0x01, // OUT
+                    endpoint_address: BULK_ENDPOINT_OUT,
                     attributes: 0x02,       // Bulk
                     max_packet_size: 64,
                     interval: 0,
                     ..EndpointDescriptor::new()
                 },
                 EndpointDescriptor {
-                    endpoint_address: 0x02, // OUT - host commands
-                    attributes: 0x02,       // Bulk
-                    max_packet_size: 8,
-                    interval: 0,
-                    ..EndpointDescriptor::new()
-                },
-                EndpointDescriptor {
-                    endpoint_address: 0x81, // IN
+                    endpoint_address: BULK_ENDPOINT_IN,
                     attributes: 0x02,       // Bulk
                     max_packet_size: 64,
                     interval: 0,

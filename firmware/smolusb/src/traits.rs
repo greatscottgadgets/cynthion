@@ -73,7 +73,9 @@ pub trait ReadEndpoint {
     fn read(&self, endpoint_number: u8, buffer: &mut [u8]) -> usize;
 }
 
-// These two should be one trait
+// TODO These two should be one trait
+// TODO write_packets() should just be write() rather than having to deal with two cases
+// TODO implementation should take max_packet_size from a const generic parameter
 
 pub trait WriteEndpoint {
     /// Write iterator to a single packet

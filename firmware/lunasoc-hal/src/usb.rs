@@ -576,6 +576,8 @@ macro_rules! impl_usb {
                     I: Iterator<Item = u8>
                 {
                     $LADYBUG_TRACE(Channel::B, Bit::B_USB_BULK_WRITE, || {
+                        unsafe { self.set_tx_ack_active(endpoint_number); }
+
                         // reset output fifo if needed
                         // FIXME rather return an error
                         if self.ep_in.have.read().have().bit() {
@@ -583,10 +585,13 @@ macro_rules! impl_usb {
                             self.ep_in.reset.write(|w| w.reset().bit(true));
                         }
 
+                        let mut is_not_primed = true;
+
                         // write data as multiple packets
-                        let mut timeout = 0;
                         let mut bytes_written: usize = 0;
                         for byte in iter {
+                            is_not_primed = true;
+
                             self.ep_in.data.write(|w| unsafe { w.data().bits(byte) });
                             bytes_written += 1;
                             // end of chunk - transmit packet
@@ -595,8 +600,9 @@ macro_rules! impl_usb {
                                 self.ep_in
                                     .epno
                                     .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                                is_not_primed = false;
                                 // wait for transmission to complete
-                                // FIXME it may be better if this blocked on the USB_EP_IN interrupt.
+                                let mut timeout = 0;
                                 while self.ep_in.have.read().have().bit() {
                                     timeout += 1;
                                     if timeout > 5_000_000 {
@@ -608,14 +614,15 @@ macro_rules! impl_usb {
                                         break;
                                     }
                                 }
-                                //unsafe { riscv::asm::delay(10000); }
                             }
                         }
 
-                        // finally prime IN endpoint
-                        self.ep_in
-                            .epno
-                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                        // finally, if we haven't already, prime IN endpoint
+                        if is_not_primed {
+                            self.ep_in
+                                .epno
+                                .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                        }
 
                         if bytes_written == 0 {
                             $LADYBUG_TRACE(Channel::A, Bit::USB_TX_ZLP, || {});
@@ -631,6 +638,8 @@ macro_rules! impl_usb {
                     I: Iterator<Item = u8>,
                 {
                     $LADYBUG_TRACE(Channel::A, Bit::USB_WRITE, || {
+                        unsafe { self.set_tx_ack_active(endpoint_number); }
+
                         // reset output fifo if needed
                         // TODO rather return an error
                         if self.ep_in.have.read().have().bit() {
@@ -664,58 +673,14 @@ macro_rules! impl_usb {
             }
 
             impl WriteRefEndpoint for $USBX {
-                fn write_bulk_ref<'a, I>(&self, endpoint_number: u8, iter: I, packet_size: usize) -> usize
+                fn write_bulk_ref<'a, I>(&self, _endpoint_number: u8, _iter: I, _packet_size: usize) -> usize
                 where
                     I: Iterator<Item = &'a u8>
                 {
-                    $LADYBUG_TRACE(Channel::B, Bit::B_USB_BULK_WRITE, || {
-                        // reset output fifo if needed
-                        // FIXME rather return an error
-                        if self.ep_in.have.read().have().bit() {
-                            warn!("  {} clear tx", stringify!($USBX));
-                            self.ep_in.reset.write(|w| w.reset().bit(true));
-                        }
-
-                        // write data as multiple packets
-                        let mut timeout = 0;
-                        let mut bytes_written: usize = 0;
-                        for byte in iter {
-                            self.ep_in.data.write(|w| unsafe { w.data().bits(*byte) });
-                            bytes_written += 1;
-                            // end of chunk - transmit packet
-                            if bytes_written % packet_size == 0 {
-                                // prime IN endpoint
-                                self.ep_in
-                                    .epno
-                                    .write(|w| unsafe { w.epno().bits(endpoint_number) });
-                                // wait for transmission to complete
-                                // FIXME it may be better if this blocked on the USB_EP_IN interrupt.
-                                while self.ep_in.have.read().have().bit() {
-                                    timeout += 1;
-                                    if timeout > 5_000_000 {
-                                        log::error!(
-                                            "{}::write_packets timed out after {} bytes",
-                                            stringify!($USBX),
-                                            bytes_written
-                                        );
-                                        break;
-                                    }
-                                }
-                                //unsafe { riscv::asm::delay(10000); }
-                            }
-                        }
-
-                        // finally prime IN endpoint
-                        self.ep_in
-                            .epno
-                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
-
-                        if bytes_written == 0 {
-                            $LADYBUG_TRACE(Channel::A, Bit::USB_TX_ZLP, || {});
-                        }
-
-                        bytes_written
-                    })
+                    //$LADYBUG_TRACE(Channel::B, Bit::B_USB_BULK_WRITE, || {
+                        log::error!("TODO write_bulk_ref");
+                        return 0;
+                    //})
                 }
 
                 #[inline(always)]
@@ -723,7 +688,11 @@ macro_rules! impl_usb {
                 where
                     I: Iterator<Item = &'a u8>,
                 {
+                    $LADYBUG_TRACE(Channel::B, Bit::B_USB_BULK_WRITE, || {
+                    });
                     $LADYBUG_TRACE(Channel::A, Bit::USB_WRITE, || {
+                        unsafe { self.set_tx_ack_active(endpoint_number); }
+
                         // reset output fifo if needed
                         // TODO rather return an error
                         if self.ep_in.have.read().have().bit() {
