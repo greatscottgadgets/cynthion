@@ -171,11 +171,8 @@ impl<'a> Firmware<'a> {
             .output
             .write(|w| unsafe { w.output().bits(1 << 2) });
 
-        // set usb1 speed
-        self.usb1.set_speed(DEVICE_SPEED);
-
         // connect usb1
-        self.usb1.connect();
+        self.usb1.connect(DEVICE_SPEED);
         info!("Connected usb1 device");
 
         // enable interrupts

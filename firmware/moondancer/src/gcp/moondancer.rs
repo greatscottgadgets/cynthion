@@ -149,11 +149,8 @@ impl Moondancer {
         self.ep_out_max_packet_size[0] = ep0_max_packet_size;
         self.quirk_flags = quirk_flags;
 
-        // set device speed
-        self.usb0.set_speed(device_speed);
-
         // connect usb0 device and enable interrupts
-        self.usb0.connect();
+        self.usb0.connect(device_speed);
         unsafe { self.enable_usb_interrupts() };
 
         // wait for things to settle and get connection speed

@@ -198,8 +198,9 @@ macro_rules! impl_usb {
             // - trait: UsbDriverOperations -----------------------------------
 
             impl UsbDriverOperations for $USBX {
-                /// Set the device speed
-                fn set_speed(&self, device_speed: Speed) {
+                /// Set the interface up for new connections
+                fn connect(&self, device_speed: Speed) {
+                    // set the device speed
                     match device_speed {
                         Speed::High => {
                             self.controller.full_speed_only.write(|w| w.full_speed_only().bit(false));
@@ -218,10 +219,7 @@ macro_rules! impl_usb {
                             log::warn!("Requested unsupported device speed, ignoring: {:?}", device_speed);
                         }
                     }
-                }
 
-                /// Set the interface up for new connections
-                fn connect(&self) {
                     // disconnect device controller
                     self.controller.connect.write(|w| w.connect().bit(false));
 

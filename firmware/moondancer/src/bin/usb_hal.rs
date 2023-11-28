@@ -200,11 +200,8 @@ fn main_loop() -> GreatResult<()> {
         }, //.set_total_lengths() // TODO figure out a better solution
     );
 
-    // set controller speed
-    usb0.set_speed(DEVICE_SPEED);
-
     // connect device
-    usb0.connect();
+    usb0.connect(DEVICE_SPEED);
     info!("Connected usb0 device");
 
     // enable interrupts

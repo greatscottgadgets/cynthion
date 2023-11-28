@@ -201,8 +201,8 @@ mod deprecated {
     where
         D: UsbDriver,
     {
-        pub fn connect(&self) {
-            self.hal_driver.connect();
+        pub fn connect(&self, device_speed: super::Speed) {
+            self.hal_driver.connect(device_speed);
         }
 
         pub fn disconnect(&self) {

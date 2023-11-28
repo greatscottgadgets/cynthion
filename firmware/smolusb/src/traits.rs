@@ -19,10 +19,8 @@ pub trait UsbDriver:
 }
 
 pub trait UsbDriverOperations {
-    /// Set the device speed
-    fn set_speed(&self, device_speed: Speed);
     /// Connect
-    fn connect(&self);
+    fn connect(&self, device_speed: Speed);
     /// Disconnect
     fn disconnect(&self);
     /// Reset

@@ -196,11 +196,8 @@ fn main() -> ! {
     // TODO control_usb0.cb_vendor_request = Some(handle_vendor_request);
     // TODO control_usb0.cb_string_request = Some(handle_string_request);
 
-    // set device speed
-    usb0.set_speed(DEVICE_SPEED);
-
     // connect device
-    usb0.connect();
+    usb0.connect(DEVICE_SPEED);
     let speed: Speed = usb0.controller.speed.read().speed().bits().into();
     info!("Connected USB0 device: {:?}", speed);
 
@@ -229,11 +226,8 @@ fn main() -> ! {
     // TODO control_usb1.cb_vendor_request = Some(handle_vendor_request);
     // TODO control_usb1.cb_string_request = Some(handle_string_request);
 
-    // set device speed
-    usb1.set_speed(DEVICE_SPEED);
-
     // connect device
-    usb1.connect();
+    usb1.connect(DEVICE_SPEED);
     let speed: Speed = usb1.controller.speed.read().speed().bits().into();
     info!("Connected USB1 device: {:?}", speed);
 
