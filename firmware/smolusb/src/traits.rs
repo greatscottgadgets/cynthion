@@ -12,7 +12,6 @@ pub trait UsbDriver:
     ReadControl
     + ReadEndpoint
     + WriteEndpoint
-    + WriteRefEndpoint
     + UsbDriverOperations
     + UnsafeUsbDriverOperations
 {
@@ -73,7 +72,7 @@ pub trait ReadEndpoint {
 
 // TODO These two should be one trait
 // TODO write_packets() should just be write() rather than having to deal with two cases
-// TODO implementation should take max_packet_size from a const generic parameter
+// TODO implementation should take max_packet_size from device speed
 
 pub trait WriteEndpoint {
     /// Write iterator to a single packet
@@ -89,23 +88,6 @@ pub trait WriteEndpoint {
     fn write_packets<'a, I>(&self, endpoint_number: u8, iter: I, max_packet_size: usize) -> usize
     where
         I: Iterator<Item = u8>;
-}
-
-pub trait WriteRefEndpoint {
-    /// Write iterator to a single packet
-    ///
-    /// Returns the number of bytes written to the endpoint.
-    fn write_ref<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
-    where
-        I: Iterator<Item = &'a u8>;
-
-    /// Write iterator in multiple packets
-    ///
-    /// Returns the number of bytes written to the endpoint.
-    fn write_bulk_ref<'a, I>(&self, endpoint_number: u8, iter: I, max_packet_size: usize) -> usize
-    where
-        I: Iterator<Item = &'a u8>;
-
 }
 
 // - AsIterator ---------------------------------------------------------------

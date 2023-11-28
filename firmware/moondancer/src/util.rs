@@ -6,7 +6,6 @@ use smolusb::event::UsbEvent;
 use smolusb::setup::SetupPacket;
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
-    WriteRefEndpoint,
 };
 
 use crate::event::InterruptEvent;

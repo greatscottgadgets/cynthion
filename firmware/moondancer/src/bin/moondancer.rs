@@ -467,7 +467,6 @@ impl<'a> Firmware<'a> {
 
             // TODO we can probably just use write_packets here
             if response.len() > 64 {
-                info!("wp: {}", response.len());
                 self.usb1.write_packets(0, response, 64);
             } else {
                 self.usb1.write(0, response);

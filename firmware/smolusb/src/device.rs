@@ -415,18 +415,18 @@ mod deprecated {
             match (&descriptor_type, descriptor_number) {
                 (DescriptorType::Device, 0) => {
                     self.hal_driver
-                        .write_ref(0, self.device_descriptor.as_iter().take(requested_length));
+                        .write(0, self.device_descriptor.as_iter().copied().take(requested_length));
                 }
                 (DescriptorType::Configuration, 0) => {
-                    self.hal_driver.write_ref(
+                    self.hal_driver.write(
                         0,
-                        self.configuration_descriptor.iter().take(requested_length),
+                        self.configuration_descriptor.iter().copied().take(requested_length),
                     );
                 }
                 (DescriptorType::DeviceQualifier, 0) => {
                     if let Some(descriptor) = &self.device_qualifier_descriptor {
                         self.hal_driver
-                            .write_ref(0, descriptor.as_iter().take(requested_length));
+                            .write(0, descriptor.as_iter().copied().take(requested_length));
                     } else {
                         warn!("SETUP stall: no device qualifier descriptor configured");
                         // TODO stall?
@@ -436,7 +436,7 @@ mod deprecated {
                 (DescriptorType::OtherSpeedConfiguration, 0) => {
                     if let Some(descriptor) = self.other_speed_configuration_descriptor {
                         self.hal_driver
-                            .write_ref(0, descriptor.iter().take(requested_length));
+                            .write(0, descriptor.iter().copied().take(requested_length));
                     } else {
                         warn!("SETUP stall: no other speed configuration descriptor configured");
                         // TODO stall?
@@ -445,7 +445,7 @@ mod deprecated {
                 }
                 (DescriptorType::String, 0) => {
                     self.hal_driver
-                        .write_ref(0, self.string_descriptor_zero.iter().take(requested_length));
+                        .write(0, self.string_descriptor_zero.iter().copied().take(requested_length));
                 }
                 (DescriptorType::String, index) => {
                     if let Some(cb) = self.cb_string_request {
@@ -523,7 +523,7 @@ mod deprecated {
 
             let current_configuration = self.current_configuration.load(Ordering::Relaxed);
 
-            self.hal_driver.write_ref(0, [current_configuration].iter());
+            self.hal_driver.write(0, [current_configuration].into_iter());
             self.hal_driver.ack(0, setup_packet.direction());
 
             Ok(())
@@ -610,7 +610,7 @@ mod deprecated {
 
             let status: u16 = 0b00; // TODO bit 1:remote-wakeup bit 0:self-powered
 
-            self.hal_driver.write_ref(0, status.to_le_bytes().iter());
+            self.hal_driver.write(0, status.to_le_bytes().into_iter());
             self.hal_driver.ack(0, setup_packet.direction());
 
             Ok(())

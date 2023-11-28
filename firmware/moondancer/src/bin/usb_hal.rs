@@ -15,7 +15,6 @@ use smolusb::setup::{Direction, Request, RequestType, SetupPacket};
 use smolusb::traits::AsByteSliceIterator;
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
-    WriteRefEndpoint,
 };
 
 use moondancer::event::InterruptEvent;
@@ -291,7 +290,7 @@ fn main_loop() -> GreatResult<()> {
 
 fn handle_vendor_request<'a, D>(usb: &D, setup_packet: SetupPacket, rx_buffer: &[u8])
 where
-    D: ReadControl + ReadEndpoint + WriteEndpoint + WriteRefEndpoint + UsbDriverOperations,
+    D: ReadControl + ReadEndpoint + WriteEndpoint + UsbDriverOperations,
 {
     let direction = setup_packet.direction();
     let request_type = setup_packet.request_type();
@@ -327,7 +326,7 @@ where
             let test_data = test_data.iter().take(payload_length);
 
             // send requested data
-            let bytes_written = usb.write_packets(0, test_data.cloned(), 64);
+            let bytes_written = usb.write_packets(0, test_data.copied(), 64);
             //let bytes_written = usb.write_ref(0, test_data);
 
             // prime endpoint to receive zlp ack from host

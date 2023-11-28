@@ -8,7 +8,6 @@ use smolusb::event::UsbEvent;
 use smolusb::setup::{Direction, SetupPacket};
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
-    WriteRefEndpoint,
 };
 
 use ladybug::{Bit, Channel};
@@ -466,7 +465,7 @@ impl Moondancer {
             self.usb0
                 .write_packets(endpoint_number, payload.copied(), max_packet_size)
         } else {
-            self.usb0.write_ref(endpoint_number, payload)
+            self.usb0.write(endpoint_number, payload.copied())
         };
 
         // prime endpoint to receive zlp ack from host or should the remote do this?
@@ -494,7 +493,7 @@ impl Moondancer {
         }*/
 
         if payload_length > 0 {
-            log::info!(
+            log::debug!(
                 "MD moondancer::write_endpoint(endpoint_number:{}, blocking:{} payload.len:{} ({})) max_packet_size:{} bytes_written:{}",
                 endpoint_number,
                 blocking,

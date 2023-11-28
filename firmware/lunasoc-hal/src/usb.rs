@@ -9,7 +9,7 @@ use smolusb::device::Speed;
 use smolusb::setup::*;
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriver, UsbDriverOperations,
-    WriteEndpoint, WriteRefEndpoint,
+    WriteEndpoint,
 };
 
 use crate::pac;
@@ -609,14 +609,16 @@ macro_rules! impl_usb {
                                             stringify!($USBX),
                                             bytes_written
                                         );
-                                        break;
+                                        // TODO return an error
+                                        return bytes_written;
                                     }
                                 }
                             }
                         }
 
+                        // TODO hmmm... I suspect sometimes this is acting like a zlp
                         // finally, if we haven't already, prime IN endpoint
-                        if is_not_primed {
+                        if true || is_not_primed {
                             self.ep_in
                                 .epno
                                 .write(|w| unsafe { w.epno().bits(endpoint_number) });
@@ -660,57 +662,6 @@ macro_rules! impl_usb {
                         if bytes_written > 60 {
                             log::debug!("  TX {} bytes", bytes_written);
                         }
-
-                        if bytes_written == 0 {
-                            $LADYBUG_TRACE(Channel::A, Bit::USB_TX_ZLP, || {});
-                        }
-
-                        bytes_written
-                    })
-                }
-            }
-
-            impl WriteRefEndpoint for $USBX {
-                fn write_bulk_ref<'a, I>(&self, _endpoint_number: u8, _iter: I, _packet_size: usize) -> usize
-                where
-                    I: Iterator<Item = &'a u8>
-                {
-                    //$LADYBUG_TRACE(Channel::B, Bit::B_USB_BULK_WRITE, || {
-                        log::error!("TODO write_bulk_ref");
-                        return 0;
-                    //})
-                }
-
-                #[inline(always)]
-                fn write_ref<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
-                where
-                    I: Iterator<Item = &'a u8>,
-                {
-                    $LADYBUG_TRACE(Channel::B, Bit::B_USB_BULK_WRITE, || {
-                    });
-                    $LADYBUG_TRACE(Channel::A, Bit::USB_WRITE, || {
-                        unsafe { self.set_tx_ack_active(endpoint_number); }
-
-                        // reset output fifo if needed
-                        // TODO rather return an error
-                        if self.ep_in.have.read().have().bit() {
-                            warn!("  clear tx");
-                            self.ep_in.reset.write(|w| w.reset().bit(true));
-                        }
-
-                        // write data
-                        let mut bytes_written: usize = 0;
-                        for byte in iter {
-                            self.ep_in.data.write(|w| unsafe { w.data().bits(*byte) });
-                            bytes_written += 1;
-                        }
-
-                        // finally, prime IN endpoint
-                        self.ep_in
-                            .epno
-                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
-
-                        trace!("  TX {} bytes", bytes_written);
 
                         if bytes_written == 0 {
                             $LADYBUG_TRACE(Channel::A, Bit::USB_TX_ZLP, || {});

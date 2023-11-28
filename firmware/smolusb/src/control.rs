@@ -269,9 +269,9 @@ where
 
             (Direction::DeviceToHost, RequestType::Standard, Request::GetConfiguration) => {
                 if let Some(configuration) = self.configuration {
-                    usb.write_ref(self.endpoint_number, [configuration].iter());
+                    usb.write(self.endpoint_number, [configuration].into_iter());
                 } else {
-                    usb.write_ref(self.endpoint_number, [0].iter());
+                    usb.write(self.endpoint_number, [0].into_iter());
                 }
 
                 // prepare to receive ZLP from host to end status stage
@@ -559,18 +559,18 @@ impl<'a> Descriptors<'a> {
         let requested_length = setup_packet.length as usize;
 
         let bytes_written = match (&descriptor_type, descriptor_number) {
-            (DescriptorType::Device, 0) => usb.write_ref(
+            (DescriptorType::Device, 0) => usb.write(
                 endpoint_number,
-                self.device_descriptor.as_iter().take(requested_length),
+                self.device_descriptor.as_iter().copied().take(requested_length),
             ),
-            (DescriptorType::Configuration, _) => usb.write_ref(
+            (DescriptorType::Configuration, _) => usb.write(
                 endpoint_number,
-                self.configuration_descriptor.iter().take(requested_length),
+                self.configuration_descriptor.iter().copied().take(requested_length),
             ),
             (DescriptorType::DeviceQualifier, _) => {
                 if self.device_speed == Speed::High {
                     if let Some(descriptor) = &self.device_qualifier_descriptor {
-                        usb.write_ref(endpoint_number, descriptor.as_iter().take(requested_length))
+                        usb.write(endpoint_number, descriptor.as_iter().copied().take(requested_length))
                     } else {
                         // no device qualifier configured, ack HostToDevice instead - TODO check check on mac/windows
                         debug!("  No device qualifier configured for high-speed device");
@@ -586,16 +586,16 @@ impl<'a> Descriptors<'a> {
             }
             (DescriptorType::OtherSpeedConfiguration, _) => {
                 if let Some(descriptor) = self.other_speed_configuration_descriptor {
-                    usb.write_ref(endpoint_number, descriptor.iter().take(requested_length))
+                    usb.write(endpoint_number, descriptor.iter().copied().take(requested_length))
                 } else {
                     // no other speed configuration, ack HostToDevice instead - TODO check check on mac/windows
                     debug!("  Descriptors::write_descriptor() - no other speed configuration descriptor configured");
                     usb.write(endpoint_number, [].into_iter())
                 }
             }
-            (DescriptorType::String, 0) => usb.write_ref(
+            (DescriptorType::String, 0) => usb.write(
                 endpoint_number,
-                self.string_descriptor_zero.iter().take(requested_length),
+                self.string_descriptor_zero.iter().copied().take(requested_length),
             ),
             (DescriptorType::String, number) => {
                 let offset_index: usize = (number - 1).into();

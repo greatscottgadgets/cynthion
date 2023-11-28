@@ -11,7 +11,7 @@ use smolusb::device::Speed;
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Request, RequestType, SetupPacket};
 use smolusb::traits::{
-    ReadControl, ReadEndpoint, UsbDriverOperations, WriteEndpoint, WriteRefEndpoint,
+    ReadControl, ReadEndpoint, UsbDriverOperations, WriteEndpoint,
 };
 
 use moondancer::{hal, pac};
@@ -335,7 +335,7 @@ fn main() -> ! {
                             endpoint,
                             &buffer[0..8],
                         );
-                        usb1.write_ref(endpoint, buffer.iter().take(bytes_read).into_iter());
+                        usb1.write(endpoint, buffer.iter().copied().take(bytes_read).into_iter());
                         info!("Sent {} bytes to usb1 endpoint: {}", bytes_read, endpoint);
                     }
                     usb0.ep_out_prime_receive(endpoint);
@@ -350,7 +350,7 @@ fn main() -> ! {
                             endpoint,
                             &buffer[0..8],
                         );
-                        usb0.write_ref(endpoint, buffer.iter().take(bytes_read).into_iter());
+                        usb0.write(endpoint, buffer.iter().copied().take(bytes_read).into_iter());
                         info!("Sent {} bytes to usb0 endpoint: {}", bytes_read, endpoint);
                     }
                     usb1.ep_out_prime_receive(endpoint);
@@ -367,7 +367,7 @@ fn main() -> ! {
 
 fn handle_vendor_request<'a, D>(usb: &D, setup_packet: SetupPacket)
 where
-    D: ReadControl + ReadEndpoint + WriteEndpoint + WriteRefEndpoint + UsbDriverOperations,
+    D: ReadControl + ReadEndpoint + WriteEndpoint + UsbDriverOperations,
 {
     let request_type = setup_packet.request_type();
     let request = setup_packet.request();
