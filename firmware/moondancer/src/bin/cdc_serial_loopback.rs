@@ -172,7 +172,7 @@ fn main() -> ! {
     info!("logging initialized");
 
     // usb0: Target
-    let usb0 = hal::Usb0::new(
+    let mut usb0 = hal::Usb0::new(
         peripherals.USB0,
         peripherals.USB0_EP_CONTROL,
         peripherals.USB0_EP_IN,
@@ -202,7 +202,7 @@ fn main() -> ! {
     info!("Connected USB0 device: {:?}", speed);
 
     // usb1: Aux
-    let usb1 = hal::Usb1::new(
+    let mut usb1 = hal::Usb1::new(
         peripherals.USB1,
         peripherals.USB1_EP_CONTROL,
         peripherals.USB1_EP_IN,

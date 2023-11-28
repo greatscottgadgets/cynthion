@@ -461,24 +461,24 @@ impl<'a> Firmware<'a> {
     fn dispatch_libgreat_response(&mut self, _setup_packet: &SetupPacket) -> GreatResult<()> {
         // do we have a response ready?
         if let Some(response) = &mut self.libgreat_response {
-            let _bytes_to_send = response.len();
+            // send response
+            let bytes_written = self.usb1.write(0, response);
 
-            debug!("dispatch_libgreat_response -> {} bytes", response.len());
-
-            // TODO we can probably just use write_packets here
-            if response.len() > 64 {
-                self.usb1.write_packets(0, response, 64);
-            } else {
-                self.usb1.write(0, response);
-            }
+            // clear cached response
+            self.libgreat_response = None;
 
             // prime to receive host zlp - TODO should control do this in send_complete?
             self.usb1.ack(0, Direction::DeviceToHost);
 
-            self.libgreat_response = None;
+            debug!("dispatch_libgreat_response -> {} bytes", bytes_written);
+
         } else if let Some(error) = self.libgreat_response_last_error {
             warn!("dispatch_libgreat_response error result: {:?}", error);
+
+            // write error
             self.usb1.write(0, (error as u32).to_le_bytes().into_iter());
+
+            // clear cached error
             self.libgreat_response_last_error = None;
 
             // prime to receive host zlp - TODO should control do this in send_complete?

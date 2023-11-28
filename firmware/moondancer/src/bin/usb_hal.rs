@@ -178,7 +178,7 @@ fn main_loop() -> GreatResult<()> {
     moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
     // usb0: Target
-    let usb0 = hal::Usb0::new(
+    let mut usb0 = hal::Usb0::new(
         peripherals.USB0,
         peripherals.USB0_EP_CONTROL,
         peripherals.USB0_EP_IN,
@@ -219,8 +219,7 @@ fn main_loop() -> GreatResult<()> {
         usb0.enable_interrupts();
     }
 
-    // prime the usb OUT endpoint(s) we'll be using
-    //usb0.ep_out_prime_receive(0);
+    // prime the usb Bulk OUT endpoint(s) we'll be using
     //usb0.ep_out_prime_receive(1);
 
     info!("Peripherals initialized, entering main loop.");
@@ -326,8 +325,7 @@ where
             let test_data = test_data.iter().take(payload_length);
 
             // send requested data
-            let bytes_written = usb.write_packets(0, test_data.copied(), 64);
-            //let bytes_written = usb.write_ref(0, test_data);
+            let bytes_written = usb.write(0, test_data.copied());
 
             // prime endpoint to receive zlp ack from host
             usb.ack(0, Direction::DeviceToHost);

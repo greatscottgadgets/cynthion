@@ -19,9 +19,9 @@ pub trait UsbDriver:
 
 pub trait UsbDriverOperations {
     /// Connect
-    fn connect(&self, device_speed: Speed);
+    fn connect(&mut self, device_speed: Speed);
     /// Disconnect
-    fn disconnect(&self);
+    fn disconnect(&mut self);
     /// Reset
     fn reset(&self); // FIXME deprecate in favour of bus_reset
     /// Bus Reset
@@ -78,14 +78,22 @@ pub trait WriteEndpoint {
     /// Write iterator to a single packet
     ///
     /// Returns the number of bytes written to the endpoint.
+    fn old_write<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
+    where
+        I: Iterator<Item = u8>;
+
+    /// Write iterator to endpoint
+    ///
+    /// Returns the number of bytes written to the endpoint.
     fn write<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
     where
         I: Iterator<Item = u8>;
 
-    /// Write iterator to multiple packets
+
+    /// Write iterator to endpoint using the given packet size
     ///
     /// Returns the number of bytes written to the endpoint.
-    fn write_packets<'a, I>(&self, endpoint_number: u8, iter: I, max_packet_size: usize) -> usize
+    fn write_with_packet_size<'a, I>(&self, endpoint_number: u8, iter: I, packet_size: usize) -> usize
     where
         I: Iterator<Item = u8>;
 }

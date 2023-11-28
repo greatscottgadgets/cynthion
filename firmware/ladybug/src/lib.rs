@@ -52,7 +52,7 @@ impl Bit {
 
     // extra events on pmod B
     pub const B_USB_READ_CONTROL: u8 = 4;
-    pub const B_USB_BULK_WRITE: u8 = 5;
+    pub const B_USB_EP_IN_EPNO: u8 = 5;
 
 }
 

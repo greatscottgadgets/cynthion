@@ -165,7 +165,7 @@ fn main_loop() -> GreatResult<()> {
     moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
     // usb0: Target
-    let usb0 = hal::Usb0::new(
+    let mut usb0 = hal::Usb0::new(
         peripherals.USB0,
         peripherals.USB0_EP_CONTROL,
         peripherals.USB0_EP_IN,

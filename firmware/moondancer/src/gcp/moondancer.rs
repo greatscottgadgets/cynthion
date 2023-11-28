@@ -461,12 +461,9 @@ impl Moondancer {
 
         // TODO we can probably just use write_packets here
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
-        let bytes_written = if payload_length > max_packet_size {
+        let bytes_written =
             self.usb0
-                .write_packets(endpoint_number, payload.copied(), max_packet_size)
-        } else {
-            self.usb0.write(endpoint_number, payload.copied())
-        };
+                .write_with_packet_size(endpoint_number, payload.copied(), max_packet_size);
 
         // prime endpoint to receive zlp ack from host or should the remote do this?
         self.usb0.ack(endpoint_number, Direction::DeviceToHost);
@@ -476,10 +473,13 @@ impl Moondancer {
         while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
             timeout += 1;
             if timeout > 50_000_000 {
-                unsafe { self.usb0.clear_tx_ack_active(endpoint_number); }
+                unsafe {
+                    self.usb0.clear_tx_ack_active(endpoint_number);
+                }
                 log::error!(
                     "MD moondancer::write_endpoint timed out writing {} bytes. Sent {} bytes.",
-                    payload_length, bytes_written
+                    payload_length,
+                    bytes_written
                 );
                 break;
             }
