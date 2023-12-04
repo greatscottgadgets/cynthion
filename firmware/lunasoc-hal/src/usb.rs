@@ -242,6 +242,8 @@ macro_rules! impl_usb {
 
                 fn disconnect(&mut self) {
                     // reset speed
+                    self.controller.full_speed_only.write(|w| w.full_speed_only().bit(false));
+                    self.controller.low_speed_only.write(|w| w.low_speed_only().bit(false));
                     self.device_speed = Speed::Unknown;
 
                     // disable endpoint events
@@ -607,24 +609,25 @@ macro_rules! impl_usb {
                             self.ep_in.reset.write(|w| w.reset().bit(true));
                         }
 
-                        let mut is_not_primed = true;
-
-                        // write data as multiple packets
                         let mut bytes_written: usize = 0;
+                        let mut is_primed = false;
+
                         for byte in iter {
-                            is_not_primed = true;
+                            is_primed = false;
 
                             self.ep_in.data.write(|w| unsafe { w.data().bits(byte) });
                             bytes_written += 1;
-                            // end of chunk - transmit packet
+
+                            // check if we've written a packet yet and need to send it
                             if bytes_written % packet_size == 0 {
-                                // prime IN endpoint
+                                // prime the IN endpoint to send it
                                 $LADYBUG_TRACE(Channel::B, Bit::B_USB_EP_IN_EPNO, || {
                                     self.ep_in
                                         .epno
                                         .write(|w| unsafe { w.epno().bits(endpoint_number) });
                                 });
-                                is_not_primed = false;
+                                is_primed = true;
+
                                 // wait for transmission to complete
                                 let mut timeout = 0;
                                 while self.ep_in.have.read().have().bit() {
@@ -642,9 +645,8 @@ macro_rules! impl_usb {
                             }
                         }
 
-                        // TODO hmmm... I suspect sometimes this is acting like a zlp
                         // finally, if we haven't already, prime IN endpoint
-                        if is_not_primed {
+                        if !is_primed {
                             $LADYBUG_TRACE(Channel::B, Bit::B_USB_EP_IN_EPNO, || {
                                 self.ep_in
                                     .epno
