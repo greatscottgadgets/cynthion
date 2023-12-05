@@ -340,8 +340,8 @@ macro_rules! impl_usb {
                 /// Set stall for the given IN endpoint number
                 fn stall_endpoint_in(&self, endpoint_number: u8) {
                     $LADYBUG_TRACE(Channel::A, Bit::USB_STALL_IN, || {
-                        self.ep_in.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
                         self.ep_in.stall.write(|w| w.stall().bit(true));
+                        self.ep_in.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
                     });
                 }
 
@@ -351,18 +351,6 @@ macro_rules! impl_usb {
                         self.ep_out.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
                         self.ep_out.stall.write(|w| w.stall().bit(true));
                     });
-                }
-
-                /// Clear stall for the given IN endpoint number.
-                fn unstall_endpoint_in(&self, endpoint_number: u8) {
-                    self.ep_in.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
-                    self.ep_in.stall.write(|w| w.stall().bit(false));
-                }
-
-                /// Clear stall for the given OUT endpoint number.
-                fn unstall_endpoint_out(&self, endpoint_number: u8) {
-                    self.ep_out.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
-                    self.ep_out.stall.write(|w| w.stall().bit(false));
                 }
 
                 /// Clear PID toggle bit for the given endpoint address.
