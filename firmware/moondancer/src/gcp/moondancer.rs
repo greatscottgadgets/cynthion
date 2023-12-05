@@ -60,8 +60,8 @@ impl Moondancer {
         let event = match event {
             InterruptEvent::Usb(_, UsbEvent::BusReset) => {
                 // flush queues, the actual bus reset is handled in the irq handler for lower latency
-                while let Some(_) = self.irq_queue.dequeue() {}
-                while let Some(_) = self.control_queue.dequeue() {}
+                //while let Some(_) = self.irq_queue.dequeue() {}
+                //while let Some(_) = self.control_queue.dequeue() {}
                 event
             }
 
@@ -91,12 +91,12 @@ impl Moondancer {
         match self.irq_queue.enqueue(event) {
             Ok(()) => (),
             Err(_) => {
-                error!("Moondancer - event queue overflow");
-                loop {
+                error!("Moondancer - irq queue overflow");
+                /*loop {
                     unsafe {
                         riscv::asm::nop();
                     }
-                }
+                }*/
             }
         }
     }
@@ -398,10 +398,10 @@ impl Moondancer {
 
         let payload_length: usize = u32::from(args.payload_length) as usize;
 
-        debug!("MD moondancer::test_read_endpoint({})", payload_length);
+        log::debug!("MD moondancer::test_read_endpoint({})", payload_length);
 
         if payload_length > LIBGREAT_MAX_COMMAND_SIZE {
-            debug!(
+            error!(
                 "MD moondancer::test_read_endpoint error overflow: {}",
                 payload_length
             );
@@ -459,20 +459,17 @@ impl Moondancer {
         let payload_length = args.payload.len();
         let payload = args.payload.clone().iter();
 
-        // TODO we can probably just use write_packets here
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
         let bytes_written =
             self.usb0
                 .write_with_packet_size(endpoint_number, payload.copied(), max_packet_size);
 
-        // prime endpoint to receive zlp ack from host or should the remote do this?
-        self.usb0.ack(endpoint_number, Direction::DeviceToHost);
-
         // TODO better handling for blocking
         let mut timeout = 0;
-        while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
+        //while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
+        while blocking & self.usb0.ep_in.have.read().have().bit() {
             timeout += 1;
-            if timeout > 50_000_000 {
+            if timeout > 5_000_000 {
                 unsafe {
                     self.usb0.clear_tx_ack_active(endpoint_number);
                 }
@@ -484,15 +481,14 @@ impl Moondancer {
                 break;
             }
         }
-        /*while blocking && self.usb0.ep_in.have.read().have().bit() {
-            timeout += 1;
-            if timeout > 10_000_000 {
-                log::error!("MD moondancer::write_endpoint timed out");
-                break;
-            }
-        }*/
 
-        if payload_length > 0 {
+        // prime endpoint to receive zlp ack from host or should the remote do this?
+        //if endpoint_number == 0 {
+            self.usb0.ack(endpoint_number, Direction::DeviceToHost);
+        //}
+
+        if payload_length > 0 && self.irq_queue.len() < 16 {
+            //log::info!("write");
             log::debug!(
                 "MD moondancer::write_endpoint(endpoint_number:{}, blocking:{} payload.len:{} ({})) max_packet_size:{} bytes_written:{}",
                 endpoint_number,

@@ -610,11 +610,7 @@ macro_rules! impl_usb {
                         }
 
                         let mut bytes_written: usize = 0;
-                        let mut is_primed = false;
-
                         for byte in iter {
-                            is_primed = false;
-
                             self.ep_in.data.write(|w| unsafe { w.data().bits(byte) });
                             bytes_written += 1;
 
@@ -626,8 +622,6 @@ macro_rules! impl_usb {
                                         .epno
                                         .write(|w| unsafe { w.epno().bits(endpoint_number) });
                                 });
-                                is_primed = true;
-
                                 // wait for transmission to complete
                                 let mut timeout = 0;
                                 while self.ep_in.have.read().have().bit() {
@@ -645,14 +639,13 @@ macro_rules! impl_usb {
                             }
                         }
 
-                        // finally, if we haven't already, prime IN endpoint
-                        if !is_primed {
-                            $LADYBUG_TRACE(Channel::B, Bit::B_USB_EP_IN_EPNO, || {
-                                self.ep_in
-                                    .epno
-                                    .write(|w| unsafe { w.epno().bits(endpoint_number) });
-                            });
-                        }
+                        // finally, if we haven't already, prime IN endpoint to either send
+                        // remaining queued data or a ZLP if the fifo is empty
+                        $LADYBUG_TRACE(Channel::B, Bit::B_USB_EP_IN_EPNO, || {
+                            self.ep_in
+                                .epno
+                                .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                        });
 
                         if bytes_written == 0 {
                             $LADYBUG_TRACE(Channel::A, Bit::USB_TX_ZLP, || {});

@@ -24,7 +24,7 @@ use ladybug::{Bit, Channel};
 
 // - configuration ------------------------------------------------------------
 
-const DEVICE_SPEED: Speed = Speed::High;
+const DEVICE_SPEED: Speed = Speed::Full;
 
 const VENDOR_REQUEST: u8 = 0x65;
 const VENDOR_VALUE_CONTROL_OUT: u16 = 0x0001;
@@ -39,7 +39,7 @@ const MAX_TRANSFER_SIZE: usize = moondancer::EP_MAX_PACKET_SIZE * 4;
 
 // - global static state ------------------------------------------------------
 
-static EVENT_QUEUE: Queue<InterruptEvent, 32> = Queue::new();
+static EVENT_QUEUE: Queue<InterruptEvent, 64> = Queue::new();
 
 #[inline(always)]
 fn dispatch_event(event: InterruptEvent) {
@@ -334,7 +334,7 @@ where
             // send requested data
             let bytes_written = usb.write(0, test_data.copied());
 
-            // prime endpoint to receive zlp ack from host
+            // prime endpoint to receive zlp ack from host - this makes no sense or does control have a zlp???
             usb.ack(0, Direction::DeviceToHost);
 
             if bytes_written == payload_length {
@@ -374,8 +374,8 @@ where
             // send requested data
             let bytes_written = usb.write(endpoint_number, test_data.copied());
 
-            // prime endpoint to receive zlp ack from host
-            usb.ack(endpoint_number, Direction::DeviceToHost);
+            // prime endpoint to receive zlp ack from host - this makes no sense or does bulk have a zlp???
+            //usb.ack(endpoint_number, Direction::DeviceToHost);
 
             if bytes_written == payload_length {
                 debug!("VENDOR_VALUE_BULK_IN wrote {} bytes", bytes_written);

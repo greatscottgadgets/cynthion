@@ -40,7 +40,7 @@ class TestTransfers(unittest.TestCase):
 
         import random
         self.payload_length = random.randint(1, MAX_TRANSFER_SIZE - 1)
-        self.payload_length = 768
+        #self.payload_length = 768
         self.test_data = bytes([b % 0xff for b in range(0, self.payload_length)])
 
 
@@ -79,7 +79,7 @@ class TestTransfers(unittest.TestCase):
                 request=VENDOR_REQUEST,
                 value=VENDOR_VALUE_CONTROL_IN,
                 index=self.payload_length,
-                length=self.payload_length,
+                length=MAX_TRANSFER_SIZE,
                 timeout=1000
             )
             response = bytes(response)
@@ -133,7 +133,7 @@ class TestTransfers(unittest.TestCase):
 
             response = device_handle.bulkRead(
                 endpoint=ENDPOINT_BULK_IN & 0x7f,
-                length=self.payload_length,
+                length=MAX_TRANSFER_SIZE,
                 timeout=1000
             )
             response = bytes(response)
