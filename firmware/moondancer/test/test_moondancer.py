@@ -62,16 +62,29 @@ class TestMoondancer(unittest.TestCase):
     def test_read_endpoint(self):
         api = self.board.apis.moondancer
 
+        payload_length = 767
+        response = api.test_read_endpoint(payload_length);
+        self.assertEqual(len(response), payload_length)
+        logging.debug(f"read_endpoint() -> {len(response)} -> {response}")
+
         payload_length = 768
         response = api.test_read_endpoint(payload_length);
         self.assertEqual(len(response), payload_length)
         logging.debug(f"read_endpoint() -> {len(response)} -> {response}")
 
 
+
     def test_write_endpoint(self):
         api = self.board.apis.moondancer
 
-        payload = [b % 0xff for b in range(0, 768)]
+        payload_length = 767
+        payload = [b % 0xff for b in range(0, payload_length)]
+        response = api.test_write_endpoint(1, bytes(payload))
+        self.assertEqual(response, len(payload))
+        logging.debug(f"write_endpoint() -> {len(payload)} -> {response}")
+
+        payload_length = 768
+        payload = [b % 0xff for b in range(0, payload_length)]
         response = api.test_write_endpoint(1, bytes(payload))
         self.assertEqual(response, len(payload))
         logging.debug(f"write_endpoint() -> {len(payload)} -> {response}")

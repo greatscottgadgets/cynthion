@@ -28,8 +28,6 @@ VENDOR_VALUE_CONTROL_IN = 0x0002
 VENDOR_VALUE_BULK_OUT = 0x0003
 VENDOR_VALUE_BULK_IN = 0x0004
 
-PAYLOAD_LENGTH = 70
-
 # usb_hal.rs MAX_TRANSFER_SIZE is 2048
 MAX_TRANSFER_SIZE = 2048
 
@@ -40,12 +38,12 @@ class TestTransfers(unittest.TestCase):
     def setUp(self):
         configure_default_logging(level=os.getenv("LOG_LEVEL", "DEBUG").upper())
 
-        #import random
-        #self.payload_length = random.randint(1, MAX_TRANSFER_SIZE - 1)
-        self.payload_length = PAYLOAD_LENGTH
+        import random
+        self.payload_length = random.randint(1, MAX_TRANSFER_SIZE - 1)
+        self.payload_length = 768
         self.test_data = bytes([b % 0xff for b in range(0, self.payload_length)])
 
-    # TODO unreliable at High
+
     def test_control_transfer_out(self):
         logging.info("test_control_transfer_out")
 
@@ -67,8 +65,7 @@ class TestTransfers(unittest.TestCase):
             logging.info(f"Control write transfer sent {response} bytes.")
 
 
-    # TODO unreliable at High
-    def off_test_control_transfer_in(self):
+    def test_control_transfer_in(self):
         logging.info("test_control_transfer_in")
 
         with usb1.USBContext() as context:
@@ -89,8 +86,7 @@ class TestTransfers(unittest.TestCase):
             logging.info(f"Control read transfer received {len(response)} bytes.")
 
 
-    # TODO unreliable at High
-    def off_test_bulk_transfer_out(self):
+    def test_bulk_transfer_out(self):
         logging.info("test_bulk_transfer_out")
 
         with usb1.USBContext() as context:
@@ -117,8 +113,7 @@ class TestTransfers(unittest.TestCase):
             logging.info(f"bulk write transfer sent {response} bytes.")
 
 
-    # TODO unreliable at High
-    def off_test_bulk_transfer_in(self):
+    def test_bulk_transfer_in(self):
         logging.info("test_bulk_transfer_in")
 
         with usb1.USBContext() as context:
