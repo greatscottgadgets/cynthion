@@ -40,6 +40,7 @@ pub struct Moondancer {
     ep_out_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
     irq_queue: Queue<InterruptEvent, 64>,
     control_queue: Queue<SetupPacket, 8>,
+    pending_set_address: Option<u8>,
 }
 
 impl Moondancer {
@@ -51,6 +52,7 @@ impl Moondancer {
             ep_out_max_packet_size: [0; crate::EP_MAX_ENDPOINTS],
             irq_queue: Queue::new(),
             control_queue: Queue::new(),
+            pending_set_address: None,
         }
     }
 
@@ -62,13 +64,38 @@ impl Moondancer {
                 // flush queues, the actual bus reset is handled in the irq handler for lower latency
                 //while let Some(_) = self.irq_queue.dequeue() {}
                 //while let Some(_) = self.control_queue.dequeue() {}
+                self.pending_set_address = None;
                 event
             }
 
             InterruptEvent::Usb(
                 interface,
-                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
+                UsbEvent::ReceiveSetupPacket(endpoint_number, setup_packet),
             ) => {
+                // check if it is a SetAddress request and handle it locally for lowest latency
+                use smolusb::setup::{Request, RequestType};
+                let direction = setup_packet.direction();
+                let request_type = setup_packet.request_type();
+                let request = setup_packet.request();
+                if matches!(
+                    (direction, request_type, request),
+                    (
+                        Direction::HostToDevice,
+                        RequestType::Standard,
+                        Request::SetAddress
+                    )
+                ) {
+                    // read the address
+                    let address: u8 = (setup_packet.value & 0x7f) as u8;
+
+                    // set pending flag to perform set address after SendComplete
+                    self.pending_set_address = Some(address);
+
+                    // send ZLP to host to end status stage
+                    self.usb0.ack(endpoint_number, Direction::HostToDevice);
+                    return;
+                }
+
                 // queue setup packet and convert to a control event
                 match self.control_queue.enqueue(setup_packet) {
                     Ok(()) => (),
@@ -81,7 +108,17 @@ impl Moondancer {
                         }
                     }
                 }
-                InterruptEvent::Usb(interface, UsbEvent::ReceiveControl(endpoint))
+                InterruptEvent::Usb(interface, UsbEvent::ReceiveControl(endpoint_number))
+            }
+
+            InterruptEvent::Usb(interface, UsbEvent::SendComplete(endpoint_number)) => {
+                // catch EP_IN SendComplete after SetAddress ack
+                if let Some(address) = self.pending_set_address.take() {
+                    self.usb0.set_address(address);
+                    //log::info!("SetAddress: {}", address);
+                    return;
+                }
+                event
             }
 
             _ => event,
@@ -329,7 +366,7 @@ impl Moondancer {
         // stall IN end
         self.usb0.stall_endpoint_in(endpoint_number);
 
-        log::info!("MD moondancer::stall_endpoint_in({})", args.endpoint_number);
+        log::debug!("MD moondancer::stall_endpoint_in({})", args.endpoint_number);
 
         Ok([].into_iter())
     }
@@ -347,7 +384,7 @@ impl Moondancer {
         // stall OUT end
         self.usb0.stall_endpoint_out(endpoint_number);
 
-        log::debug!(
+        log::info!(
             "MD moondancer::stall_endpoint_out({})",
             args.endpoint_number
         );
@@ -482,10 +519,8 @@ impl Moondancer {
             }
         }
 
-        // prime endpoint to receive zlp ack from host or should the remote do this?
-        //if endpoint_number == 0 {
-            self.usb0.ack(endpoint_number, Direction::DeviceToHost);
-        //}
+        // prime OUT endpoint to receive zlp ack from host or should the remote do this?
+        self.usb0.ack(endpoint_number, Direction::DeviceToHost);
 
         if payload_length > 0 && self.irq_queue.len() < 16 {
             //log::info!("write");

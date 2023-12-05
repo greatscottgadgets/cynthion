@@ -587,6 +587,7 @@ impl<'a> Descriptors<'a> {
                     debug!(
                         "  Device qualifier request is not supported for full/low-speed devices"
                     );
+                    // FIXME we should stall instead
                     usb.write(endpoint_number, [].into_iter())
                 }
             }
@@ -596,6 +597,7 @@ impl<'a> Descriptors<'a> {
                 } else {
                     // no other speed configuration, ack HostToDevice instead - TODO check check on mac/windows
                     debug!("  Descriptors::write_descriptor() - no other speed configuration descriptor configured");
+                    // FIXME we should stall instead
                     usb.write(endpoint_number, [].into_iter())
                 }
             }
