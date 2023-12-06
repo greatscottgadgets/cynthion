@@ -195,7 +195,7 @@ impl Moondancer {
         }
         let speed: Speed = self.usb0.controller.speed.read().speed().bits().into();
 
-        log::info!(
+        log::debug!(
             "MD moondancer::connect(ep0_max_packet_size:{}, device_speed:{:?}, quirk_flags:{}) -> {:?}",
             args.ep0_max_packet_size, device_speed, args.quirk_flags, speed
         );
@@ -208,12 +208,20 @@ impl Moondancer {
         // disconnect USB interface
         self.usb0.disconnect();
 
-        // reset state
+        // reset connection state
         self.quirk_flags = 0;
         self.ep_in_max_packet_size = [0; crate::EP_MAX_ENDPOINTS];
         self.ep_out_max_packet_size = [0; crate::EP_MAX_ENDPOINTS];
+        self.pending_set_address = None;
 
-        debug!("MD moondancer::disconnect()");
+        // flush queues
+        while let Some(_) = self.irq_queue.dequeue() {}
+        while let Some(_) = self.control_queue.dequeue() {}
+
+        // clear quirk flags
+        self.quirk_flags = 0;
+
+        log::info!("MD moondancer::disconnect()");
 
         Ok([].into_iter())
     }
@@ -293,7 +301,7 @@ impl Moondancer {
             transfer_type: u8,
         }
 
-        log::info!("MD moondancer::configure_endpoints()");
+        log::debug!("MD moondancer::configure_endpoints()");
 
         // while we have endpoint triplets to handle
         let mut byte_slice = arguments;
@@ -302,7 +310,7 @@ impl Moondancer {
         {
             let endpoint_number = (endpoint.address & 0x7f) as u8;
 
-            log::info!(
+            log::debug!(
                 "  moondancer::configure_endpoint(0x{:x}) -> {} -> max_packet_size:{}",
                 endpoint.address,
                 endpoint_number,
@@ -341,7 +349,7 @@ impl Moondancer {
 
             // prime any OUT endpoints
             if Direction::from_endpoint_address(endpoint.address) == Direction::HostToDevice {
-                log::info!(
+                log::debug!(
                     "  priming HostToDevice (OUT) endpoint address: {}",
                     endpoint.address
                 );
@@ -503,10 +511,10 @@ impl Moondancer {
 
         // TODO better handling for blocking
         let mut timeout = 0;
-        //while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
-        while blocking & self.usb0.ep_in.have.read().have().bit() {
+        while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
+        //while blocking & self.usb0.ep_in.have.read().have().bit() {
             timeout += 1;
-            if timeout > 5_000_000 {
+            if timeout > 10_000_000 {
                 unsafe {
                     self.usb0.clear_tx_ack_active(endpoint_number);
                 }
@@ -519,21 +527,15 @@ impl Moondancer {
             }
         }
 
-        // prime OUT endpoint to receive zlp ack from host or should the remote do this?
-        self.usb0.ack(endpoint_number, Direction::DeviceToHost);
-
-        if payload_length > 0 && self.irq_queue.len() < 16 {
-            //log::info!("write");
-            log::debug!(
-                "MD moondancer::write_endpoint(endpoint_number:{}, blocking:{} payload.len:{} ({})) max_packet_size:{} bytes_written:{}",
-                endpoint_number,
-                blocking,
-                payload_length,
-                args.payload.iter().count(),
-                max_packet_size,
-                bytes_written,
-            );
-        }
+        log::debug!(
+            "MD moondancer::write_endpoint(endpoint_number:{}, blocking:{} payload.len:{} ({})) max_packet_size:{} bytes_written:{}",
+            endpoint_number,
+            blocking,
+            payload_length,
+            args.payload.iter().count(),
+            max_packet_size,
+            bytes_written,
+        );
 
         Ok([].into_iter())
     }
