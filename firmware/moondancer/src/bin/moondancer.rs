@@ -28,7 +28,7 @@ const DEVICE_SPEED: Speed = Speed::High;
 
 // - MachineExternal interrupt handler ----------------------------------------
 
-static EVENT_QUEUE: Queue<InterruptEvent, 128> = Queue::new();
+static EVENT_QUEUE: Queue<InterruptEvent, 64> = Queue::new();
 
 #[inline(always)]
 fn dispatch_event(event: InterruptEvent) {
