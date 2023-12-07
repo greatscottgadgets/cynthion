@@ -27,10 +27,27 @@ pub mod QuirkFlag {
     pub const SetAddressManually: u16 = 0x0001;
 }
 
+struct Packet {
+    endpoint_number: u8,
+    bytes_read: usize,
+    buffer: [u8; 64],
+}
+
+impl Packet {
+    const fn new(endpoint_number: u8, bytes_read: usize) -> Self {
+        Self {
+            endpoint_number,
+            bytes_read,
+            buffer: [0; 64],
+        }
+    }
+}
+
 // - Moondancer --------------------------------------------------------------
 
 use crate::event::InterruptEvent;
 use heapless::spsc::Queue;
+use heapless::Vec;
 
 /// Moondancer
 pub struct Moondancer {
@@ -40,6 +57,7 @@ pub struct Moondancer {
     ep_out_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
     irq_queue: Queue<InterruptEvent, 64>,
     control_queue: Queue<SetupPacket, 8>,
+    packet_buffer: Vec<Packet, 64>,
     pending_set_address: Option<u8>,
 }
 
@@ -52,6 +70,7 @@ impl Moondancer {
             ep_out_max_packet_size: [0; crate::EP_MAX_ENDPOINTS],
             irq_queue: Queue::new(),
             control_queue: Queue::new(),
+            packet_buffer: Vec::new(),
             pending_set_address: None,
         }
     }
@@ -115,9 +134,42 @@ impl Moondancer {
                 // catch EP_IN SendComplete after SetAddress ack
                 if let Some(address) = self.pending_set_address.take() {
                     self.usb0.set_address(address);
-                    //log::info!("SetAddress: {}", address);
                     return;
                 }
+
+                // swallow event, because - currently - we're not using it in moondancer.py
+                return;
+            }
+
+            InterruptEvent::Usb(interface, UsbEvent::ReceivePacket(endpoint_number)) => {
+                // drain FIFO
+                let mut rx_buffer: [u8; crate::EP_MAX_PACKET_SIZE] = [0; crate::EP_MAX_PACKET_SIZE];
+                let bytes_read = self.usb0.read(endpoint_number, &mut rx_buffer);
+
+                // create Packet
+                let mut packet = Packet::new(endpoint_number, bytes_read);
+                if packet.bytes_read > packet.buffer.len() {
+                    error!(
+                        "MD moondancer::dispatch(ReceivePacket({})) -> bytes_read:{} receive buffer overflow",
+                        packet.endpoint_number, packet.bytes_read
+                    );
+                    // TODO we can probably do better than truncating the packet
+                    packet.bytes_read = packet.buffer.len();
+                } else {
+                    packet.buffer[..packet.bytes_read].copy_from_slice(&rx_buffer[..packet.bytes_read]);
+                }
+
+                // append to packet buffer
+                match self.packet_buffer.push(packet) {
+                    Ok(()) => {
+                        // all good
+                    }
+                    Err(packet) => {
+                        error!("MD moondancer::dispatch(ReceivePacket({})) packet buffer overflow",
+                               endpoint_number);
+                    }
+                }
+
                 event
             }
 
@@ -411,23 +463,28 @@ impl Moondancer {
             endpoint_number: u8,
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
+        let endpoint_number = args.endpoint_number;
 
-        let mut rx_buffer: [u8; crate::EP_MAX_PACKET_SIZE] = [0; crate::EP_MAX_PACKET_SIZE];
-        let bytes_read = self.usb0.read(args.endpoint_number, &mut rx_buffer);
-        if bytes_read > rx_buffer.len() {
-            error!(
-                "MD moondancer::read_endpoint({}) -> bytes_read:{} buffer overflow",
-                args.endpoint_number, bytes_read
-            );
-        }
+        let packet = match self.packet_buffer.iter().position(|packet| packet.endpoint_number == endpoint_number) {
+            Some(index) => {
+                self.packet_buffer.remove(index)
+            }
+            None => {
+                error!(
+                    "MD moondancer::read_endpoint({}) has no packet buffered for endpoint",
+                    endpoint_number
+                );
+                Packet::new(endpoint_number, 0)
+            }
+        };
 
         log::debug!(
             "MD moondancer::read_endpoint({}) -> bytes_read:{}",
-            args.endpoint_number,
-            bytes_read
+            packet.endpoint_number,
+            packet.bytes_read
         );
 
-        Ok(rx_buffer.into_iter().take(bytes_read))
+        Ok(packet.buffer.into_iter().take(packet.bytes_read))
     }
 
     pub fn test_read_endpoint(
@@ -440,7 +497,6 @@ impl Moondancer {
             payload_length: U32<LittleEndian>,
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
-
         let payload_length: usize = u32::from(args.payload_length) as usize;
 
         log::debug!("MD moondancer::test_read_endpoint({})", payload_length);
