@@ -308,7 +308,7 @@ macro_rules! impl_usb {
 
                 /// Acknowledge the status stage of an incoming control request.
                 fn ack(&self, endpoint_number: u8, direction: Direction) {
-                    $LADYBUG_TRACE(Channel::A, Bit::USB_ACK, || {
+                    $LADYBUG_TRACE(Channel::A, Bit::A_USB_ACK, || {
                         match direction {
                             // DeviceToHost - IN request, prime the endpoint so we can receive a zlp from the host
                             Direction::DeviceToHost => {
@@ -339,7 +339,7 @@ macro_rules! impl_usb {
 
                 /// Set stall for the given IN endpoint number
                 fn stall_endpoint_in(&self, endpoint_number: u8) {
-                    $LADYBUG_TRACE(Channel::A, Bit::USB_STALL_IN, || {
+                    $LADYBUG_TRACE(Channel::A, Bit::A_USB_STALL_IN, || {
                         self.ep_in.stall.write(|w| w.stall().bit(true));
                         self.ep_in.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
                     });
@@ -347,7 +347,7 @@ macro_rules! impl_usb {
 
                 /// Set stall for the given OUT endpoint number
                 fn stall_endpoint_out(&self, endpoint_number: u8) {
-                    $LADYBUG_TRACE(Channel::A, Bit::USB_STALL_OUT, || {
+                    $LADYBUG_TRACE(Channel::A, Bit::A_USB_STALL_OUT, || {
                         self.ep_out.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });
                         self.ep_out.stall.write(|w| w.stall().bit(true));
                     });
@@ -470,11 +470,9 @@ macro_rules! impl_usb {
                         }
 
                         if bytes_read != buffer.len() {
-                            $LADYBUG_TRACE(Channel::A, Bit::USB_ZERO_SETUP, || {
-                                warn!("  RX {} CONTROL {} bytes read - expected {}",
-                                      stringify!($USBX),
-                                      bytes_read, buffer.len());
-                            });
+                            warn!("  RX {} CONTROL {} bytes read - expected {}",
+                                  stringify!($USBX),
+                                  bytes_read, buffer.len());
                         }
 
                         if overflow == 0 {
@@ -494,7 +492,7 @@ macro_rules! impl_usb {
                 /// Prepare OUT endpoint to receive a single packet.
                 #[inline(always)]
                 fn ep_out_prime_receive(&self, endpoint_number: u8) {
-                    $LADYBUG_TRACE(Channel::A, Bit::USB_EP_OUT_PRIME, || {
+                    $LADYBUG_TRACE(Channel::A, Bit::A_USB_EP_OUT_PRIME, || {
                         // 0. clear receive buffer
                         self.ep_out.reset.write(|w| w.reset().bit(true));
 
@@ -513,7 +511,7 @@ macro_rules! impl_usb {
 
                 #[inline(always)]
                 fn read(&self, endpoint_number: u8, buffer: &mut [u8]) -> usize {
-                    $LADYBUG_TRACE(Channel::A, Bit::USB_READ, || {
+                    $LADYBUG_TRACE(Channel::A, Bit::A_USB_READ, || {
                         /*let mut bytes_read = 0;
                         let mut overflow = 0;
                         while self.ep_out.have.read().have().bit() {
@@ -558,7 +556,7 @@ macro_rules! impl_usb {
                         }
 
                         if bytes_read == 0 {
-                            $LADYBUG_TRACE(Channel::A, Bit::USB_RX_ZLP, || {});
+                            $LADYBUG_TRACE(Channel::A, Bit::A_USB_RX_ZLP, || {});
                         }
 
                         bytes_read + overflow
@@ -587,7 +585,7 @@ macro_rules! impl_usb {
                 where
                     I: Iterator<Item = u8>
                 {
-                    $LADYBUG_TRACE(Channel::A, Bit::USB_WRITE, || {
+                    $LADYBUG_TRACE(Channel::A, Bit::A_USB_WRITE, || {
                         unsafe { self.set_tx_ack_active(endpoint_number); }
 
                         // reset output fifo if needed
@@ -630,13 +628,15 @@ macro_rules! impl_usb {
                         // finally, if we haven't already, prime IN endpoint to either send
                         // remaining queued data or a ZLP if the fifo is empty
                         $LADYBUG_TRACE(Channel::B, Bit::B_USB_EP_IN_EPNO, || {
-                            self.ep_in
-                                .epno
-                                .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                            if bytes_written != 64 {
+                                self.ep_in
+                                    .epno
+                                    .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                            }
                         });
 
                         if bytes_written == 0 {
-                            $LADYBUG_TRACE(Channel::A, Bit::USB_TX_ZLP, || {});
+                            $LADYBUG_TRACE(Channel::A, Bit::A_USB_TX_ZLP, || {});
                         }
 
                         bytes_written
@@ -648,7 +648,7 @@ macro_rules! impl_usb {
                 where
                     I: Iterator<Item = u8>,
                 {
-                    $LADYBUG_TRACE(Channel::A, Bit::USB_WRITE, || {
+                    $LADYBUG_TRACE(Channel::A, Bit::A_USB_WRITE, || {
                         unsafe { self.set_tx_ack_active(endpoint_number); }
 
                         // reset output fifo if needed
@@ -675,7 +675,7 @@ macro_rules! impl_usb {
                         }
 
                         if bytes_written == 0 {
-                            $LADYBUG_TRACE(Channel::A, Bit::USB_TX_ZLP, || {});
+                            $LADYBUG_TRACE(Channel::A, Bit::A_USB_TX_ZLP, || {});
                         }
 
                         bytes_written

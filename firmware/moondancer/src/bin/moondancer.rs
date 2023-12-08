@@ -280,9 +280,7 @@ impl<'a> Firmware<'a> {
 
                     // enqueue moondancer events
                     Usb(Target, _event) => {
-                        ladybug::trace(Channel::A, Bit::GCP_HANDLE_EVENT, || {
-                            self.moondancer.dispatch_event(interrupt_event)
-                        })
+                        self.moondancer.dispatch_event(interrupt_event)
                     },
 
                     // Unhandled event

@@ -23,37 +23,38 @@ pub trait LogicAnalyzer {
 pub struct Bit;
 
 impl Bit {
-    // interrupts on pmod B
-    pub const IRQ_BUS_RESET: u8 = 0;
-    pub const IRQ_EP_CONTROL: u8 = 1;
-    pub const IRQ_EP_IN: u8 = 2;
-    pub const IRQ_EP_OUT: u8 = 3;
+    // - PMOD A --
+    // usb_hal.rs
+    pub const A_HANDLE_EVENT: u8 = 0;
+    pub const A_HANDLE_VENDOR: u8 = 1;
 
-    // moondancer
-    pub const MD_HANDLE_EVENT: u8 = 0;
-    pub const MD_HANDLE_VENDOR: u8 = 1;
+    // moondancer.rs:gcp
+    pub const A_READ_ENDPOINT: u8 = 0;
+    pub const A_WRITE_ENDPOINT: u8 = 1;
 
-    // gcp
-    pub const GCP_HANDLE_EVENT: u8 = 0;
-    pub const USB_ZERO_SETUP: u8   = 1;
+    // usb.rs
+    pub const A_USB_STALL_IN: u8 = 2;
+    pub const A_USB_STALL_OUT: u8 = 2;
+    pub const A_USB_READ: u8 = 3;
+    pub const A_USB_WRITE: u8 = 4;
+    pub const A_USB_RX_ZLP: u8 = 5;
+    pub const A_USB_TX_ZLP: u8 = 5;
+    pub const A_USB_ACK: u8 = 6;
+    pub const A_USB_EP_OUT_PRIME: u8 = 7;
 
-    // control
-    //pub const CONTROL_CALLBACK: u8 = 2;
+    // - PMOD B --
 
-    // usb
-    pub const USB_STALL_IN: u8 = 2;
-    pub const USB_STALL_OUT: u8 = 2;
-    pub const USB_READ: u8 = 3;
-    pub const USB_WRITE: u8 = 4;
-    pub const USB_RX_ZLP: u8 = 5;
-    pub const USB_TX_ZLP: u8 = 5;
-    pub const USB_ACK: u8 = 6;
-    pub const USB_EP_OUT_PRIME: u8 = 7;
+    // interrupts
+    pub const B_IRQ_BUS_RESET: u8 = 0;
+    pub const B_IRQ_EP_CONTROL: u8 = 1;
+    pub const B_IRQ_EP_IN: u8 = 2;
+    pub const B_IRQ_EP_OUT: u8 = 3;
 
-    // extra events on pmod B
+    // usb.rs
     pub const B_USB_READ_CONTROL: u8 = 4;
     pub const B_USB_EP_IN_EPNO: u8 = 5;
 
+    // pmod B 6, 7 are not used because LA channels are assigned to USB D+/D1
 }
 
 

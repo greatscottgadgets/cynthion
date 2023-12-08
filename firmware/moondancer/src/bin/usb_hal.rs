@@ -65,7 +65,7 @@ fn MachineExternal() {
 
     // USB0 BusReset
     if usb0.is_pending(pac::Interrupt::USB0) {
-        ladybug::trace(Channel::B, Bit::IRQ_BUS_RESET, || {
+        ladybug::trace(Channel::B, Bit::B_IRQ_BUS_RESET, || {
             // handle bus reset in interrupt handler for lowest latency
             usb0.bus_reset();
             dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
@@ -75,7 +75,7 @@ fn MachineExternal() {
 
     // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
-        ladybug::trace(Channel::B, Bit::IRQ_EP_CONTROL, || {
+        ladybug::trace(Channel::B, Bit::B_IRQ_EP_CONTROL, || {
             let endpoint = usb0.ep_control.epno.read().bits() as u8;
             let mut buffer = [0_u8; 8];
             let _bytes_read = usb0.read_control(&mut buffer);
@@ -90,7 +90,7 @@ fn MachineExternal() {
 
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
-        ladybug::trace(Channel::B, Bit::IRQ_EP_OUT, || {
+        ladybug::trace(Channel::B, Bit::B_IRQ_EP_OUT, || {
             let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
 
             #[cfg(not(feature = "chonky_events"))]
@@ -124,7 +124,7 @@ fn MachineExternal() {
 
     // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
-        ladybug::trace(Channel::B, Bit::IRQ_EP_IN, || {
+        ladybug::trace(Channel::B, Bit::B_IRQ_EP_IN, || {
             let endpoint = usb0.ep_in.epno.read().bits() as u8;
 
             // TODO something a little safer would be nice
@@ -243,13 +243,13 @@ fn main_loop() -> GreatResult<()> {
                 | Usb(Target, event @ ReceiveSetupPacket(0, _))
                 | Usb(Target, event @ ReceiveBuffer(0, _, _))
                 | Usb(Target, event @ SendComplete(0)) => {
-                    let result = ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || {
+                    let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
                         control.handle_event(&usb0, event)
                     });
                     match result {
                         // vendor requests are not handled by control
                         Some((setup_packet, rx_buffer)) => {
-                            ladybug::trace(Channel::A, Bit::MD_HANDLE_VENDOR, || {
+                            ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
                                 handle_vendor_request(&usb0, setup_packet, rx_buffer);
                             });
                         }
@@ -262,13 +262,13 @@ fn main_loop() -> GreatResult<()> {
                 | Usb(Target, event @ ReceiveSetupPacket(0, _))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
-                    let result = ladybug::trace(Channel::A, Bit::MD_HANDLE_EVENT, || {
+                    let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
                         control.handle_event(&usb0, event)
                     });
                     match result {
                         // vendor requests are not handled by control
                         Some((setup_packet, rx_buffer)) => {
-                            ladybug::trace(Channel::A, Bit::MD_HANDLE_VENDOR, || {
+                            ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
                                 handle_vendor_request(&usb0, setup_packet, rx_buffer);
                             });
                         }

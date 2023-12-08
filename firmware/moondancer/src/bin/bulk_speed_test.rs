@@ -50,7 +50,7 @@ fn MachineExternal() {
 
     // USB0 BusReset
     if usb0.is_pending(pac::Interrupt::USB0) {
-        ladybug::trace(Channel::B, Bit::IRQ_BUS_RESET, || {
+        ladybug::trace(Channel::B, Bit::B_IRQ_BUS_RESET, || {
             usb0.clear_pending(pac::Interrupt::USB0);
             usb0.bus_reset();
             dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
@@ -58,7 +58,7 @@ fn MachineExternal() {
 
     // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
-        ladybug::trace(Channel::B, Bit::IRQ_EP_CONTROL, || {
+        ladybug::trace(Channel::B, Bit::B_IRQ_EP_CONTROL, || {
             let endpoint = usb0.ep_control.epno.read().bits() as u8;
 
             #[cfg(not(feature = "chonky_events"))]
@@ -87,7 +87,7 @@ fn MachineExternal() {
 
     // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
-        ladybug::trace(Channel::B, Bit::IRQ_EP_IN, || {
+        ladybug::trace(Channel::B, Bit::B_IRQ_EP_IN, || {
             let endpoint = usb0.ep_in.epno.read().bits() as u8;
             usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
 
@@ -99,7 +99,7 @@ fn MachineExternal() {
 
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
-        ladybug::trace(Channel::B, Bit::IRQ_EP_OUT, || {
+        ladybug::trace(Channel::B, Bit::B_IRQ_EP_OUT, || {
             let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
 
             // discard packets from Bulk OUT transfer endpoint
