@@ -321,19 +321,25 @@ impl<'a> Firmware<'a> {
                     // host is starting a new command sequence
                     (VendorValue::Execute, Direction::HostToDevice) => {
                         trace!("  GOT COMMAND data:{:?}", rx_buffer);
-                        self.dispatch_libgreat_request(rx_buffer)?;
+                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_REQUEST, || {
+                            self.dispatch_libgreat_request(rx_buffer)
+                        })?;
                     }
 
                     // host is ready to receive a response
                     (VendorValue::Execute, Direction::DeviceToHost) => {
                         trace!("  GOT RESPONSE REQUEST");
-                        self.dispatch_libgreat_response(&setup_packet)?;
+                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_RESPONSE, || {
+                            self.dispatch_libgreat_response(&setup_packet)
+                        })?;
                     }
 
                     // host would like to abort the current command sequence
                     (VendorValue::Cancel, Direction::DeviceToHost) => {
                         debug!("  GOT ABORT");
-                        self.dispatch_libgreat_abort(&setup_packet)?;
+                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_ABORT, || {
+                            self.dispatch_libgreat_abort(&setup_packet)
+                        })?;
                     }
 
                     _ => {
@@ -457,15 +463,19 @@ impl<'a> Firmware<'a> {
     }
 
     fn dispatch_libgreat_response(&mut self, _setup_packet: &SetupPacket) -> GreatResult<()> {
+        use smolusb::traits::UnsafeUsbDriverOperations;
+
         // do we have a response ready?
         if let Some(response) = &mut self.libgreat_response {
             // send response
-            let bytes_written = self.usb1.write(0, response);
+            // TODO let bytes_written = self.usb1.write(0, response);
+            let blocking = false;
+            let bytes_written = self.usb1.old_write(0, response, blocking);
 
             // clear cached response
             self.libgreat_response = None;
 
-            // prime to receive host zlp - TODO should control do this in send_complete?
+            // prime to receive host zlp - aka ep_out_prime_receive() TODO should control do this in send_complete?
             self.usb1.ack(0, Direction::DeviceToHost);
 
             debug!("dispatch_libgreat_response -> {} bytes", bytes_written);

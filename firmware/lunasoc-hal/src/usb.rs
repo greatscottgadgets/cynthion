@@ -628,6 +628,7 @@ macro_rules! impl_usb {
                         // finally, if we haven't already, prime IN endpoint to either send
                         // remaining queued data or a ZLP if the fifo is empty
                         $LADYBUG_TRACE(Channel::B, Bit::B_USB_EP_IN_EPNO, || {
+                            // TODO clean this up - it fixes gcp but breaks usb_hal test_control_transfer_in
                             if bytes_written != 64 {
                                 self.ep_in
                                     .epno
@@ -644,7 +645,7 @@ macro_rules! impl_usb {
                 }
 
                 #[inline(always)]
-                fn old_write<I>(&self, endpoint_number: u8, iter: I) -> usize
+                fn old_write<I>(&self, endpoint_number: u8, iter: I, blocking: bool) -> usize
                 where
                     I: Iterator<Item = u8>,
                 {
@@ -669,6 +670,22 @@ macro_rules! impl_usb {
                         self.ep_in
                             .epno
                             .write(|w| unsafe { w.epno().bits(endpoint_number) });
+
+                        let mut timeout = 0;
+                        while blocking && unsafe { self.is_tx_ack_active(0) } {
+                            timeout += 1;
+                            if timeout > 5_000_000 {
+                                unsafe {
+                                    self.clear_tx_ack_active(0);
+                                }
+                                log::error!(
+                                    "{}::old_write timed out after writing {} bytes.",
+                                    stringify!(USBX),
+                                    bytes_written
+                                );
+                                break;
+                            }
+                        }
 
                         if bytes_written > 60 {
                             log::debug!("  TX {} bytes", bytes_written);

@@ -70,7 +70,7 @@ pub trait WriteEndpoint {
     /// TODO remove once new write is stabilized
     ///
     /// Returns the number of bytes written to the endpoint.
-    fn old_write<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
+    fn old_write<'a, I>(&self, endpoint_number: u8, iter: I, blocking: bool) -> usize
     where
         I: Iterator<Item = u8>;
 

@@ -32,6 +32,11 @@ impl Bit {
     pub const A_READ_ENDPOINT: u8 = 0;
     pub const A_WRITE_ENDPOINT: u8 = 1;
 
+    // moondancer.rs:bin
+    pub const A_GCP_DISPATCH_REQUEST: u8 = 2;
+    pub const A_GCP_DISPATCH_RESPONSE: u8 = 5;
+    pub const A_GCP_DISPATCH_ABORT: u8 = 6;
+
     // usb.rs
     pub const A_USB_STALL_IN: u8 = 2;
     pub const A_USB_STALL_OUT: u8 = 2;
