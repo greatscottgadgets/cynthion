@@ -468,9 +468,9 @@ impl<'a> Firmware<'a> {
         // do we have a response ready?
         if let Some(response) = &mut self.libgreat_response {
             // send response
-            // TODO let bytes_written = self.usb1.write(0, response);
-            let blocking = false;
-            let bytes_written = self.usb1.old_write(0, response, blocking);
+            let bytes_written = self.usb1.write(0, response);
+
+            // TODO should we block here?
 
             // clear cached response
             self.libgreat_response = None;

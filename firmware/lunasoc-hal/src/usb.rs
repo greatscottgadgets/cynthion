@@ -628,12 +628,9 @@ macro_rules! impl_usb {
                         // finally, if we haven't already, prime IN endpoint to either send
                         // remaining queued data or a ZLP if the fifo is empty
                         $LADYBUG_TRACE(Channel::B, Bit::B_USB_EP_IN_EPNO, || {
-                            // TODO clean this up - it fixes gcp but breaks usb_hal test_control_transfer_in
-                            if bytes_written != 64 {
-                                self.ep_in
-                                    .epno
-                                    .write(|w| unsafe { w.epno().bits(endpoint_number) });
-                            }
+                            self.ep_in
+                                .epno
+                                .write(|w| unsafe { w.epno().bits(endpoint_number) });
                         });
 
                         if bytes_written == 0 {

@@ -30,7 +30,7 @@ pub mod QuirkFlag {
 struct Packet {
     endpoint_number: u8,
     bytes_read: usize,
-    buffer: [u8; 64],
+    buffer: [u8; crate::EP_MAX_PACKET_SIZE],
 }
 
 impl Packet {
@@ -38,7 +38,7 @@ impl Packet {
         Self {
             endpoint_number,
             bytes_read,
-            buffer: [0; 64],
+            buffer: [0; crate::EP_MAX_PACKET_SIZE],
         }
     }
 }
@@ -57,7 +57,7 @@ pub struct Moondancer {
     ep_out_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
     irq_queue: Queue<InterruptEvent, 64>,
     control_queue: Queue<SetupPacket, 8>,
-    packet_buffer: Vec<Packet, 64>,
+    packet_buffer: Vec<Packet, 4>,
     pending_set_address: Option<u8>,
 }
 
@@ -137,7 +137,7 @@ impl Moondancer {
                     return;
                 }
 
-                // swallow event, because - currently - we're not using it in moondancer.py
+                // drop event, because - currently - we're not using it in moondancer.py
                 return;
             }
 
@@ -474,6 +474,7 @@ impl Moondancer {
                     "MD moondancer::read_endpoint({}) has no packet buffered for endpoint",
                     endpoint_number
                 );
+                // TODO actually handle this case in moondancer.py
                 Packet::new(endpoint_number, 0)
             }
         };
@@ -559,14 +560,36 @@ impl Moondancer {
         let blocking = args.blocking.read() != 0;
         let payload_length = args.payload.len();
         let payload = args.payload.clone().iter();
-
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
-        let bytes_written =
+
+        let bytes_written = ladybug::trace(Channel::A, Bit::A_USB_WRITE, || {
+            unsafe { self.usb0.set_tx_ack_active(endpoint_number); }
+            let mut bytes_written: usize = 0;
+            for byte in payload {
+                self.usb0.ep_in.data.write(|w| unsafe { w.data().bits(*byte) });
+                bytes_written += 1;
+            }
+            ladybug::trace(Channel::B, Bit::B_USB_EP_IN_EPNO, || {
+                self.usb0.ep_in
+                    .epno
+                    .write(|w| unsafe { w.epno().bits(endpoint_number) });
+            });
+            if bytes_written == 0 {
+                ladybug::trace(Channel::A, Bit::A_USB_TX_ZLP, || {});
+            }
+            bytes_written
+        });
+
+        /*let bytes_written =
             self.usb0
-                .write_with_packet_size(endpoint_number, payload.copied(), max_packet_size);
+                .write_with_packet_size(endpoint_number, payload.copied(), max_packet_size);*/
 
         // TODO better handling for blocking
         let mut timeout = 0;
+        // FIXME not a great assumption if we're sending multi-packets because we'll be assuming
+        // that everything is done after the first packet's send complete fires
+        // One possible fix: make sure facedancer.future never sends multi-packet?
+        // Or, we write our own multi-packet and not use the one in usb.rs
         while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
         //while blocking & self.usb0.ep_in.have.read().have().bit() {
             timeout += 1;
@@ -898,9 +921,11 @@ impl Moondancer {
             }
             0x8 => {
                 // moondancer::read_endpoint
-                let iter = self.read_endpoint(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
-                Ok(response)
+                ladybug::trace(Channel::A, Bit::A_READ_ENDPOINT, || {
+                    let iter = self.read_endpoint(arguments)?;
+                    let response = unsafe { iter_to_response(iter, response_buffer) };
+                    Ok(response)
+                })
             }
             0x9 => {
                 // moondancer::ep_out_prime_receive
@@ -910,9 +935,11 @@ impl Moondancer {
             }
             0xa => {
                 // moondancer::write_endpoint
-                let iter = self.write_endpoint(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
-                Ok(response)
+                ladybug::trace(Channel::A, Bit::A_WRITE_ENDPOINT, || {
+                    let iter = self.write_endpoint(arguments)?;
+                    let response = unsafe { iter_to_response(iter, response_buffer) };
+                    Ok(response)
+                })
             }
             0xb => {
                 // moondancer::get_interrupt_events

@@ -469,7 +469,7 @@ where
                 self.set_state(State::Status(Direction::DeviceToHost))
             }
             State::Status(Direction::DeviceToHost) => {
-                debug!("  send_complete() TODO Status(DeviceToHost)");
+                //warn!("  send_complete() TODO Status(DeviceToHost)");
             }
 
             State::Data(Direction::HostToDevice, _setup_packet) => {
@@ -488,7 +488,7 @@ where
                 warn!("  send_complete() TODO Stalled state");
             }
             State::Idle => {
-                warn!("  send_complete() should not be in Idle state");
+                //warn!("  send_complete() should not be in Idle state");
             }
         }
 
