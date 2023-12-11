@@ -31,7 +31,7 @@ class TestMoondancer(unittest.TestCase):
         response = self.board.supports_api("moondancer")
         self.assertTrue(response)
 
-    def test_get_event(self):
+    def test_get_interrupt_events(self):
         api = self.board.apis.moondancer
 
         # interrupt queue should be empty
@@ -57,37 +57,33 @@ class TestMoondancer(unittest.TestCase):
         self.assertEqual(response[3].interface, 0)
         self.assertEqual(response[3].endpoint_number, 3)
         for message in response:
-            logging.debug(f"get_interrupt_events() -> {message} -> {message.interface} -> {message.endpoint_number}")
+            logging.debug(f"test_get_interrupt_events() -> {message} -> {message.interface} -> {message.endpoint_number}")
+
 
     def test_read_endpoint(self):
         api = self.board.apis.moondancer
 
-        payload_length = 767
-        response = api.test_read_endpoint(payload_length);
-        self.assertEqual(len(response), payload_length)
-        logging.debug(f"read_endpoint() -> {len(response)} -> {response}")
+        payload_lengths = [ 63, 64, 65, 127, 128, 129, 511, 512, 513, 767, 768, 769 ]
 
-        payload_length = 768
-        response = api.test_read_endpoint(payload_length);
-        self.assertEqual(len(response), payload_length)
-        logging.debug(f"read_endpoint() -> {len(response)} -> {response}")
-
+        for payload_length in payload_lengths:
+            logging.debug(f"test_read_endpoint: read {payload_length} bytes")
+            response = api.test_read_endpoint(payload_length);
+            self.assertEqual(len(response), payload_length)
+            logging.debug(f"test_read_endpoint() -> {len(response)}") # -> {response}")
 
 
     def test_write_endpoint(self):
         api = self.board.apis.moondancer
 
-        payload_length = 767
-        payload = [b % 0xff for b in range(0, payload_length)]
-        response = api.test_write_endpoint(1, bytes(payload))
-        self.assertEqual(response, len(payload))
-        logging.debug(f"write_endpoint() -> {len(payload)} -> {response}")
+        payload_lengths = [ 63, 64, 65, 127, 128, 129, 511, 512, 513, 767, 768, 769 ]
 
-        payload_length = 768
-        payload = [b % 0xff for b in range(0, payload_length)]
-        response = api.test_write_endpoint(1, bytes(payload))
-        self.assertEqual(response, len(payload))
-        logging.debug(f"write_endpoint() -> {len(payload)} -> {response}")
+        for payload_length in payload_lengths:
+            logging.debug(f"test_write_endpoint: write {payload_length} bytes")
+            payload = [b % 0xff for b in range(0, payload_length)]
+            response = api.test_write_endpoint(1, bytes(payload))
+            self.assertEqual(response, len(payload))
+            logging.debug(f"test_write_endpoint() -> {len(payload)} -> {response}")
+
 
 
 if __name__ == "__main__":
