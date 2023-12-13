@@ -170,3 +170,136 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
         InterruptEvent::UnhandledInterrupt(pending)
     }
 }
+
+
+// - multi event queue --------------------------------------------------------
+
+use heapless::mpmc::MpMcQueue as Queue;
+
+#[allow(non_snake_case)]
+pub mod UsbEventExt {
+    //! Alternate implementation of some UsbEvent values that also
+    //! contain their associated data.
+
+    use smolusb::setup::SetupPacket;
+    use crate::UsbInterface;
+
+    /// Received a setup packet on USBx_EP_CONTROL
+    ///
+    /// An alternate version of `ReceiveControl` that can be used
+    /// when the setup packet is read inside the interrupt handler
+    /// for lower latency.
+    ///
+    /// Contents is (usb_interface, endpoint_number, setup_packet)
+    #[derive(Clone, Copy)]
+    pub struct ReceiveControl(UsbInterface, u8, SetupPacket);
+
+    /// Received a data packet on USBx_EP_OUT
+    ///
+    /// An alternate version of `ReceivePacket` that can be used
+    /// when the packet is read inside the interrupt handler
+    /// for lower latency.
+    ///
+    /// Contents is (usb_interface, endpoint_number, bytes_read, packet_buffer)
+    #[derive(Clone, Copy)]
+    pub struct ReceivePacket(UsbInterface, u8, usize, [u8; crate::EP_MAX_PACKET_SIZE]);
+}
+
+
+/// So the problem this solves is that some events are much larger
+/// than others.
+///
+/// This can create some pressure on memory-use if you need a large
+/// event queue.
+///
+/// Fortunately the larger events occur less frequently which means we
+/// can give them their own, smaller, queues.
+///
+/// It goes something like this:
+///
+///     use core::any::Any;
+///     use moondancer::util::EventQueue;
+///
+///     static EVENT_QUEUE_ALT: EventQueue = EventQueue::new();
+///     fn dispatch_event_alt<T: Any>(event: T) {
+///         match EVENT_QUEUE_ALT.enqueue(event) {
+///             Ok(()) => (),
+///             Err(_) => {
+///                 error!("MachineExternal - event queue overflow");
+///                 panic!("MachineExternal - event queue overflow");
+///             }
+///         }
+///     }
+pub struct EventQueue {
+    receive_control: Queue<UsbEventExt::ReceiveControl, 16>,
+    receive_packet: Queue<UsbEventExt::ReceivePacket, 16>,
+    interrupt_event: Queue<InterruptEvent, 64>,
+}
+
+use core::any::Any;
+
+impl EventQueue {
+    pub const fn new() -> Self {
+        Self {
+            receive_control: Queue::new(),
+            receive_packet: Queue::new(),
+            interrupt_event: Queue::new(),
+        }
+    }
+
+    pub fn dequeue(&self) -> Option<InterruptEvent> {
+        self.interrupt_event.dequeue()
+    }
+
+    pub fn dequeue_setup_packet(&self) -> Option<UsbEventExt::ReceiveControl> {
+        self.receive_control.dequeue()
+    }
+
+    pub fn dequeue_buffer(&self) -> Option<UsbEventExt::ReceivePacket> {
+        self.receive_packet.dequeue()
+    }
+
+    pub fn enqueue<T: Any>(&self, event: T) -> Result<(), ()> {
+        let any = &event as &dyn Any;
+        match any.downcast_ref::<InterruptEvent>() {
+            Some(event) => {
+                match self.interrupt_event.enqueue(*event) {
+                    Ok(()) => (),
+                    Err(_) => {
+                        log::error!("EventQueue - interrupt event queue overflow");
+                    }
+                }
+            }
+            None => {
+            }
+        }
+
+        match any.downcast_ref::<UsbEventExt::ReceiveControl>() {
+            Some(event) => {
+                match self.receive_control.enqueue(*event) {
+                    Ok(()) => (),
+                    Err(_) => {
+                        log::error!("EventQueue - usb receive control queue overflow");
+                    }
+                }
+            }
+            None => {
+            }
+        }
+
+        match any.downcast_ref::<UsbEventExt::ReceivePacket>() {
+            Some(event) => {
+                match self.receive_packet.enqueue(*event) {
+                    Ok(()) => (),
+                    Err(_) => {
+                        log::error!("EventQueue - usb receive packet queue overflow");
+                    }
+                }
+            }
+            None => {
+            }
+        }
+
+        Ok(())
+    }
+}
