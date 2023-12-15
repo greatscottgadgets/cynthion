@@ -559,50 +559,71 @@ impl Moondancer {
         let endpoint_number: u8 = args.endpoint_number.read();
         let blocking = args.blocking.read() != 0;
         let payload_length = args.payload.len();
-        let payload = args.payload.clone().iter();
+        let iter = args.payload.clone().iter();
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
 
-        let bytes_written = ladybug::trace(Channel::A, Bit::A_USB_WRITE, || {
-            unsafe { self.usb0.set_tx_ack_active(endpoint_number); }
-            let mut bytes_written: usize = 0;
-            for byte in payload {
-                self.usb0.ep_in.data.write(|w| unsafe { w.data().bits(*byte) });
-                bytes_written += 1;
-            }
-            ladybug::trace(Channel::B, Bit::B_USB_EP_IN_EPNO, || {
+        // check if output FIFO is empty
+        // FIXME add a timeout and/or return a GreatError::DeviceOrResourceBusy
+        if self.usb0.ep_in.have.read().have().bit() {
+            warn!("  {} clear tx", stringify!($USBX));
+            self.usb0.ep_in.reset.write(|w| w.reset().bit(true));
+        }
+
+        // write data out to EP_IN, splitting into packets of max_packet_size
+        let mut bytes_written: usize = 0;
+        for byte in iter {
+            self.usb0.ep_in.data.write(|w| unsafe { w.data().bits(*byte) });
+            bytes_written += 1;
+
+            if bytes_written % max_packet_size == 0 {
+                unsafe { self.usb0.set_tx_ack_active(endpoint_number); }
                 self.usb0.ep_in
                     .epno
                     .write(|w| unsafe { w.epno().bits(endpoint_number) });
-            });
-            if bytes_written == 0 {
-                ladybug::trace(Channel::A, Bit::A_USB_TX_ZLP, || {});
-            }
-            bytes_written
-        });
 
-        /*let bytes_written =
-            self.usb0
-                .write_with_packet_size(endpoint_number, payload.copied(), max_packet_size);*/
-
-        // TODO better handling for blocking
-        let mut timeout = 0;
-        // FIXME not a great assumption if we're sending multi-packets because we'll be assuming
-        // that everything is done after the first packet's send complete fires
-        // One possible fix: make sure facedancer.future never sends multi-packet?
-        // Or, we write our own multi-packet and not use the one in usb.rs
-        while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
-        //while blocking & self.usb0.ep_in.have.read().have().bit() {
-            timeout += 1;
-            if timeout > 10_000_000 {
-                unsafe {
-                    self.usb0.clear_tx_ack_active(endpoint_number);
+                // TODO should we wait for send complete interrupt to fire
+                // or do we eke out the smallest bit of performance if we
+                // just wait for the FIFO to empty?
+                let mut timeout = 0;
+                //while self.ep_in.have.read().have().bit() {
+                while unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
+                    timeout += 1;
+                    if timeout > 25_000_000 {
+                        log::error!(
+                            "moondancer::write_endpoint timed out after {} bytes",
+                            bytes_written
+                        );
+                        // TODO return an error
+                    }
                 }
+            }
+        }
+
+        // finally, prime IN endpoint to either send
+        // remaining queued data or a ZLP if the fifo is
+        // empty.
+        //
+        // FIXME this conditional is to work around a problem where
+        // Facedancer has taken responsibility for splitting the
+        // packets up. We probably need two moondancer write methods
+        // to be honest.
+        if bytes_written != max_packet_size {
+            unsafe { self.usb0.set_tx_ack_active(endpoint_number); }
+            self.usb0.ep_in
+                .epno
+                .write(|w| unsafe { w.epno().bits(endpoint_number) });
+        }
+
+        // wait for send to complete if we're blocking
+        let mut timeout = 0;
+        while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
+            timeout += 1;
+            if timeout > 25_000_000 {
                 log::error!(
-                    "MD moondancer::write_endpoint timed out writing {} bytes. Sent {} bytes.",
-                    payload_length,
+                    "moondancer::write_endpoint timed out waiting for write to complete after {} bytes",
                     bytes_written
                 );
-                break;
+                // TODO return an error
             }
         }
 

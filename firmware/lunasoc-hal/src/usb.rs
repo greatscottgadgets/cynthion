@@ -625,8 +625,9 @@ macro_rules! impl_usb {
                             }
                         }
 
-                        // finally, if we haven't already, prime IN endpoint to either send
-                        // remaining queued data or a ZLP if the fifo is empty
+                        // finally, prime IN endpoint to either send
+                        // remaining queued data or a ZLP if the fifo
+                        // is empty and transmission is complete
                         $LADYBUG_TRACE(Channel::B, Bit::B_USB_EP_IN_EPNO, || {
                             self.ep_in
                                 .epno
@@ -641,60 +642,6 @@ macro_rules! impl_usb {
                     })
                 }
 
-                #[inline(always)]
-                fn old_write<I>(&self, endpoint_number: u8, iter: I, blocking: bool) -> usize
-                where
-                    I: Iterator<Item = u8>,
-                {
-                    $LADYBUG_TRACE(Channel::A, Bit::A_USB_WRITE, || {
-                        unsafe { self.set_tx_ack_active(endpoint_number); }
-
-                        // reset output fifo if needed
-                        // TODO rather return an error
-                        if self.ep_in.have.read().have().bit() {
-                            warn!("  clear tx");
-                            self.ep_in.reset.write(|w| w.reset().bit(true));
-                        }
-
-                        // write data
-                        let mut bytes_written: usize = 0;
-                        for byte in iter {
-                            self.ep_in.data.write(|w| unsafe { w.data().bits(byte) });
-                            bytes_written += 1;
-                        }
-
-                        // finally, prime IN endpoint
-                        self.ep_in
-                            .epno
-                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
-
-                        let mut timeout = 0;
-                        while blocking && unsafe { self.is_tx_ack_active(0) } {
-                            timeout += 1;
-                            if timeout > 5_000_000 {
-                                unsafe {
-                                    self.clear_tx_ack_active(0);
-                                }
-                                log::error!(
-                                    "{}::old_write timed out after writing {} bytes.",
-                                    stringify!(USBX),
-                                    bytes_written
-                                );
-                                break;
-                            }
-                        }
-
-                        if bytes_written > 60 {
-                            log::debug!("  TX {} bytes", bytes_written);
-                        }
-
-                        if bytes_written == 0 {
-                            $LADYBUG_TRACE(Channel::A, Bit::A_USB_TX_ZLP, || {});
-                        }
-
-                        bytes_written
-                    })
-                }
             }
 
             // mark implementation as complete

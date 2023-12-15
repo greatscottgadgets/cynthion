@@ -67,19 +67,17 @@ pub trait ReadEndpoint {
 }
 
 pub trait WriteEndpoint {
-    /// TODO remove once new write is stabilized
-    ///
-    /// Returns the number of bytes written to the endpoint.
-    fn old_write<'a, I>(&self, endpoint_number: u8, iter: I, blocking: bool) -> usize
-    where
-        I: Iterator<Item = u8>;
-
     /// Write iterator to endpoint
     ///
     /// Returns the number of bytes written to the endpoint.
     fn write<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
     where
         I: Iterator<Item = u8>;
+
+    // TODO add blocking argument to write
+    //fn write<'a, I>(&self, endpoint_number: u8, iter: I, blocking: bool) -> usize
+    //where
+    //    I: Iterator<Item = u8>;
 
     /// Write iterator to endpoint using the given packet size
     ///
