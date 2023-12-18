@@ -67,6 +67,17 @@ where
             return;
         }
 
+        // evil, scary version that is guaranteed to not be interrupt safe
+        /*unsafe {
+            let mut writer = hal::Serial::summon();
+            match writeln!(writer, "{}\t{}", record.level(), record.args()) {
+                Ok(()) => (),
+                Err(_e) => {
+                    panic!("Logger failed to write to device");
+                }
+            }
+        }*/
+
         #[cfg(target_has_atomic)]
         {
             match self.writer.borrow_mut().as_mut() {

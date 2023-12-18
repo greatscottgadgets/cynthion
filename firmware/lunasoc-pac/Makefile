@@ -1,4 +1,8 @@
-SVD := ../../python/cynthion/build/gensvd/lunasoc.svd
+# Depends on:
+#
+#	 cargo install svd2rust form
+
+SVD := ../../cynthion/python/build/gensvd/lunasoc.svd
 
 svd2rust:
 	rm -rf build src/generated.rs src/generated/

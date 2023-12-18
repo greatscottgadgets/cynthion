@@ -15,8 +15,10 @@ pub mod traits;
 pub use error::SmolError;
 pub use error::SmolResult;
 
-// TODO const template structs
+/// USB devices can define up to 32 endpoints. 16 IN and 16 OUT.
 pub const EP_MAX_ENDPOINTS: usize = 16;
+
+// TODO const template struct
 pub const EP_MAX_PACKET_SIZE: usize = 512;
 
 pub mod event {
@@ -29,17 +31,12 @@ pub mod event {
         /// Received a USB bus reset
         BusReset = 10,
 
-        /// Received a packet on USBx_EP_CONTROL
+        /// Received a setup packet on USBx_EP_CONTROL
         ///
         /// Contents is (endpoint_number)
         ReceiveControl(u8) = 11,
 
-        /// Received a setup packet on USBx_EP_CONTROL
-        ///
-        /// Contents is (endpoint_number, SetupPacket)
-        ReceiveSetupPacket(u8, SetupPacket) = 14,
-
-        /// Received a packet on USBx_EP_OUT
+        /// Received a data packet on USBx_EP_OUT
         ///
         /// Contents is (endpoint_number)
         ReceivePacket(u8) = 12,
@@ -48,6 +45,25 @@ pub mod event {
         ///
         /// Contents is (endpoint_number)
         SendComplete(u8) = 13,
+
+        /// Received a setup packet on USBx_EP_CONTROL
+        ///
+        /// An alternate version of `ReceiveControl` that can be used
+        /// when the setup packet is read inside the interrupt handler
+        /// for lower latency.
+        ///
+        /// Contents is (endpoint_number, setup_packet)
+        ReceiveSetupPacket(u8, SetupPacket) = 14,
+
+        #[cfg(feature = "chonky_events")]
+        /// Received a data packet on USBx_EP_OUT
+        ///
+        /// An alternate version of `ReceivePacket` that can be used
+        /// when the packet is read inside the interrupt handler
+        /// for lower latency.
+        ///
+        /// Contents is (endpoint_number, bytes_read, packet_buffer)
+        ReceiveBuffer(u8, usize, [u8; crate::EP_MAX_PACKET_SIZE]) = 15,
     }
 
     impl core::fmt::Debug for UsbEvent {
@@ -59,14 +75,18 @@ pub mod event {
                 UsbEvent::ReceiveControl(endpoint) => {
                     write!(f, "ReceiveControl({})", endpoint)
                 }
-                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet) => {
-                    write!(f, "ReceiveSetupPacket({}, {:?})", endpoint, setup_packet)
-                }
                 UsbEvent::ReceivePacket(endpoint) => {
                     write!(f, "ReceivePacket({})", endpoint)
                 }
                 UsbEvent::SendComplete(endpoint) => {
                     write!(f, "SendComplete({})", endpoint)
+                }
+                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet) => {
+                    write!(f, "ReceiveSetupPacket({}, {:?})", endpoint, setup_packet)
+                }
+                #[cfg(feature = "chonky_events")]
+                UsbEvent::ReceiveBuffer(endpoint, bytes_read, _buffer) => {
+                    write!(f, "ReceiveBuffer({}, {})", endpoint, bytes_read)
                 }
             }
         }
@@ -77,9 +97,11 @@ pub mod event {
             match event {
                 UsbEvent::BusReset => 10,
                 UsbEvent::ReceiveControl(_) => 11,
-                UsbEvent::ReceiveSetupPacket(_, _) => 14,
                 UsbEvent::ReceivePacket(_) => 12,
                 UsbEvent::SendComplete(_) => 13,
+                UsbEvent::ReceiveSetupPacket(_, _) => 14,
+                #[cfg(feature = "chonky_events")]
+                UsbEvent::ReceiveBuffer(_, _, _) => 15,
             }
         }
     }

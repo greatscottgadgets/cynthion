@@ -1,0 +1,15 @@
+[package]
+name = "ladybug"
+version = "0.1.0"
+authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
+license-file = "LICENSE.txt"
+categories = ["embedded", "hardware-support", "no-std"]
+description = "A small library for triggering a logic analyzer from program events"
+edition = "2021"
+rust-version = "1.68"
+
+[features]
+disable = []
+enable = []
+
+[dependencies]

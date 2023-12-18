@@ -16,14 +16,11 @@ pub struct SetupPacket {
     pub length: u16,
 }
 
-// TODO TryFrom -> From
-impl TryFrom<[u8; 8]> for SetupPacket {
-    type Error = SmolError;
-
-    fn try_from(buffer: [u8; 8]) -> core::result::Result<Self, Self::Error> {
+impl From<[u8; 8]> for SetupPacket {
+    fn from(buffer: [u8; 8]) -> Self {
         // Deserialize into a SetupRequest in the most cursed manner available to us
         // TODO do this properly
-        Ok(unsafe { core::mem::transmute::<[u8; 8], SetupPacket>(buffer) })
+        unsafe { core::mem::transmute::<[u8; 8], SetupPacket>(buffer) }
     }
 }
 
@@ -78,7 +75,7 @@ impl From<u8> for Recipient {
 }
 
 /// Represents bit 5..=6 of the `[SetupPacket]` `request`_type field.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum RequestType {
     Standard = 0,
@@ -99,7 +96,7 @@ impl From<u8> for RequestType {
 }
 
 /// Represents bit 7 of the `[SetupPacket]` `request`_type field.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
 #[repr(u8)]
 pub enum Direction {
     /// Host to device (OUT)
@@ -132,7 +129,7 @@ impl Direction {
 }
 
 /// Represents the `SetupPacket` `request` field.
-#[derive(Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Request {
     GetStatus = 0,

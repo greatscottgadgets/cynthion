@@ -38,6 +38,7 @@ pub enum DescriptorType {
     SuperSpeedEndpointCompanion = 48,
 }
 
+// TODO s/TryFrom/From
 impl TryFrom<u8> for DescriptorType {
     type Error = SmolError;
 

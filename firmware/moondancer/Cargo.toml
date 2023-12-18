@@ -9,6 +9,11 @@ edition = "2021"
 rust-version = "1.68"
 default-run = "moondancer"
 
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+
 [package.metadata.docs.rs]
 default-target = "riscv32imac-unknown-none-elf"
 targets = [
@@ -25,7 +30,16 @@ default = [
     "vexriscv_dcache",
 
     #"nightly",
+
+    #"chonky_events",
+    #"chonky_control_events",
+    #"chonky_receive_events",
+    "ladybug",
 ]
+
+# pack setup packet and rx packet buffers into event queue
+chonky_events = ["smolusb/chonky_events"]
+ladybug = ["ladybug/enable"]
 
 # select softcore
 minerva = [
@@ -47,17 +61,19 @@ nightly = [
 
 [dependencies]
 cynthion = { path = "../../cynthion/rust" }
+ladybug = { path = "../ladybug" }
 libgreat = { path = "../libgreat-rs", features = ["errno_minimal"] }
 lunasoc-pac = { path = "../lunasoc-pac", default-features = false, features = ["critical-section"]}
 lunasoc-hal = { path = "../lunasoc-hal", default-features = false, features = ["usb"]}
-smolusb = { path = "../smolusb", default-features = false, features = []}
+smolusb = { path = "../smolusb", default-features = false, features = ["ladybug"]}
 
 riscv = { version = "=0.10.1", features = ["critical-section-single-hart"] }
 riscv-rt = { version = "=0.11.0" }
 
 bbqueue = { version = "0.5.1", default-features = false }
 
-heapless = { version = "=0.7.16", default-features = false, features = ["mpmc_large"] } # TODO 0.8.0 is en-route
+heapless = { version = "=0.7.16", default-features = false, features = ["cas", "mpmc_large"] }
+#heapless = { path = "../../../forks/heapless.git", default-features = false, features = ["cas", "mpmc_large"] }
 zerocopy = { version = "=0.7.0-alpha.2", default-features = false }
 
 log = { version="=0.4.17", features = ["release_max_level_info"] }
@@ -83,4 +99,4 @@ name = "interrupts"
 name = "moondancer"
 
 [[bin]]
-name = "test_usb"
+name = "usb_hal"

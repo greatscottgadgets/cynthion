@@ -102,13 +102,11 @@ class TestLibgreatEndpoints(unittest.TestCase):
     def test_large_api_commands(self):
         api = self.board.apis.moondancer
 
-        # TODO caps out at 511
-        response = api.test_read_endpoint(511)
-        self.assertEqual(len(response), 511)
+        response = api.test_read_endpoint(711)
+        self.assertEqual(len(response), 711)
         logging.debug(f"received api response: {len(response)} -> '{response}'")
 
-        # TODO maxes out at 503 because we're encoding function arguments too
-        payload = [b % 0xff for b in range(0, 503)]
+        payload = [b % 0xff for b in range(0, 711)]
         response = api.test_write_endpoint(1, bytes(payload))
         self.assertEqual(response, len(payload))
         logging.debug(f"received api response: {response}")
