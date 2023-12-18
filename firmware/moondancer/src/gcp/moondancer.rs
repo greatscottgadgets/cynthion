@@ -156,7 +156,8 @@ impl Moondancer {
                     // TODO we can probably do better than truncating the packet
                     packet.bytes_read = packet.buffer.len();
                 } else {
-                    packet.buffer[..packet.bytes_read].copy_from_slice(&rx_buffer[..packet.bytes_read]);
+                    packet.buffer[..packet.bytes_read]
+                        .copy_from_slice(&rx_buffer[..packet.bytes_read]);
                 }
 
                 // append to packet buffer
@@ -165,8 +166,10 @@ impl Moondancer {
                         // all good
                     }
                     Err(packet) => {
-                        error!("MD moondancer::dispatch(ReceivePacket({})) packet buffer overflow",
-                               endpoint_number);
+                        error!(
+                            "MD moondancer::dispatch(ReceivePacket({})) packet buffer overflow",
+                            endpoint_number
+                        );
                     }
                 }
 
@@ -465,10 +468,12 @@ impl Moondancer {
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let endpoint_number = args.endpoint_number;
 
-        let packet = match self.packet_buffer.iter().position(|packet| packet.endpoint_number == endpoint_number) {
-            Some(index) => {
-                self.packet_buffer.remove(index)
-            }
+        let packet = match self
+            .packet_buffer
+            .iter()
+            .position(|packet| packet.endpoint_number == endpoint_number)
+        {
+            Some(index) => self.packet_buffer.remove(index),
             None => {
                 error!(
                     "MD moondancer::read_endpoint({}) has no packet buffered for endpoint",
@@ -572,12 +577,18 @@ impl Moondancer {
         // write data out to EP_IN, splitting into packets of max_packet_size
         let mut bytes_written: usize = 0;
         for byte in iter {
-            self.usb0.ep_in.data.write(|w| unsafe { w.data().bits(*byte) });
+            self.usb0
+                .ep_in
+                .data
+                .write(|w| unsafe { w.data().bits(*byte) });
             bytes_written += 1;
 
             if bytes_written % max_packet_size == 0 {
-                unsafe { self.usb0.set_tx_ack_active(endpoint_number); }
-                self.usb0.ep_in
+                unsafe {
+                    self.usb0.set_tx_ack_active(endpoint_number);
+                }
+                self.usb0
+                    .ep_in
                     .epno
                     .write(|w| unsafe { w.epno().bits(endpoint_number) });
 
@@ -608,8 +619,11 @@ impl Moondancer {
         // packets up. We probably need two moondancer write methods
         // to be honest.
         if bytes_written != max_packet_size {
-            unsafe { self.usb0.set_tx_ack_active(endpoint_number); }
-            self.usb0.ep_in
+            unsafe {
+                self.usb0.set_tx_ack_active(endpoint_number);
+            }
+            self.usb0
+                .ep_in
                 .epno
                 .write(|w| unsafe { w.epno().bits(endpoint_number) });
         }

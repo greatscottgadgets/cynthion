@@ -279,9 +279,7 @@ impl<'a> Firmware<'a> {
                     // - usb0 Target event handlers --
 
                     // enqueue moondancer events
-                    Usb(Target, _event) => {
-                        self.moondancer.dispatch_event(interrupt_event)
-                    },
+                    Usb(Target, _event) => self.moondancer.dispatch_event(interrupt_event),
 
                     // Unhandled event
                     _ => {
@@ -488,7 +486,6 @@ impl<'a> Firmware<'a> {
             self.usb1.ack(0, Direction::DeviceToHost);
 
             debug!("dispatch_libgreat_response -> {} bytes", bytes_written);
-
         } else if let Some(error) = self.libgreat_response_last_error {
             warn!("dispatch_libgreat_response error result: {:?}", error);
 

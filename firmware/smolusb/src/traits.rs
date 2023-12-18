@@ -9,11 +9,7 @@ use core::slice;
 
 // convenience alias
 pub trait UsbDriver:
-    ReadControl
-    + ReadEndpoint
-    + WriteEndpoint
-    + UsbDriverOperations
-    + UnsafeUsbDriverOperations // FIXME this should not be part of the default set
+    ReadControl + ReadEndpoint + WriteEndpoint + UsbDriverOperations
 {
 }
 
@@ -80,7 +76,12 @@ pub trait WriteEndpoint {
     /// Write iterator to endpoint using the given packet size
     ///
     /// Returns the number of bytes written to the endpoint.
-    fn write_with_packet_size<'a, I>(&self, endpoint_number: u8, iter: I, packet_size: usize) -> usize
+    fn write_with_packet_size<'a, I>(
+        &self,
+        endpoint_number: u8,
+        iter: I,
+        packet_size: usize,
+    ) -> usize
     where
         I: Iterator<Item = u8>;
 }

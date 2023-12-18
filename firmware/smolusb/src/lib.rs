@@ -6,7 +6,6 @@
 
 pub mod class;
 pub mod control;
-pub mod control_deprecated;
 pub mod descriptor;
 pub mod device;
 pub mod error;

@@ -10,9 +10,7 @@ use smolusb::descriptor::DescriptorType;
 use smolusb::device::Speed;
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Request, RequestType, SetupPacket};
-use smolusb::traits::{
-    ReadControl, ReadEndpoint, UsbDriverOperations, WriteEndpoint,
-};
+use smolusb::traits::{ReadControl, ReadEndpoint, UsbDriverOperations, WriteEndpoint};
 
 use moondancer::{hal, pac};
 use pac::csr::interrupt;
@@ -335,7 +333,10 @@ fn main() -> ! {
                             endpoint,
                             &buffer[0..8],
                         );
-                        usb1.write(endpoint, buffer.iter().copied().take(bytes_read).into_iter());
+                        usb1.write(
+                            endpoint,
+                            buffer.iter().copied().take(bytes_read).into_iter(),
+                        );
                         info!("Sent {} bytes to usb1 endpoint: {}", bytes_read, endpoint);
                     }
                     usb0.ep_out_prime_receive(endpoint);
@@ -350,7 +351,10 @@ fn main() -> ! {
                             endpoint,
                             &buffer[0..8],
                         );
-                        usb0.write(endpoint, buffer.iter().copied().take(bytes_read).into_iter());
+                        usb0.write(
+                            endpoint,
+                            buffer.iter().copied().take(bytes_read).into_iter(),
+                        );
                         info!("Sent {} bytes to usb0 endpoint: {}", bytes_read, endpoint);
                     }
                     usb1.ep_out_prime_receive(endpoint);

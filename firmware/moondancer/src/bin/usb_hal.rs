@@ -52,7 +52,6 @@ fn dispatch_event(event: InterruptEvent) {
     }
 }
 
-
 // - MachineExternal interrupt handler ----------------------------------------
 
 #[allow(non_snake_case)]
@@ -278,7 +277,8 @@ fn main_loop() -> GreatResult<()> {
                     }
                 }
                 Usb(Target, ReceivePacket(endpoint @ ENDPOINT_BULK_OUT)) => {
-                    let mut rx_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] = [0; moondancer::EP_MAX_PACKET_SIZE];
+                    let mut rx_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] =
+                        [0; moondancer::EP_MAX_PACKET_SIZE];
                     let bytes_read = usb0.read(endpoint, &mut rx_buffer);
                     usb0.ep_out_prime_receive(endpoint);
                     debug!("VENDOR_VALUE_BULK_IN received {} bytes", bytes_read);
@@ -323,9 +323,16 @@ where
             // but caller has to send zlp themselves if there was no data.
             // really, either control has to always zlp or the caller has to always zlp
             if rx_buffer.len() == payload_length {
-                debug!("VENDOR_VALUE_CONTROL_OUT received {} bytes", rx_buffer.len());
+                debug!(
+                    "VENDOR_VALUE_CONTROL_OUT received {} bytes",
+                    rx_buffer.len()
+                );
             } else {
-                error!("VENDOR_VALUE_CONTROL_OUT expected {} bytes but only received {} bytes.", payload_length, rx_buffer.len());
+                error!(
+                    "VENDOR_VALUE_CONTROL_OUT expected {} bytes but only received {} bytes.",
+                    payload_length,
+                    rx_buffer.len()
+                );
             }
         }
         (VENDOR_REQUEST, VENDOR_VALUE_CONTROL_IN) => {
@@ -341,7 +348,10 @@ where
             if bytes_written == payload_length {
                 debug!("VENDOR_VALUE_CONTROL_IN wrote {} bytes", bytes_written);
             } else {
-                error!("VENDOR_VALUE_CONTROL_IN payload length is {} bytes but only wrote {} bytes", payload_length, bytes_written);
+                error!(
+                    "VENDOR_VALUE_CONTROL_IN payload length is {} bytes but only wrote {} bytes",
+                    payload_length, bytes_written
+                );
             }
         }
         (VENDOR_REQUEST, VENDOR_VALUE_BULK_OUT) => {
@@ -351,7 +361,11 @@ where
             // send zlp response because there was no data TODO see above
             usb.ack(0, Direction::HostToDevice);
 
-            debug!("VENDOR_VALUE_BULK_OUT expecting {} bytes ({})", payload_length, rx_buffer.len());
+            debug!(
+                "VENDOR_VALUE_BULK_OUT expecting {} bytes ({})",
+                payload_length,
+                rx_buffer.len()
+            );
         }
         (VENDOR_REQUEST, VENDOR_VALUE_BULK_IN) => {
             let endpoint_number = ENDPOINT_BULK_IN & 0x7f;
@@ -359,7 +373,9 @@ where
             let test_data = test_data.iter().take(payload_length);
 
             // send zlp response because there was no data TODO see above
-            unsafe { usb.set_tx_ack_active(0); }
+            unsafe {
+                usb.set_tx_ack_active(0);
+            }
             usb.ack(0, Direction::HostToDevice);
 
             // wait for zlp to be sent
@@ -381,7 +397,10 @@ where
             if bytes_written == payload_length {
                 debug!("VENDOR_VALUE_BULK_IN wrote {} bytes", bytes_written);
             } else {
-                error!("VENDOR_VALUE_BULK_IN payload length is {} bytes but only wrote {} bytes", payload_length, bytes_written);
+                error!(
+                    "VENDOR_VALUE_BULK_IN payload length is {} bytes but only wrote {} bytes",
+                    payload_length, bytes_written
+                );
             }
         }
         _ => {
@@ -395,8 +414,16 @@ where
 
 // - usb descriptors ----------------------------------------------------------
 
-const DESCRIPTOR_MAX_PACKET_SIZE: u16 = if matches!(DEVICE_SPEED, Speed::High) {512} else {64};
-const OTHER_DESCRIPTOR_MAX_PACKET_SIZE: u16 = if matches!(DEVICE_SPEED, Speed::High) {64} else {512};
+const DESCRIPTOR_MAX_PACKET_SIZE: u16 = if matches!(DEVICE_SPEED, Speed::High) {
+    512
+} else {
+    64
+};
+const OTHER_DESCRIPTOR_MAX_PACKET_SIZE: u16 = if matches!(DEVICE_SPEED, Speed::High) {
+    64
+} else {
+    512
+};
 
 static USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     descriptor_version: 0x0200,
@@ -445,14 +472,14 @@ static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDe
         &[
             EndpointDescriptor {
                 endpoint_address: ENDPOINT_BULK_OUT,
-                attributes: 0x02,       // Bulk
+                attributes: 0x02, // Bulk
                 max_packet_size: DESCRIPTOR_MAX_PACKET_SIZE,
                 interval: 0,
                 ..EndpointDescriptor::new()
             },
             EndpointDescriptor {
                 endpoint_address: ENDPOINT_BULK_IN,
-                attributes: 0x02,       // Bulk
+                attributes: 0x02, // Bulk
                 max_packet_size: DESCRIPTOR_MAX_PACKET_SIZE,
                 interval: 0,
                 ..EndpointDescriptor::new()
@@ -484,14 +511,14 @@ static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
             &[
                 EndpointDescriptor {
                     endpoint_address: ENDPOINT_BULK_OUT,
-                    attributes: 0x02,       // Bulk
+                    attributes: 0x02, // Bulk
                     max_packet_size: OTHER_DESCRIPTOR_MAX_PACKET_SIZE,
                     interval: 0,
                     ..EndpointDescriptor::new()
                 },
                 EndpointDescriptor {
                     endpoint_address: ENDPOINT_BULK_IN,
-                    attributes: 0x02,       // Bulk
+                    attributes: 0x02, // Bulk
                     max_packet_size: OTHER_DESCRIPTOR_MAX_PACKET_SIZE,
                     interval: 0,
                     ..EndpointDescriptor::new()

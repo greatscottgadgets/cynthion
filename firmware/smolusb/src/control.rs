@@ -31,17 +31,16 @@ impl Callback {
                 State::Idle
             }
             Ack(endpoint_number, Direction::DeviceToHost)
-                | EndpointOutPrimeReceive(endpoint_number) => {
-                    // DeviceToHost - IN request,  prime the endpoint because the host will send a zlp to the device
-                    usb.ack(endpoint_number, Direction::DeviceToHost);
-                    control_state
-                }
-            Ack(endpoint_number, Direction::HostToDevice)
-                | EndpointInSendZLP(endpoint_number) => {
-                    // HostToDevice - OUT request, send a ZLP from the device to the host
-                    usb.ack(endpoint_number, Direction::HostToDevice);
-                    control_state
-                }
+            | EndpointOutPrimeReceive(endpoint_number) => {
+                // DeviceToHost - IN request,  prime the endpoint because the host will send a zlp to the device
+                usb.ack(endpoint_number, Direction::DeviceToHost);
+                control_state
+            }
+            Ack(endpoint_number, Direction::HostToDevice) | EndpointInSendZLP(endpoint_number) => {
+                // HostToDevice - OUT request, send a ZLP from the device to the host
+                usb.ack(endpoint_number, Direction::HostToDevice);
+                control_state
+            }
         }
     }
 }
@@ -567,16 +566,25 @@ impl<'a> Descriptors<'a> {
         let bytes_written = match (&descriptor_type, descriptor_number) {
             (DescriptorType::Device, 0) => usb.write(
                 endpoint_number,
-                self.device_descriptor.as_iter().copied().take(requested_length),
+                self.device_descriptor
+                    .as_iter()
+                    .copied()
+                    .take(requested_length),
             ),
             (DescriptorType::Configuration, _) => usb.write(
                 endpoint_number,
-                self.configuration_descriptor.iter().copied().take(requested_length),
+                self.configuration_descriptor
+                    .iter()
+                    .copied()
+                    .take(requested_length),
             ),
             (DescriptorType::DeviceQualifier, _) => {
                 if self.device_speed == Speed::High {
                     if let Some(descriptor) = &self.device_qualifier_descriptor {
-                        usb.write(endpoint_number, descriptor.as_iter().copied().take(requested_length))
+                        usb.write(
+                            endpoint_number,
+                            descriptor.as_iter().copied().take(requested_length),
+                        )
                     } else {
                         // no device qualifier configured, ack HostToDevice instead - TODO check check on mac/windows
                         debug!("  No device qualifier configured for high-speed device");
@@ -593,7 +601,10 @@ impl<'a> Descriptors<'a> {
             }
             (DescriptorType::OtherSpeedConfiguration, _) => {
                 if let Some(descriptor) = self.other_speed_configuration_descriptor {
-                    usb.write(endpoint_number, descriptor.iter().copied().take(requested_length))
+                    usb.write(
+                        endpoint_number,
+                        descriptor.iter().copied().take(requested_length),
+                    )
                 } else {
                     // no other speed configuration, ack HostToDevice instead - TODO check check on mac/windows
                     debug!("  Descriptors::write_descriptor() - no other speed configuration descriptor configured");
@@ -603,7 +614,10 @@ impl<'a> Descriptors<'a> {
             }
             (DescriptorType::String, 0) => usb.write(
                 endpoint_number,
-                self.string_descriptor_zero.iter().copied().take(requested_length),
+                self.string_descriptor_zero
+                    .iter()
+                    .copied()
+                    .take(requested_length),
             ),
             (DescriptorType::String, number) => {
                 let offset_index: usize = (number - 1).into();

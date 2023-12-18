@@ -62,7 +62,6 @@ impl Bit {
     // pmod B 6, 7 are not used because LA channels are assigned to USB D+/D1
 }
 
-
 // - public methods -----------------------------------------------------------
 
 pub unsafe fn set_analyzer(analyzer: &'static dyn LogicAnalyzer) {

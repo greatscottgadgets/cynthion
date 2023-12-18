@@ -42,9 +42,6 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
         ladybug::trace(Channel::B, Bit::B_IRQ_EP_CONTROL, || {
             let endpoint_number = usb0.ep_control.epno.read().bits() as u8;
 
-            //usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-            //InterruptEvent::Usb(Target, UsbEvent::ReceiveControl(endpoint_number))
-
             // read setup packet in interrupt handler for lowest latency
             let mut setup_packet_buffer = [0_u8; 8];
             let bytes_read = usb0.read_control(&mut setup_packet_buffer);
@@ -53,7 +50,10 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
             if bytes_read == 0 {
                 InterruptEvent::ErrorMessage("ERROR USB0 received 0 bytes for setup packet")
             } else {
-                InterruptEvent::Usb(Target, UsbEvent::ReceiveSetupPacket(endpoint_number, setup_packet))
+                InterruptEvent::Usb(
+                    Target,
+                    UsbEvent::ReceiveSetupPacket(endpoint_number, setup_packet),
+                )
             }
         })
 
@@ -84,55 +84,46 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
 
     // USB1 BusReset
     } else if usb1.is_pending(pac::Interrupt::USB1) {
-        //ladybug::trace(Channel::B, Bit::BUS_RESET, || {
-            // handle bus reset in interrupt handler for lowest latency
-            usb1.bus_reset();
-            usb1.clear_pending(pac::Interrupt::USB1);
-            InterruptEvent::Usb(Aux, UsbEvent::BusReset)
-        //})
+        // handle bus reset in interrupt handler for lowest latency
+        usb1.bus_reset();
+        usb1.clear_pending(pac::Interrupt::USB1);
+        InterruptEvent::Usb(Aux, UsbEvent::BusReset)
 
     // USB1_EP_CONTROL ReceiveControl
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
-        //ladybug::trace(Channel::B, Bit::EP_CONTROL, || {
-            let endpoint_number = usb1.ep_control.epno.read().bits() as u8;
+        let endpoint_number = usb1.ep_control.epno.read().bits() as u8;
 
-            //usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
-            //InterruptEvent::Usb(Aux, UsbEvent::ReceiveControl(endpoint_number))
-
-            // read setup packet in interrupt handler for lowest latency
-            let mut setup_packet_buffer = [0_u8; 8];
-            let bytes_read = usb1.read_control(&mut setup_packet_buffer);
-            let setup_packet = SetupPacket::from(setup_packet_buffer);
-            usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
-            if bytes_read == 0 {
-                InterruptEvent::ErrorMessage("ERROR USB1 received 0 bytes for setup packet")
-            } else {
-                InterruptEvent::Usb(Aux, UsbEvent::ReceiveSetupPacket(endpoint_number, setup_packet))
-            }
-
-        //})
+        // read setup packet in interrupt handler for lowest latency
+        let mut setup_packet_buffer = [0_u8; 8];
+        let bytes_read = usb1.read_control(&mut setup_packet_buffer);
+        let setup_packet = SetupPacket::from(setup_packet_buffer);
+        usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
+        if bytes_read == 0 {
+            InterruptEvent::ErrorMessage("ERROR USB1 received 0 bytes for setup packet")
+        } else {
+            InterruptEvent::Usb(
+                Aux,
+                UsbEvent::ReceiveSetupPacket(endpoint_number, setup_packet),
+            )
+        }
 
     // USB1_EP_OUT ReceivePacket
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_OUT) {
-        //ladybug::trace(Channel::B, Bit::EP_OUT, || {
-            let endpoint_number = usb1.ep_out.data_ep.read().bits() as u8;
-            usb1.clear_pending(pac::Interrupt::USB1_EP_OUT);
-            InterruptEvent::Usb(Aux, UsbEvent::ReceivePacket(endpoint_number))
-        //})
+        let endpoint_number = usb1.ep_out.data_ep.read().bits() as u8;
+        usb1.clear_pending(pac::Interrupt::USB1_EP_OUT);
+        InterruptEvent::Usb(Aux, UsbEvent::ReceivePacket(endpoint_number))
 
     // USB1_EP_IN SendComplete
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
-        //ladybug::trace(Channel::B, Bit::EP_IN, || {
-            let endpoint_number = usb1.ep_in.epno.read().bits() as u8;
-            usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
+        let endpoint_number = usb1.ep_in.epno.read().bits() as u8;
+        usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
 
-            // TODO something a little safer would be nice
-            unsafe {
-                usb1.clear_tx_ack_active(endpoint_number);
-            }
+        // TODO something a little safer would be nice
+        unsafe {
+            usb1.clear_tx_ack_active(endpoint_number);
+        }
 
-            InterruptEvent::Usb(Aux, UsbEvent::SendComplete(endpoint_number))
-        //})
+        InterruptEvent::Usb(Aux, UsbEvent::SendComplete(endpoint_number))
 
     // - usb2 interrupts - "control_phy" (sideband on r0.4) --
 
@@ -171,7 +162,6 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     }
 }
 
-
 // - multi event queue --------------------------------------------------------
 
 use heapless::mpmc::MpMcQueue as Queue;
@@ -181,8 +171,8 @@ pub mod UsbEventExt {
     //! Alternate implementation of some UsbEvent values that also
     //! contain their associated data.
 
-    use smolusb::setup::SetupPacket;
     use crate::UsbInterface;
+    use smolusb::setup::SetupPacket;
 
     /// Received a setup packet on USBx_EP_CONTROL
     ///
@@ -204,7 +194,6 @@ pub mod UsbEventExt {
     #[derive(Clone, Copy)]
     pub struct ReceivePacket(UsbInterface, u8, usize, [u8; crate::EP_MAX_PACKET_SIZE]);
 }
-
 
 /// So the problem this solves is that some events are much larger
 /// than others.
@@ -262,42 +251,33 @@ impl EventQueue {
     pub fn enqueue<T: Any>(&self, event: T) -> Result<(), ()> {
         let any = &event as &dyn Any;
         match any.downcast_ref::<InterruptEvent>() {
-            Some(event) => {
-                match self.interrupt_event.enqueue(*event) {
-                    Ok(()) => (),
-                    Err(_) => {
-                        log::error!("EventQueue - interrupt event queue overflow");
-                    }
+            Some(event) => match self.interrupt_event.enqueue(*event) {
+                Ok(()) => (),
+                Err(_) => {
+                    log::error!("EventQueue - interrupt event queue overflow");
                 }
-            }
-            None => {
-            }
+            },
+            None => {}
         }
 
         match any.downcast_ref::<UsbEventExt::ReceiveControl>() {
-            Some(event) => {
-                match self.receive_control.enqueue(*event) {
-                    Ok(()) => (),
-                    Err(_) => {
-                        log::error!("EventQueue - usb receive control queue overflow");
-                    }
+            Some(event) => match self.receive_control.enqueue(*event) {
+                Ok(()) => (),
+                Err(_) => {
+                    log::error!("EventQueue - usb receive control queue overflow");
                 }
-            }
-            None => {
-            }
+            },
+            None => {}
         }
 
         match any.downcast_ref::<UsbEventExt::ReceivePacket>() {
-            Some(event) => {
-                match self.receive_packet.enqueue(*event) {
-                    Ok(()) => (),
-                    Err(_) => {
-                        log::error!("EventQueue - usb receive packet queue overflow");
-                    }
+            Some(event) => match self.receive_packet.enqueue(*event) {
+                Ok(()) => (),
+                Err(_) => {
+                    log::error!("EventQueue - usb receive packet queue overflow");
                 }
-            }
-            None => {
-            }
+            },
+            None => {}
         }
 
         Ok(())
