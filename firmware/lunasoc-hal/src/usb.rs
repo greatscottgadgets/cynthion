@@ -331,13 +331,7 @@ macro_rules! impl_usb {
                         .write(|w| unsafe { w.address().bits(address & 0x7f) });
                 }
 
-                /// Stalls the current control request. TODO get rid of this method
-                fn stall_control_request(&self) {
-                    self.stall_endpoint_in(0);
-                    self.stall_endpoint_out(0);
-                }
-
-                /// Set stall for the given IN endpoint number
+                /// Stall the given IN endpoint number
                 fn stall_endpoint_in(&self, endpoint_number: u8) {
                     $LADYBUG_TRACE(Channel::A, Bit::A_USB_STALL_IN, || {
                         self.ep_in.stall.write(|w| w.stall().bit(true));
@@ -345,7 +339,7 @@ macro_rules! impl_usb {
                     });
                 }
 
-                /// Set stall for the given OUT endpoint number
+                /// Stall the given OUT endpoint number
                 fn stall_endpoint_out(&self, endpoint_number: u8) {
                     $LADYBUG_TRACE(Channel::A, Bit::A_USB_STALL_OUT, || {
                         self.ep_out.epno.write(|w| unsafe { w.epno().bits(endpoint_number) });

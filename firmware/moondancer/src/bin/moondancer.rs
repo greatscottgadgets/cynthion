@@ -347,7 +347,10 @@ impl<'a> Firmware<'a> {
                             "handle_vendor_request stall: unknown vendor request and/or value direction{:?} vendor_request{:?} vendor_value:{:?}",
                             direction, vendor_request, vendor_value
                         );
-                        self.usb1.stall_control_request();
+                        match direction {
+                            Direction::HostToDevice => self.usb1.stall_endpoint_out(0),
+                            Direction::DeviceToHost => self.usb1.stall_endpoint_in(0),
+                        }
                     }
                 }
             }
@@ -356,7 +359,10 @@ impl<'a> Firmware<'a> {
                     "handle_vendor_request Unknown vendor request '{}'",
                     vendor_request
                 );
-                self.usb1.stall_control_request();
+                match direction {
+                    Direction::HostToDevice => self.usb1.stall_endpoint_out(0),
+                    Direction::DeviceToHost => self.usb1.stall_endpoint_in(0),
+                }
             }
             (RequestType::Vendor, vendor_request) => {
                 // TODO this is from one of the legacy boards which we
@@ -379,7 +385,10 @@ impl<'a> Firmware<'a> {
                     "handle_control_event Unknown control packet '{:?}'",
                     setup_packet
                 );
-                self.usb1.stall_control_request();
+                match direction {
+                    Direction::HostToDevice => self.usb1.stall_endpoint_out(0),
+                    Direction::DeviceToHost => self.usb1.stall_endpoint_in(0),
+                }
             }
         }
 
@@ -494,7 +503,7 @@ impl<'a> Firmware<'a> {
         } else {
             // TODO figure out what to do if we don't have a response or error
             error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");
-            self.usb1.stall_control_request();
+            self.usb1.stall_endpoint_in(0);
         }
 
         Ok(())
@@ -506,10 +515,6 @@ impl<'a> Firmware<'a> {
         // cancel any queued response
         self.libgreat_response = None;
         self.libgreat_response_last_error = None;
-
-        // TODO figure out if the host is expecting a response
-        /*self.usb1
-        .write(0, [].into_iter());*/
 
         Ok(())
     }

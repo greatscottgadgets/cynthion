@@ -256,7 +256,7 @@ where
                         configuration
                     );
                     self.configuration = None;
-                    usb.stall_control_request();
+                    usb.stall_endpoint_out(self.endpoint_number);
                     self.set_state(State::Stalled);
                     return None;
                 } else {
@@ -555,7 +555,7 @@ impl<'a> Descriptors<'a> {
                     "Descriptors::write_descriptor() stall - invalid descriptor type: {} {}",
                     descriptor_type_bits, descriptor_number
                 );
-                usb.stall_control_request();
+                usb.stall_endpoint_in(endpoint_number);
                 return Some(setup_packet);
             }
         };

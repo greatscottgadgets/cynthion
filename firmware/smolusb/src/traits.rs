@@ -30,8 +30,6 @@ pub trait UsbDriverOperations {
     fn ack(&self, endpoint_number: u8, direction: Direction);
     /// Set the device address
     fn set_address(&self, address: u8);
-    /// Stall the current control request.
-    fn stall_control_request(&self);
     /// Stall the given IN endpoint
     fn stall_endpoint_in(&self, endpoint_number: u8);
     /// Stall the given OUT endpoint
