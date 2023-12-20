@@ -9,7 +9,7 @@ import os
 from amaranth.build import *
 from amaranth_boards.resources import *
 
-from cynthion.gateware.platform.core import CynthionPlatform
+from .core import CynthionPlatform
 
 __all__ = ["CynthionPlatformRev0D2"]
 
