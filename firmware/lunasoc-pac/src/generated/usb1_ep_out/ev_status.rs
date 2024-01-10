@@ -1,20 +1,7 @@
 #[doc = "Register `ev_status` reader"]
-pub struct R(crate::R<EV_STATUS_SPEC>);
-impl core::ops::Deref for R {
-    type Target = crate::R<EV_STATUS_SPEC>;
-    #[inline(always)]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl From<crate::R<EV_STATUS_SPEC>> for R {
-    #[inline(always)]
-    fn from(reader: crate::R<EV_STATUS_SPEC>) -> Self {
-        R(reader)
-    }
-}
+pub type R = crate::R<EV_STATUS_SPEC>;
 #[doc = "Field `status` reader - usb1_ep_out status register field"]
-pub type STATUS_R = crate::BitReader<bool>;
+pub type STATUS_R = crate::BitReader;
 impl R {
     #[doc = "Bit 0 - usb1_ep_out status register field"]
     #[inline(always)]
@@ -22,16 +9,14 @@ impl R {
         STATUS_R::new((self.bits & 1) != 0)
     }
 }
-#[doc = "usb1_ep_out ev_status register\n\nThis register you can [`read`](crate::generic::Reg::read). See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [ev_status](index.html) module"]
+#[doc = "usb1_ep_out ev_status register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`ev_status::R`](R).  See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct EV_STATUS_SPEC;
 impl crate::RegisterSpec for EV_STATUS_SPEC {
     type Ux = u32;
 }
-#[doc = "`read()` method returns [ev_status::R](R) reader structure"]
-impl crate::Readable for EV_STATUS_SPEC {
-    type Reader = R;
-}
+#[doc = "`read()` method returns [`ev_status::R`](R) reader structure"]
+impl crate::Readable for EV_STATUS_SPEC {}
 #[doc = "`reset()` method sets ev_status to value 0"]
 impl crate::Resettable for EV_STATUS_SPEC {
-    const RESET_VALUE: Self::Ux = 0;
+    const RESET_VALUE: u32 = 0;
 }

@@ -248,7 +248,7 @@ impl Moondancer {
         unsafe {
             riscv::asm::delay(5_000_000);
         }
-        let speed: Speed = self.usb0.controller.speed.read().speed().bits().into();
+        let speed: Speed = self.usb0.controller.speed().read().speed().bits().into();
 
         log::debug!(
             "MD moondancer::connect(ep0_max_packet_size:{}, device_speed:{:?}, quirk_flags:{}) -> {:?}",
@@ -569,9 +569,9 @@ impl Moondancer {
 
         // check if output FIFO is empty
         // FIXME add a timeout and/or return a GreatError::DeviceOrResourceBusy
-        if self.usb0.ep_in.have.read().have().bit() {
+        if self.usb0.ep_in.have().read().have().bit() {
             warn!("  {} clear tx", stringify!($USBX));
-            self.usb0.ep_in.reset.write(|w| w.reset().bit(true));
+            self.usb0.ep_in.reset().write(|w| w.reset().bit(true));
         }
 
         // write data out to EP_IN, splitting into packets of max_packet_size
@@ -579,7 +579,7 @@ impl Moondancer {
         for byte in iter {
             self.usb0
                 .ep_in
-                .data
+                .data()
                 .write(|w| unsafe { w.data().bits(*byte) });
             bytes_written += 1;
 
@@ -589,7 +589,7 @@ impl Moondancer {
                 }
                 self.usb0
                     .ep_in
-                    .epno
+                    .epno()
                     .write(|w| unsafe { w.epno().bits(endpoint_number) });
 
                 // TODO should we wait for send complete interrupt to fire
@@ -624,7 +624,7 @@ impl Moondancer {
             }
             self.usb0
                 .ep_in
-                .epno
+                .epno()
                 .write(|w| unsafe { w.epno().bits(endpoint_number) });
         }
 

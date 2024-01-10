@@ -31,10 +31,10 @@ mod ladybug_impl {
         pub fn new(gpioa: pac::GPIOA, gpiob: pac::GPIOB) -> Self {
             // configure gpioa & gpiob pins as outputs
             gpioa
-                .moder
+                .moder()
                 .write(|w| unsafe { w.moder().bits(0b1111_1111) }); // 0=input, 1=output
             gpiob
-                .moder
+                .moder()
                 .write(|w| unsafe { w.moder().bits(0b1111_1111) }); // 0=input, 1=output
 
             Self {
@@ -50,13 +50,13 @@ mod ladybug_impl {
         fn high(&self, channel: Channel, bit_number: u8) {
             match channel {
                 Channel::A => {
-                    self.gpioa.odr.write(|w| unsafe {
+                    self.gpioa.odr().write(|w| unsafe {
                         self.a.fetch_or(1 << bit_number, Ordering::Relaxed);
                         w.odr().bits(self.a.load(Ordering::Relaxed))
                     });
                 }
                 Channel::B => {
-                    self.gpiob.odr.write(|w| unsafe {
+                    self.gpiob.odr().write(|w| unsafe {
                         self.b.fetch_or(1 << bit_number, Ordering::Relaxed);
                         w.odr().bits(self.b.load(Ordering::Relaxed))
                     });
@@ -67,13 +67,13 @@ mod ladybug_impl {
         fn low(&self, channel: Channel, bit_number: u8) {
             match channel {
                 Channel::A => {
-                    self.gpioa.odr.write(|w| unsafe {
+                    self.gpioa.odr().write(|w| unsafe {
                         self.a.fetch_xor(1 << bit_number, Ordering::Relaxed);
                         w.odr().bits(self.a.load(Ordering::Relaxed))
                     });
                 }
                 Channel::B => {
-                    self.gpiob.odr.write(|w| unsafe {
+                    self.gpiob.odr().write(|w| unsafe {
                         self.b.fetch_xor(1 << bit_number, Ordering::Relaxed);
                         w.odr().bits(self.b.load(Ordering::Relaxed))
                     });

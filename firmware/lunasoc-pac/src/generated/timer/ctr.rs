@@ -1,43 +1,11 @@
 #[doc = "Register `ctr` reader"]
-pub struct R(crate::R<CTR_SPEC>);
-impl core::ops::Deref for R {
-    type Target = crate::R<CTR_SPEC>;
-    #[inline(always)]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl From<crate::R<CTR_SPEC>> for R {
-    #[inline(always)]
-    fn from(reader: crate::R<CTR_SPEC>) -> Self {
-        R(reader)
-    }
-}
+pub type R = crate::R<CTR_SPEC>;
 #[doc = "Register `ctr` writer"]
-pub struct W(crate::W<CTR_SPEC>);
-impl core::ops::Deref for W {
-    type Target = crate::W<CTR_SPEC>;
-    #[inline(always)]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl core::ops::DerefMut for W {
-    #[inline(always)]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-impl From<crate::W<CTR_SPEC>> for W {
-    #[inline(always)]
-    fn from(writer: crate::W<CTR_SPEC>) -> Self {
-        W(writer)
-    }
-}
+pub type W = crate::W<CTR_SPEC>;
 #[doc = "Field `ctr` reader - timer ctr register field"]
-pub type CTR_R = crate::FieldReader<u32, u32>;
+pub type CTR_R = crate::FieldReader<u32>;
 #[doc = "Field `ctr` writer - timer ctr register field"]
-pub type CTR_W<'a, const O: u8> = crate::FieldWriter<'a, u32, CTR_SPEC, u32, u32, 32, O>;
+pub type CTR_W<'a, REG> = crate::FieldWriter<'a, REG, 32, u32>;
 impl R {
     #[doc = "Bits 0:31 - timer ctr register field"]
     #[inline(always)]
@@ -49,32 +17,33 @@ impl W {
     #[doc = "Bits 0:31 - timer ctr register field"]
     #[inline(always)]
     #[must_use]
-    pub fn ctr(&mut self) -> CTR_W<0> {
-        CTR_W::new(self)
+    pub fn ctr(&mut self) -> CTR_W<CTR_SPEC> {
+        CTR_W::new(self, 0)
     }
-    #[doc = "Writes raw bits to the register."]
+    #[doc = r" Writes raw bits to the register."]
+    #[doc = r""]
+    #[doc = r" # Safety"]
+    #[doc = r""]
+    #[doc = r" Passing incorrect value can cause undefined behaviour. See reference manual"]
     #[inline(always)]
     pub unsafe fn bits(&mut self, bits: u32) -> &mut Self {
-        self.0.bits(bits);
+        self.bits = bits;
         self
     }
 }
-#[doc = "timer ctr register\n\nThis register you can [`read`](crate::generic::Reg::read), [`write_with_zero`](crate::generic::Reg::write_with_zero), [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`modify`](crate::generic::Reg::modify). See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [ctr](index.html) module"]
+#[doc = "timer ctr register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`ctr::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`ctr::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct CTR_SPEC;
 impl crate::RegisterSpec for CTR_SPEC {
     type Ux = u32;
 }
-#[doc = "`read()` method returns [ctr::R](R) reader structure"]
-impl crate::Readable for CTR_SPEC {
-    type Reader = R;
-}
-#[doc = "`write(|w| ..)` method takes [ctr::W](W) writer structure"]
+#[doc = "`read()` method returns [`ctr::R`](R) reader structure"]
+impl crate::Readable for CTR_SPEC {}
+#[doc = "`write(|w| ..)` method takes [`ctr::W`](W) writer structure"]
 impl crate::Writable for CTR_SPEC {
-    type Writer = W;
-    const ZERO_TO_MODIFY_FIELDS_BITMAP: Self::Ux = 0;
-    const ONE_TO_MODIFY_FIELDS_BITMAP: Self::Ux = 0;
+    const ZERO_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+    const ONE_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
 }
 #[doc = "`reset()` method sets ctr to value 0"]
 impl crate::Resettable for CTR_SPEC {
-    const RESET_VALUE: Self::Ux = 0;
+    const RESET_VALUE: u32 = 0;
 }

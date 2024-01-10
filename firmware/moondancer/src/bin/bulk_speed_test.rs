@@ -59,7 +59,7 @@ fn MachineExternal() {
     // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         ladybug::trace(Channel::B, Bit::B_IRQ_EP_CONTROL, || {
-            let endpoint = usb0.ep_control.epno.read().bits() as u8;
+            let endpoint = usb0.ep_control.epno().read().bits() as u8;
 
             #[cfg(not(feature = "chonky_events"))]
             {
@@ -88,7 +88,7 @@ fn MachineExternal() {
     // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
         ladybug::trace(Channel::B, Bit::B_IRQ_EP_IN, || {
-            let endpoint = usb0.ep_in.epno.read().bits() as u8;
+            let endpoint = usb0.ep_in.epno().read().bits() as u8;
             usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
 
             dispatch_event(InterruptEvent::Usb(
@@ -100,14 +100,14 @@ fn MachineExternal() {
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
         ladybug::trace(Channel::B, Bit::B_IRQ_EP_OUT, || {
-            let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
+            let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
 
             // discard packets from Bulk OUT transfer endpoint
             /*if endpoint == 1 {
                 /*while usb0.ep_out.have.read().have().bit() {
                     let _b = usb0.ep_out.data.read().data().bits();
                 }*/
-                //usb0.ep_out.reset.write(|w| w.reset().bit(true));
+                //usb0.ep_out.reset().write(|w| w.reset().bit(true));
                 usb0.ep_out_prime_receive(1);
                 usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
                 return;
@@ -234,7 +234,7 @@ fn main_loop() -> GreatResult<()> {
             use moondancer::{event::InterruptEvent::*, UsbInterface::Target};
             use smolusb::event::UsbEvent::*;
 
-            leds.output.write(|w| unsafe { w.output().bits(0) });
+            leds.output().write(|w| unsafe { w.output().bits(0) });
 
             //log::info!("{:?}", event);
 
@@ -263,7 +263,7 @@ fn main_loop() -> GreatResult<()> {
                     let bytes_read = usb0.read(endpoint, &mut rx_buffer);
 
                     if endpoint == 1 {
-                        leds.output.write(|w| unsafe { w.output().bits(0b11_1000) });
+                        leds.output().write(|w| unsafe { w.output().bits(0b11_1000) });
                         if counter % 100 == 0 {
                             log::trace!(
                                 "{:?} .. {:?}",
@@ -317,7 +317,7 @@ fn main_loop() -> GreatResult<()> {
 
                 // Usb0 transfer complete
                 Usb(Target, SendComplete(_endpoint)) => {
-                    leds.output.write(|w| unsafe { w.output().bits(0b00_0111) });
+                    leds.output().write(|w| unsafe { w.output().bits(0b00_0111) });
                 }
 
                 // Error Message
@@ -367,20 +367,20 @@ fn test_in_speed(
         data: &[u8; moondancer::EP_MAX_PACKET_SIZE],
     ) -> bool {
         let mut did_reset = false;
-        if usb0.ep_in.have.read().have().bit() {
-            usb0.ep_in.reset.write(|w| w.reset().bit(true));
+        if usb0.ep_in.have().read().have().bit() {
+            usb0.ep_in.reset().write(|w| w.reset().bit(true));
             did_reset = true;
         }
         // 5.033856452242371MB/s.
         for byte in data.iter() {
-            usb0.ep_in.data.write(|w| unsafe { w.data().bits(*byte) });
+            usb0.ep_in.data().write(|w| unsafe { w.data().bits(*byte) });
         }
         // 6.392375785142406MB/s. - no memory access
         /*for n in 0..moondancer::EP_MAX_PACKET_SIZE {
             usb0.ep_in.data.write(|w| unsafe { w.data().bits((n % 256) as u8) });
         }*/
         usb0.ep_in
-            .epno
+            .epno()
             .write(|w| unsafe { w.epno().bits(endpoint & 0xf) });
         did_reset
     }
@@ -388,7 +388,7 @@ fn test_in_speed(
     // wait for fifo endpoint to be idle
     let (_, t_flush) = moondancer::profile!(
         let mut timeout = 100;
-        while !usb0.ep_in.idle.read().idle().bit() && timeout > 0 {
+        while !usb0.ep_in.idle().read().idle().bit() && timeout > 0 {
             timeout -= 1;
         }
     );

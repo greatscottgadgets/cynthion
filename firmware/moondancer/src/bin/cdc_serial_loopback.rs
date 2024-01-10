@@ -75,7 +75,7 @@ fn MachineExternal() {
 
     // debug
     let pending = interrupt::reg_pending();
-    leds.output
+    leds.output()
         .write(|w| unsafe { w.output().bits(pending as u8) });
 
     // - Usb0 (Target) interrupts --
@@ -83,14 +83,14 @@ fn MachineExternal() {
         usb0.clear_pending(pac::Interrupt::USB0);
         usb0.bus_reset();
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
-        let endpoint = usb0.ep_control.epno.read().bits() as u8;
+        let endpoint = usb0.ep_control.epno().read().bits() as u8;
         usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
         dispatch_event(InterruptEvent::Usb(
             Target,
             UsbEvent::ReceiveControl(endpoint),
         ));
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
-        let endpoint = usb0.ep_in.epno.read().bits() as u8;
+        let endpoint = usb0.ep_in.epno().read().bits() as u8;
         usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
         dispatch_event(InterruptEvent::Usb(
             Target,
@@ -98,7 +98,7 @@ fn MachineExternal() {
         ));
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
         // read data from endpoint
-        let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
+        let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
         let mut receive_packet = UsbDataPacket {
             interface: Target,
             endpoint,
@@ -118,16 +118,16 @@ fn MachineExternal() {
         usb1.clear_pending(pac::Interrupt::USB1);
         usb1.bus_reset();
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
-        let endpoint = usb1.ep_control.epno.read().bits() as u8;
+        let endpoint = usb1.ep_control.epno().read().bits() as u8;
         usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
         dispatch_event(InterruptEvent::Usb(Aux, UsbEvent::ReceiveControl(endpoint)));
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
-        let endpoint = usb1.ep_in.epno.read().bits() as u8;
+        let endpoint = usb1.ep_in.epno().read().bits() as u8;
         usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
         dispatch_event(InterruptEvent::Usb(Aux, UsbEvent::SendComplete(endpoint)));
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_OUT) {
         // read data from endpoint
-        let endpoint = usb1.ep_out.data_ep.read().bits() as u8;
+        let endpoint = usb1.ep_out.data_ep().read().bits() as u8;
         let mut receive_packet = UsbDataPacket {
             interface: Aux,
             endpoint,
@@ -162,7 +162,7 @@ unsafe fn pre_main() {
 fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
     let leds = &peripherals.LEDS;
-    leds.output.write(|w| unsafe { w.output().bits(0x0) });
+    leds.output().write(|w| unsafe { w.output().bits(0x0) });
 
     // initialize logging
     let serial = hal::Serial::new(peripherals.UART);
@@ -196,7 +196,7 @@ fn main() -> ! {
 
     // connect device
     usb0.connect(DEVICE_SPEED);
-    let speed: Speed = usb0.controller.speed.read().speed().bits().into();
+    let speed: Speed = usb0.controller.speed().read().speed().bits().into();
     info!("Connected USB0 device: {:?}", speed);
 
     // usb1: Aux
@@ -226,7 +226,7 @@ fn main() -> ! {
 
     // connect device
     usb1.connect(DEVICE_SPEED);
-    let speed: Speed = usb1.controller.speed.read().speed().bits().into();
+    let speed: Speed = usb1.controller.speed().read().speed().bits().into();
     info!("Connected USB1 device: {:?}", speed);
 
     // enable interrupts

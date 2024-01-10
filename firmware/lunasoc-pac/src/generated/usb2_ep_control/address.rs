@@ -1,43 +1,11 @@
 #[doc = "Register `address` reader"]
-pub struct R(crate::R<ADDRESS_SPEC>);
-impl core::ops::Deref for R {
-    type Target = crate::R<ADDRESS_SPEC>;
-    #[inline(always)]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl From<crate::R<ADDRESS_SPEC>> for R {
-    #[inline(always)]
-    fn from(reader: crate::R<ADDRESS_SPEC>) -> Self {
-        R(reader)
-    }
-}
+pub type R = crate::R<ADDRESS_SPEC>;
 #[doc = "Register `address` writer"]
-pub struct W(crate::W<ADDRESS_SPEC>);
-impl core::ops::Deref for W {
-    type Target = crate::W<ADDRESS_SPEC>;
-    #[inline(always)]
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-impl core::ops::DerefMut for W {
-    #[inline(always)]
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-impl From<crate::W<ADDRESS_SPEC>> for W {
-    #[inline(always)]
-    fn from(writer: crate::W<ADDRESS_SPEC>) -> Self {
-        W(writer)
-    }
-}
+pub type W = crate::W<ADDRESS_SPEC>;
 #[doc = "Field `address` reader - Controls the current device's USB address. Should be written after a SET_ADDRESS request is received. Automatically resets back to zero on a USB reset."]
-pub type ADDRESS_R = crate::FieldReader<u8, u8>;
+pub type ADDRESS_R = crate::FieldReader;
 #[doc = "Field `address` writer - Controls the current device's USB address. Should be written after a SET_ADDRESS request is received. Automatically resets back to zero on a USB reset."]
-pub type ADDRESS_W<'a, const O: u8> = crate::FieldWriter<'a, u32, ADDRESS_SPEC, u8, u8, 8, O>;
+pub type ADDRESS_W<'a, REG> = crate::FieldWriter<'a, REG, 8>;
 impl R {
     #[doc = "Bits 0:7 - Controls the current device's USB address. Should be written after a SET_ADDRESS request is received. Automatically resets back to zero on a USB reset."]
     #[inline(always)]
@@ -49,32 +17,33 @@ impl W {
     #[doc = "Bits 0:7 - Controls the current device's USB address. Should be written after a SET_ADDRESS request is received. Automatically resets back to zero on a USB reset."]
     #[inline(always)]
     #[must_use]
-    pub fn address(&mut self) -> ADDRESS_W<0> {
-        ADDRESS_W::new(self)
+    pub fn address(&mut self) -> ADDRESS_W<ADDRESS_SPEC> {
+        ADDRESS_W::new(self, 0)
     }
-    #[doc = "Writes raw bits to the register."]
+    #[doc = r" Writes raw bits to the register."]
+    #[doc = r""]
+    #[doc = r" # Safety"]
+    #[doc = r""]
+    #[doc = r" Passing incorrect value can cause undefined behaviour. See reference manual"]
     #[inline(always)]
     pub unsafe fn bits(&mut self, bits: u32) -> &mut Self {
-        self.0.bits(bits);
+        self.bits = bits;
         self
     }
 }
-#[doc = "usb2_ep_control address register\n\nThis register you can [`read`](crate::generic::Reg::read), [`write_with_zero`](crate::generic::Reg::write_with_zero), [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`modify`](crate::generic::Reg::modify). See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [address](index.html) module"]
+#[doc = "usb2_ep_control address register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`address::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`address::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct ADDRESS_SPEC;
 impl crate::RegisterSpec for ADDRESS_SPEC {
     type Ux = u32;
 }
-#[doc = "`read()` method returns [address::R](R) reader structure"]
-impl crate::Readable for ADDRESS_SPEC {
-    type Reader = R;
-}
-#[doc = "`write(|w| ..)` method takes [address::W](W) writer structure"]
+#[doc = "`read()` method returns [`address::R`](R) reader structure"]
+impl crate::Readable for ADDRESS_SPEC {}
+#[doc = "`write(|w| ..)` method takes [`address::W`](W) writer structure"]
 impl crate::Writable for ADDRESS_SPEC {
-    type Writer = W;
-    const ZERO_TO_MODIFY_FIELDS_BITMAP: Self::Ux = 0;
-    const ONE_TO_MODIFY_FIELDS_BITMAP: Self::Ux = 0;
+    const ZERO_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+    const ONE_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
 }
 #[doc = "`reset()` method sets address to value 0"]
 impl crate::Resettable for ADDRESS_SPEC {
-    const RESET_VALUE: Self::Ux = 0;
+    const RESET_VALUE: u32 = 0;
 }

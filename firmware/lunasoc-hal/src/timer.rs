@@ -46,15 +46,15 @@ macro_rules! impl_timer {
             // configuration
             impl $TIMERX {
                 pub fn counter(&self) -> u32 {
-                    self.registers.ctr.read().ctr().bits()
+                    self.registers.ctr().read().ctr().bits()
                 }
 
                 pub fn disable(&self) {
-                    self.registers.en.write(|w| w.en().bit(false));
+                    self.registers.en().write(|w| w.en().bit(false));
                 }
 
                 pub fn enable(&self) {
-                    self.registers.en.write(|w| w.en().bit(true));
+                    self.registers.en().write(|w| w.en().bit(true));
                 }
 
                 pub fn set_timeout<T>(&mut self, timeout: T)
@@ -75,7 +75,7 @@ macro_rules! impl_timer {
 
                 // TODO private
                 pub fn set_timeout_ticks(&mut self, ticks: u32) {
-                    self.registers.reload.write(|w| unsafe {
+                    self.registers.reload().write(|w| unsafe {
                         w.reload().bits(ticks)
                     });
                 }
@@ -87,7 +87,7 @@ macro_rules! impl_timer {
                 pub fn listen(&mut self, event: Event) {
                     match event {
                         Event::TimeOut => {
-                            self.registers.ev_enable.write(|w| w.enable().bit(true));
+                            self.registers.ev_enable().write(|w| w.enable().bit(true));
                         }
                     }
                 }
@@ -96,21 +96,21 @@ macro_rules! impl_timer {
                 pub fn unlisten(&mut self, event: Event) {
                     match event {
                         Event::TimeOut => {
-                            self.registers.ev_enable.write(|w| w.enable().bit(false));
+                            self.registers.ev_enable().write(|w| w.enable().bit(false));
                         }
                     }
                 }
 
                 /// Check if the interrupt flag is pending
                 pub fn is_pending(&self) -> bool {
-                    self.registers.ev_pending.read().pending().bit_is_set()
+                    self.registers.ev_pending().read().pending().bit_is_set()
                     //$crate::pac::csr::interrupt::pending($crate::pac::Interrupt::TIMER)
                 }
 
                 /// Clear the interrupt flag
                 pub fn clear_pending(&self) {
-                    let pending = self.registers.ev_pending.read().pending().bit();
-                    self.registers.ev_pending.write(|w| w.pending().bit(pending));
+                    let pending = self.registers.ev_pending().read().pending().bit();
+                    self.registers.ev_pending().write(|w| w.pending().bit(pending));
                 }
             }
 
@@ -122,15 +122,15 @@ macro_rules! impl_timer {
                     let ticks: u32 = self.clk / 1_000_000 * us;
 
                     // start timer
-                    self.registers.reload.write(|w| unsafe { w.reload().bits(0) });
-                    self.registers.ctr.write(|w| unsafe { w.ctr().bits(ticks) });
-                    self.registers.en.write(|w| w.en().bit(true));
+                    self.registers.reload().write(|w| unsafe { w.reload().bits(0) });
+                    self.registers.ctr().write(|w| unsafe { w.ctr().bits(ticks) });
+                    self.registers.en().write(|w| w.en().bit(true));
 
                     // wait for timer to hit zero
-                    while self.registers.ctr.read().ctr().bits() > 0 {}
+                    while self.registers.ctr().read().ctr().bits() > 0 {}
 
                     // reset timer
-                    self.registers.en.write(|w| w.en().bit(false));
+                    self.registers.en().write(|w| w.en().bit(false));
 
                     Ok(())
                 }
