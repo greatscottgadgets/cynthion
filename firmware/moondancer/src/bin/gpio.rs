@@ -21,11 +21,11 @@ fn MachineExternal() {
     let gpioa = &peripherals.GPIOA;
 
     if pac::csr::interrupt::pending(pac::Interrupt::GPIOA) {
-        let pending = gpioa.ev_pending.read().pending().bit();
-        gpioa.ev_pending.write(|w| w.pending().bit(pending));
+        let pending = gpioa.ev_pending().read().pending().bit();
+        gpioa.ev_pending().write(|w| w.pending().bit(pending));
 
-        let bits_all: u32 = gpioa.idr.read().bits();
-        let bits_in: u32 = gpioa.idr.read().bits() & 0b0000_1111;
+        let bits_all: u32 = gpioa.idr().read().bits();
+        let bits_in: u32 = gpioa.idr().read().bits() & 0b0000_1111;
         info!("gpioa bits: {bits_all:#010b} {bits_in:#010b}");
     } else {
         error!("MachineExternal - unknown interrupt");
@@ -46,11 +46,11 @@ fn main() -> ! {
     // configure gpioa pins 7-4:output, 3-0:input
     let gpioa = &peripherals.GPIOA;
     gpioa
-        .moder
+        .moder()
         .write(|w| unsafe { w.moder().bits(0b0000_1111) }); // 0=output, 1=input
 
     // enable gpioa events
-    gpioa.ev_enable.write(|w| w.enable().bit(true));
+    gpioa.ev_enable().write(|w| w.enable().bit(true));
 
     // configure and enable timer
     let mut timer = Timer::new(peripherals.TIMER, pac::clock::sysclk());
@@ -73,9 +73,9 @@ fn main() -> ! {
 
     loop {
         gpioa
-            .odr
+            .odr()
             .write(|w| unsafe { w.odr().bits(counter & 0b1111_0000) });
-        leds.output.write(|w| unsafe { w.output().bits(counter) });
+        leds.output().write(|w| unsafe { w.output().bits(counter) });
 
         timer.delay_ms(100).unwrap();
         counter += 1;

@@ -168,7 +168,7 @@ impl<'a> Firmware<'a> {
     fn initialize(&mut self) -> GreatResult<()> {
         // leds: starting up
         self.leds
-            .output
+            .output()
             .write(|w| unsafe { w.output().bits(1 << 2) });
 
         // connect usb1
@@ -226,7 +226,7 @@ impl<'a> Firmware<'a> {
         loop {
             // leds: main loop is responsive, interrupts are firing
             self.leds
-                .output
+                .output()
                 .write(|w| unsafe { w.output().bits((counter % 256) as u8) });
 
             if queue_length > max_queue_length {
@@ -241,7 +241,7 @@ impl<'a> Firmware<'a> {
 
                 // leds: event loop is active
                 self.leds
-                    .output
+                    .output()
                     .write(|w| unsafe { w.output().bits(1 << 0) });
 
                 use moondancer::{
@@ -462,7 +462,7 @@ impl<'a> Firmware<'a> {
                 unsafe {
                     riscv::asm::delay(2000);
                 }
-                self.usb1.ep_in.reset.write(|w| w.reset().bit(true));
+                self.usb1.ep_in.reset().write(|w| w.reset().bit(true));
             }
         }
 

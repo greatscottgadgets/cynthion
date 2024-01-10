@@ -40,7 +40,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         ladybug::trace(Channel::B, Bit::B_IRQ_EP_CONTROL, || {
-            let endpoint_number = usb0.ep_control.epno.read().bits() as u8;
+            let endpoint_number = usb0.ep_control.epno().read().bits() as u8;
 
             // read setup packet in interrupt handler for lowest latency
             let mut setup_packet_buffer = [0_u8; 8];
@@ -60,7 +60,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
         ladybug::trace(Channel::B, Bit::B_IRQ_EP_OUT, || {
-            let endpoint_number = usb0.ep_out.data_ep.read().bits() as u8;
+            let endpoint_number = usb0.ep_out.data_ep().read().bits() as u8;
 
             usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
             InterruptEvent::Usb(Target, UsbEvent::ReceivePacket(endpoint_number))
@@ -69,7 +69,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
         ladybug::trace(Channel::B, Bit::B_IRQ_EP_IN, || {
-            let endpoint_number = usb0.ep_in.epno.read().bits() as u8;
+            let endpoint_number = usb0.ep_in.epno().read().bits() as u8;
             usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
 
             // TODO something a little bit safer would be nice
@@ -91,7 +91,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
 
     // USB1_EP_CONTROL ReceiveControl
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
-        let endpoint_number = usb1.ep_control.epno.read().bits() as u8;
+        let endpoint_number = usb1.ep_control.epno().read().bits() as u8;
 
         // read setup packet in interrupt handler for lowest latency
         let mut setup_packet_buffer = [0_u8; 8];
@@ -109,13 +109,13 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
 
     // USB1_EP_OUT ReceivePacket
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_OUT) {
-        let endpoint_number = usb1.ep_out.data_ep.read().bits() as u8;
+        let endpoint_number = usb1.ep_out.data_ep().read().bits() as u8;
         usb1.clear_pending(pac::Interrupt::USB1_EP_OUT);
         InterruptEvent::Usb(Aux, UsbEvent::ReceivePacket(endpoint_number))
 
     // USB1_EP_IN SendComplete
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
-        let endpoint_number = usb1.ep_in.epno.read().bits() as u8;
+        let endpoint_number = usb1.ep_in.epno().read().bits() as u8;
         usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
 
         // TODO something a little safer would be nice
@@ -134,19 +134,19 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
 
     // USB2_EP_CONTROL ReceiveControl
     } else if usb2.is_pending(pac::Interrupt::USB2_EP_CONTROL) {
-        let endpoint_number = usb2.ep_control.epno.read().bits() as u8;
+        let endpoint_number = usb2.ep_control.epno().read().bits() as u8;
         usb2.clear_pending(pac::Interrupt::USB2_EP_CONTROL);
         InterruptEvent::Usb(Control, UsbEvent::ReceiveControl(endpoint_number))
 
     // USB2_EP_OUT ReceivePacket
     } else if usb2.is_pending(pac::Interrupt::USB2_EP_OUT) {
-        let endpoint_number = usb2.ep_out.data_ep.read().bits() as u8;
+        let endpoint_number = usb2.ep_out.data_ep().read().bits() as u8;
         usb2.clear_pending(pac::Interrupt::USB2_EP_OUT);
         InterruptEvent::Usb(Control, UsbEvent::ReceivePacket(endpoint_number))
 
     // USB2_EP_IN SendComplete
     } else if usb2.is_pending(pac::Interrupt::USB2_EP_IN) {
-        let endpoint_number = usb2.ep_in.epno.read().bits() as u8;
+        let endpoint_number = usb2.ep_in.epno().read().bits() as u8;
         usb2.clear_pending(pac::Interrupt::USB2_EP_IN);
 
         // TODO something a little safer would be nice

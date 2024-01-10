@@ -76,7 +76,7 @@ fn MachineExternal() {
     // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         ladybug::trace(Channel::B, Bit::B_IRQ_EP_CONTROL, || {
-            let endpoint = usb0.ep_control.epno.read().bits() as u8;
+            let endpoint = usb0.ep_control.epno().read().bits() as u8;
             let mut buffer = [0_u8; 8];
             let _bytes_read = usb0.read_control(&mut buffer);
             let setup_packet = SetupPacket::from(buffer);
@@ -91,7 +91,7 @@ fn MachineExternal() {
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
         ladybug::trace(Channel::B, Bit::B_IRQ_EP_OUT, || {
-            let endpoint = usb0.ep_out.data_ep.read().bits() as u8;
+            let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
 
             #[cfg(not(feature = "chonky_events"))]
             {
@@ -125,7 +125,7 @@ fn MachineExternal() {
     // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
         ladybug::trace(Channel::B, Bit::B_IRQ_EP_IN, || {
-            let endpoint = usb0.ep_in.epno.read().bits() as u8;
+            let endpoint = usb0.ep_in.epno().read().bits() as u8;
 
             // TODO something a little safer would be nice
             unsafe {

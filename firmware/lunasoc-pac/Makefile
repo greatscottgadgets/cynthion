@@ -9,7 +9,7 @@ svd2rust:
 	mkdir build
 
 	cp $(SVD) svd/lunasoc.svd
-	svd2rust -i svd/lunasoc.svd -o build/ --target riscv --const_generic --make_mod
+	svd2rust -i svd/lunasoc.svd -o build/ --target riscv --make_mod
 	mv build/mod.rs src/generated.rs
 	@# TODO uncomment once we no longer have to poly-fill 'target_has_atomic'
 	@#		see: https://github.com/rust-lang/rust/issues/94039
