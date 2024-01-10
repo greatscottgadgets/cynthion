@@ -447,7 +447,7 @@ impl Moondancer {
         // stall OUT end
         self.usb0.stall_endpoint_out(endpoint_number);
 
-        log::info!(
+        log::debug!(
             "MD moondancer::stall_endpoint_out({})",
             args.endpoint_number
         );
@@ -569,9 +569,15 @@ impl Moondancer {
 
         // check if output FIFO is empty
         // FIXME add a timeout and/or return a GreatError::DeviceOrResourceBusy
-        if self.usb0.ep_in.have().read().have().bit() {
-            warn!("  {} clear tx", stringify!($USBX));
-            self.usb0.ep_in.reset().write(|w| w.reset().bit(true));
+        let mut timeout = 0;
+        while self.usb0.ep_in.have().read().have().bit() {
+            if timeout == 0 {
+                error!("  USB0 clear tx");
+            } else if timeout > 25_000_000 {
+                self.usb0.ep_in.reset().write(|w| w.reset().bit(true));
+                error!("  USB0 clear tx timeout");
+            }
+            timeout += 1;
         }
 
         // write data out to EP_IN, splitting into packets of max_packet_size
@@ -600,6 +606,9 @@ impl Moondancer {
                 while unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
                     timeout += 1;
                     if timeout > 25_000_000 {
+                        unsafe {
+                            self.usb0.clear_tx_ack_active(endpoint_number);
+                        }
                         log::error!(
                             "moondancer::write_endpoint timed out after {} bytes",
                             bytes_written
@@ -633,8 +642,12 @@ impl Moondancer {
         while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
             timeout += 1;
             if timeout > 25_000_000 {
+                unsafe {
+                    self.usb0.clear_tx_ack_active(endpoint_number);
+                }
                 log::error!(
-                    "moondancer::write_endpoint timed out waiting for write to complete after {} bytes",
+                    "moondancer::write_endpoint timed out after {} bytes during write of {} bytes",
+                    payload_length,
                     bytes_written
                 );
                 // TODO return an error
