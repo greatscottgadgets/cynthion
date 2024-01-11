@@ -26,3 +26,4 @@ Cynthion Documentation
 
   getting_help
   cynthion_project_mentions
+  safety_information
