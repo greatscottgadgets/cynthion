@@ -55,7 +55,7 @@ pub struct Moondancer {
     quirk_flags: u16,
     ep_in_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
     ep_out_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
-    irq_queue: Queue<InterruptEvent, 64>,
+    irq_queue: Queue<UsbEvent, 64>,
     control_queue: Queue<SetupPacket, 8>,
     packet_buffer: Vec<Packet, 4>,
     pending_set_address: Option<u8>,
@@ -76,10 +76,10 @@ impl Moondancer {
     }
 
     #[inline(always)]
-    pub fn dispatch_event(&mut self, event: InterruptEvent) {
+    pub fn dispatch_event(&mut self, event: UsbEvent) {
         // filter interrupt events
         let event = match event {
-            InterruptEvent::Usb(_, UsbEvent::BusReset) => {
+            UsbEvent::BusReset => {
                 // flush queues, the actual bus reset is handled in the irq handler for lower latency
                 //while let Some(_) = self.irq_queue.dequeue() {}
                 //while let Some(_) = self.control_queue.dequeue() {}
@@ -87,10 +87,7 @@ impl Moondancer {
                 event
             }
 
-            InterruptEvent::Usb(
-                interface,
-                UsbEvent::ReceiveSetupPacket(endpoint_number, setup_packet),
-            ) => {
+            UsbEvent::ReceiveSetupPacket(endpoint_number, setup_packet) => {
                 // check if it is a SetAddress request and handle it locally for lowest latency
                 use smolusb::setup::{Request, RequestType};
                 let direction = setup_packet.direction();
@@ -127,10 +124,11 @@ impl Moondancer {
                         }
                     }
                 }
-                InterruptEvent::Usb(interface, UsbEvent::ReceiveControl(endpoint_number))
+                //InterruptEvent::Usb(interface, UsbEvent::ReceiveControl(endpoint_number))
+                UsbEvent::ReceiveControl(endpoint_number)
             }
 
-            InterruptEvent::Usb(interface, UsbEvent::SendComplete(endpoint_number)) => {
+            UsbEvent::SendComplete(endpoint_number) => {
                 // catch EP_IN SendComplete after SetAddress ack
                 if let Some(address) = self.pending_set_address.take() {
                     self.usb0.set_address(address);
@@ -141,7 +139,7 @@ impl Moondancer {
                 return;
             }
 
-            InterruptEvent::Usb(interface, UsbEvent::ReceivePacket(endpoint_number)) => {
+            UsbEvent::ReceivePacket(endpoint_number) => {
                 // drain FIFO
                 let mut rx_buffer: [u8; crate::EP_MAX_PACKET_SIZE] = [0; crate::EP_MAX_PACKET_SIZE];
                 let bytes_read = self.usb0.read(endpoint_number, &mut rx_buffer);
@@ -181,9 +179,9 @@ impl Moondancer {
 
         // enqueue interrupt event
         match self.irq_queue.enqueue(event) {
-            Ok(()) => (),
+            Ok(()) => {}
             Err(_) => {
-                error!("Moondancer - irq queue overflow");
+                error!("Moondancer - irq queue overflow: {:?}", event);
                 /*loop {
                     unsafe {
                         riscv::asm::nop();
@@ -712,8 +710,8 @@ impl Moondancer {
         let clone = self.irq_queue.clone();
         self.irq_queue = Queue::new();
 
-        let length = clone.len() * 3;
-        let response = clone.iter().flat_map(|message| message.into_bytes());
+        let length = clone.len() * 2;
+        let response = clone.iter().flat_map(|event| event.into_bytes());
 
         for (dest, src) in tx_buffer.iter_mut().zip(response) {
             *dest = src;
@@ -734,20 +732,22 @@ impl Moondancer {
         debug!("MD moondancer::test_get_interrupt_events()");
 
         use crate::UsbInterface::{Aux, Control, Target};
-        self.irq_queue
-            .enqueue(InterruptEvent::Usb(Target, UsbEvent::BusReset))
-            .ok();
-        self.irq_queue
-            .enqueue(InterruptEvent::Usb(Aux, UsbEvent::ReceiveControl(1)))
-            .ok();
-        self.irq_queue
-            .enqueue(InterruptEvent::Usb(Control, UsbEvent::ReceivePacket(2)))
-            .ok();
-        self.irq_queue
-            .enqueue(InterruptEvent::Usb(Target, UsbEvent::SendComplete(3)))
-            .ok();
+        self.irq_queue.enqueue(UsbEvent::BusReset).ok();
+        self.irq_queue.enqueue(UsbEvent::ReceiveControl(1)).ok();
+        self.irq_queue.enqueue(UsbEvent::ReceivePacket(2)).ok();
+        self.irq_queue.enqueue(UsbEvent::SendComplete(3)).ok();
 
         self.get_interrupt_events(arguments)
+    }
+
+    /// Get endpoint NAK status.
+    ///
+    /// # Return Value
+    ///
+    /// bitmask
+    pub fn get_nak_status(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        let nak_status = self.usb0.ep_in.nak().read().bits() as u16;
+        Ok(nak_status.to_le_bytes().into_iter())
     }
 }
 
@@ -766,7 +766,7 @@ pub static CLASS_DOCS: &str = "API for fine-grained control of the Target USB po
 ///
 /// Fields are `"\0"`  where C implementation has `""`
 /// Fields are `"*\0"` where C implementation has `NULL`
-pub static VERBS: [Verb; 15] = [
+pub static VERBS: [Verb; 16] = [
     // - device connection --
     Verb {
         id: 0x0,
@@ -876,8 +876,17 @@ pub static VERBS: [Verb; 15] = [
         doc: "\0", //"Return the most recent driver messages.\0",
         in_signature: "\0",
         in_param_names: "*\0",
-        out_signature: "<*(BBB)\0",
-        out_param_names: "type, interface, endpoint\0",
+        out_signature: "<*(BB)\0",
+        out_param_names: "type, endpoint\0",
+    },
+    Verb {
+        id: 0xc,
+        name: "get_nak_status\0",
+        doc: "\0", //"Return endpoint NAK status.\0",
+        in_signature: "\0",
+        in_param_names: "*\0",
+        out_signature: "<H\0",
+        out_param_names: "bitmask\0",
     },
     // - tests --
     Verb {
@@ -904,8 +913,8 @@ pub static VERBS: [Verb; 15] = [
         doc: "\0", //"Return get_interrupt_events() with test data.\0",
         in_signature: "\0",
         in_param_names: "*\0",
-        out_signature: "<*(BBB)\0",
-        out_param_names: "type, interface, endpoint\0",
+        out_signature: "<*(BB)\0",
+        out_param_names: "type, endpoint\0",
     },
 ];
 
@@ -992,6 +1001,12 @@ impl Moondancer {
             0xb => {
                 // moondancer::get_interrupt_events
                 let iter = self.get_interrupt_events(arguments)?;
+                let response = unsafe { iter_to_response(iter, response_buffer) };
+                Ok(response)
+            }
+            0xc => {
+                // moondancer::get_nak_status
+                let iter = self.get_nak_status(arguments)?;
                 let response = unsafe { iter_to_response(iter, response_buffer) };
                 Ok(response)
             }

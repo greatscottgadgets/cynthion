@@ -15,7 +15,8 @@ import os
 import sys
 
 CLOCK_FREQUENCIES_MHZ = {
-    'sync': 60
+    # Vexriscv synthesis is topping out at around 72 MHz
+    "sync": 60
 }
 
 # - MoondancerSoc ---------------------------------------------------------------
@@ -171,7 +172,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # configure clock frequency
-    clock_frequency = int(platform.default_clk_frequency)
+    clock_frequency = int(CLOCK_FREQUENCIES_MHZ["sync"] * 1e6)
 
     logging.info(f"Building for {platform} with clock frequency: {clock_frequency}")
 

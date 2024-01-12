@@ -115,36 +115,6 @@ macro_rules! impl_usb {
                     self.disable_interrupt(Interrupt::$USBX_EP_OUT);
                 }
 
-                #[inline(always)]
-                pub fn is_pending(&self, interrupt: Interrupt) -> bool {
-                    pac::csr::interrupt::pending(interrupt)
-                }
-
-                #[inline(always)]
-                pub fn clear_pending(&self, interrupt: Interrupt) {
-                    match interrupt {
-                        Interrupt::$USBX_CONTROLLER => self
-                            .controller
-                            .ev_pending()
-                            .modify(|r, w| w.pending().bit(r.pending().bit())),
-                        Interrupt::$USBX_EP_CONTROL => self
-                            .ep_control
-                            .ev_pending()
-                            .modify(|r, w| w.pending().bit(r.pending().bit())),
-                        Interrupt::$USBX_EP_IN => self
-                            .ep_in
-                            .ev_pending()
-                            .modify(|r, w| w.pending().bit(r.pending().bit())),
-                        Interrupt::$USBX_EP_OUT => self
-                            .ep_out
-                            .ev_pending()
-                            .modify(|r, w| w.pending().bit(r.pending().bit())),
-                        _ => {
-                            warn!("Ignoring invalid interrupt clear pending: {:?}", interrupt);
-                        }
-                    }
-                }
-
                 pub fn enable_interrupt(&self, interrupt: Interrupt) {
                     match interrupt {
                         Interrupt::$USBX_CONTROLLER => self
@@ -182,13 +152,80 @@ macro_rules! impl_usb {
                         Interrupt::$USBX_EP_IN => self
                             .ep_in
                             .ev_enable()
-                            .write(|w| w.enable().bit(false)),
+                            .write(|w| w.enable().bit(true)),
                         Interrupt::$USBX_EP_OUT => self
                             .ep_out
                             .ev_enable()
                             .write(|w| w.enable().bit(false)),
                         _ => {
                             warn!("Ignoring invalid interrupt enable: {:?}", interrupt);
+                        }
+                    }
+                }
+
+                #[inline(always)]
+                pub fn is_pending(&self, interrupt: Interrupt) -> bool {
+                    pac::csr::interrupt::pending(interrupt)
+                }
+
+                /// Clear pending interrupt event.
+                ///
+                /// Returns the status of the pending interrupt event.
+                #[inline(always)]
+                pub fn clear_pending(&self, interrupt: Interrupt) -> u32 {
+                    let status = self.status_pending(interrupt);
+
+                    match interrupt {
+                        Interrupt::$USBX_CONTROLLER => self
+                            .controller
+                            .ev_pending()
+                            .modify(|r, w| w.pending().bit(r.pending().bit())),
+                        Interrupt::$USBX_EP_CONTROL => self
+                            .ep_control
+                            .ev_pending()
+                            .modify(|r, w| w.pending().bit(r.pending().bit())),
+                        Interrupt::$USBX_EP_IN => self
+                            .ep_in
+                            .ev_pending()
+                            .modify(|r, w| w.pending().bit(r.pending().bit())),
+                        Interrupt::$USBX_EP_OUT => self
+                            .ep_out
+                            .ev_pending()
+                            .modify(|r, w| w.pending().bit(r.pending().bit())),
+                        _ => {
+                            warn!("Ignoring invalid clear pending for interrupt: {:?}", interrupt);
+                        }
+                    }
+
+                    status
+                }
+
+                /// Returns the status of the given interrupt event.
+                #[inline(always)]
+                pub fn status_pending(&self, interrupt: Interrupt) -> u32 {
+                    // for reasons that are still to be understood the
+                    // ev_status register is always 0 irrespective of
+                    // the event but ev_pending has the correct value.
+                    match interrupt {
+                        Interrupt::$USBX_CONTROLLER => self
+                            .controller
+                            .ev_pending()
+                            .read().bits(),
+                        Interrupt::$USBX_EP_CONTROL => self
+                            .ep_control
+                            .ev_pending()
+                            .read().bits(),
+                        Interrupt::$USBX_EP_IN => self
+                            .ep_in
+                            .ev_pending()
+                            .read().bits(),
+                        Interrupt::$USBX_EP_OUT => self
+                            .ep_out
+                            .ev_pending()
+                            .read().bits(),
+                        _ => {
+                            warn!("Ignoring invalid status pending for interrupt: {:?}", interrupt);
+                            0
                         }
                     }
                 }
