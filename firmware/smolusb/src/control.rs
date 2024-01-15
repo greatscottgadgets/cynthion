@@ -5,7 +5,7 @@ use log::{debug, error, info, trace, warn};
 use crate::descriptor::*;
 use crate::device::Speed;
 use crate::event::UsbEvent;
-use crate::setup::{Direction, Request, RequestType, SetupPacket};
+use crate::setup::{Direction, Feature, Recipient, Request, RequestType, SetupPacket};
 use crate::traits::{AsByteSliceIterator, UsbDriver};
 
 // - Control ------------------------------------------------------------------
@@ -117,7 +117,6 @@ where
         use UsbEvent::*;
         match event {
             BusReset => {
-                // TODO if latency allows, do this here: usb.bus_reset();
                 self.bus_reset();
                 None
             }
@@ -293,13 +292,50 @@ where
             (_, RequestType::Standard, Request::ClearFeature) => {
                 // TODO Direction ?
                 info!("  TODO Request::ClearFeature {:?}", direction);
-                // TODO
+
+                let recipient = setup_packet.recipient();
+                let feature = Feature::from(setup_packet.value);
+                match (&recipient, &feature) {
+                    (Recipient::Endpoint, Feature::EndpointHalt) => {
+                        let endpoint_address = setup_packet.index as u8;
+                        usb.clear_feature_endpoint_halt(endpoint_address);
+                        usb.ack(0, setup_packet.direction());
+                        trace!(
+                            "SETUP setup_clear_feature EndpointHalt: 0x{:x}",
+                            endpoint_address
+                        );
+                    }
+                    (Recipient::Device, Feature::DeviceRemoteWakeup) => {
+                        // TODO self.feature_remote_wakeup = false;
+                    }
+                    _ => {
+                        warn!(
+                            "SETUP stall: unhandled clear feature {:?}, {:?}",
+                            recipient, feature
+                        );
+                        usb.stall_endpoint_in(self.endpoint_number);
+                    }
+                }
             }
 
             (_, RequestType::Standard, Request::SetFeature) => {
                 // TODO Direction ?
                 info!("  TODO Request::SetFeature {:?}", direction);
-                // TODO
+
+                let recipient = setup_packet.recipient();
+                let feature = Feature::from(setup_packet.value);
+                match (&recipient, &feature) {
+                    (Recipient::Device, Feature::DeviceRemoteWakeup) => {
+                        // TODO self.feature_remote_wakeup = true;
+                    }
+                    _ => {
+                        warn!(
+                            "SETUP stall: unhandled set feature {:?}, {:?}",
+                            recipient, feature
+                        );
+                        usb.stall_endpoint_in(self.endpoint_number);
+                    }
+                }
             }
 
             // unknown requests
