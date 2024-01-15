@@ -298,9 +298,12 @@ macro_rules! impl_usb {
                     self.ep_out.reset().write(|w| w.reset().bit(true));
                 }
 
-                /// Perform a full reset of the device.
-                fn reset(&self) {
-                    // disable endpoint events
+                /// Perform a bus reset of the device.
+                ///
+                /// This differs from `reset()` by not disabling
+                /// USBx_CONTROLLER bus reset events.
+                fn bus_reset(&self) {
+                    // disable interrupt events
                     self.disable_interrupts();
 
                     // reset device address to 0
@@ -311,34 +314,8 @@ macro_rules! impl_usb {
                     self.ep_in.reset().write(|w| w.reset().bit(true));
                     self.ep_out.reset().write(|w| w.reset().bit(true));
 
-                    // re-enable endpoint events
+                    // re-enable interrupt events
                     self.enable_interrupts();
-
-                    trace!("UsbInterface0::reset()");
-                }
-
-                /// Perform a bus reset of the device.
-                ///
-                /// This differs from `reset()` by not disabling
-                /// USBx_CONTROLLER bus reset events.
-                fn bus_reset(&self) {
-                    // disable events
-                    self.disable_interrupt(Interrupt::$USBX_CONTROLLER);
-                    self.disable_interrupt(Interrupt::$USBX_EP_CONTROL);
-                    self.disable_interrupt(Interrupt::$USBX_EP_IN);
-
-                    // reset device address to 0
-                    self.set_address(0);
-
-                    // reset FIFOs
-                    self.ep_control.reset().write(|w| w.reset().bit(true));
-                    self.ep_in.reset().write(|w| w.reset().bit(true));
-                    self.ep_out.reset().write(|w| w.reset().bit(true));
-
-                    // re-enable events
-                    self.enable_interrupt(Interrupt::$USBX_CONTROLLER);
-                    self.enable_interrupt(Interrupt::$USBX_EP_CONTROL);
-                    self.enable_interrupt(Interrupt::$USBX_EP_IN);
 
                     trace!("UsbInterface0::bus_reset()");
                 }
@@ -401,20 +378,11 @@ macro_rules! impl_usb {
                         self.ep_in.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
                         self.ep_in.pid().write(|w| w.pid().bit(false));
                     }
-
-                    // TODO figure out why throughput is higher if we emit log messages
-                    // this smacks of a deeper problem ...
-                    log::debug!("  usb::clear_feature_endpoint_halt: 0x{:x}", endpoint_address);
                 }
             }
 
             // - trait: UnsafeUsbDriverOperations -----------------------------
 
-            // These are being used to work around the behaviour where we can only
-            // set the device address after we have transmitted our STATUS ACK
-            // response.
-            //
-            // This is not a particularly safe approach.
             #[allow(non_snake_case)]
             mod $USBX_CONTROLLER {
                 use smolusb::EP_MAX_ENDPOINTS;
@@ -543,22 +511,6 @@ macro_rules! impl_usb {
                 #[inline(always)]
                 fn read(&self, endpoint_number: u8, buffer: &mut [u8]) -> usize {
                     $LADYBUG_TRACE(Channel::A, Bit::A_USB_READ, || {
-                        /*let mut bytes_read = 0;
-                        let mut overflow = 0;
-                        while self.ep_out.have().read().have().bit() {
-                            if bytes_read >= buffer.len() {
-                                // drain fifo
-                                let _drain = self.ep_out.data().read().data().bits();
-                                overflow += 1;
-                            } else {
-                                buffer[bytes_read] = self.ep_out.data().read().data().bits();
-                                bytes_read += 1;
-                            }
-                        }*/
-
-                        // getting a little better performance with an
-                        // iterator, probably because it doesn't need to
-                        // do a bounds check.
                         let mut bytes_read = 0;
                         let mut did_overflow = true;
                         for b in buffer.iter_mut() {

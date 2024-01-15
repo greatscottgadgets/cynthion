@@ -18,8 +18,6 @@ pub trait UsbDriverOperations {
     fn connect(&mut self, device_speed: Speed);
     /// Disconnect
     fn disconnect(&mut self);
-    /// Reset
-    fn reset(&self); // FIXME deprecate in favour of bus_reset
     /// Bus Reset
     fn bus_reset(&self);
     /// Acknowledge the status stage of an incoming control request.
@@ -35,6 +33,14 @@ pub trait UsbDriverOperations {
     fn clear_feature_endpoint_halt(&self, endpoint_address: u8);
 }
 
+/// These are used to deal with the situation where we need to block
+/// on receipt of the host ACK following a usb write inside an ongoing
+/// operation and are unable to process SendComplete interrupt events.
+///
+/// Not having to do this is a powerful argument for implementing
+/// async support.
+///
+/// This is not a particularly safe approach.
 pub trait UnsafeUsbDriverOperations {
     unsafe fn set_tx_ack_active(&self, endpoint_number: u8);
     unsafe fn clear_tx_ack_active(&self, endpoint_number: u8);
@@ -67,11 +73,6 @@ pub trait WriteEndpoint {
     fn write<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
     where
         I: Iterator<Item = u8>;
-
-    // TODO add blocking argument to write
-    //fn write<'a, I>(&self, endpoint_number: u8, iter: I, blocking: bool) -> usize
-    //where
-    //    I: Iterator<Item = u8>;
 
     /// Write iterator to endpoint using the given packet size
     ///

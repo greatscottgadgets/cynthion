@@ -566,11 +566,11 @@ impl Moondancer {
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
 
         // check if output FIFO is empty
-        // FIXME add a timeout and/or return a GreatError::DeviceOrResourceBusy
+        // FIXME return a GreatError::DeviceOrResourceBusy on timeout
         let mut timeout = 0;
         while self.usb0.ep_in.have().read().have().bit() {
             if timeout == 0 {
-                error!("  USB0 clear tx");
+                warn!("  USB0 clear tx");
             } else if timeout > 25_000_000 {
                 self.usb0.ep_in.reset().write(|w| w.reset().bit(true));
                 error!("  USB0 clear tx timeout");
@@ -648,7 +648,7 @@ impl Moondancer {
                     payload_length,
                     bytes_written
                 );
-                // TODO return an error
+                // TODO return an error on timeout
             }
         }
 
