@@ -1,16 +1,17 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)] // TODO
 
-use crate::traits::AsByteSliceIterator;
-use crate::SmolError;
-
-use heapless::Vec;
-use zerocopy::{AsBytes, FromBytes};
-
 use core::iter;
 use core::iter::Chain;
 use core::marker::PhantomData;
 use core::mem::size_of;
 use core::slice;
+
+use heapless::Vec;
+use log::{warn, debug};
+use zerocopy::{AsBytes, FromBytes};
+
+use crate::traits::AsByteSliceIterator;
+use crate::SmolError;
 
 ///! USB Descriptors
 

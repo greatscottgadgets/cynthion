@@ -148,7 +148,7 @@ impl Moondancer {
                 let mut packet = Packet::new(endpoint_number, bytes_read);
                 if packet.bytes_read > packet.buffer.len() {
                     error!(
-                        "MD moondancer::dispatch(ReceivePacket({})) -> bytes_read:{} receive buffer overflow",
+                        "MD moondancer::dispatch_event(ReceivePacket({})) -> bytes_read:{} receive buffer overflow",
                         packet.endpoint_number, packet.bytes_read
                     );
                     // TODO we can probably do better than truncating the packet
@@ -165,7 +165,7 @@ impl Moondancer {
                     }
                     Err(packet) => {
                         error!(
-                            "MD moondancer::dispatch(ReceivePacket({})) packet buffer overflow",
+                            "MD moondancer::dispatch_event(ReceivePacket({})) packet buffer overflow",
                             endpoint_number
                         );
                     }

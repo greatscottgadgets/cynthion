@@ -5,9 +5,9 @@
 use log::{debug, error, info};
 
 use smolusb::class::cdc;
-use smolusb::control::{Control, Descriptors};
+use smolusb::control::Control;
 use smolusb::descriptor::DescriptorType;
-use smolusb::device::Speed;
+use smolusb::device::{Descriptors, Speed};
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Request, RequestType, SetupPacket};
 use smolusb::traits::{ReadControl, ReadEndpoint, UsbDriverOperations, WriteEndpoint};
@@ -191,8 +191,6 @@ fn main() -> ! {
         }
         .set_total_lengths(), // TODO figure out a better solution
     );
-    // TODO control_usb0.cb_vendor_request = Some(handle_vendor_request);
-    // TODO control_usb0.cb_string_request = Some(handle_string_request);
 
     // connect device
     usb0.connect(DEVICE_SPEED);
@@ -221,8 +219,6 @@ fn main() -> ! {
         }
         .set_total_lengths(), // TODO figure out a better solution
     );
-    // TODO control_usb1.cb_vendor_request = Some(handle_vendor_request);
-    // TODO control_usb1.cb_string_request = Some(handle_string_request);
 
     // connect device
     usb1.connect(DEVICE_SPEED);
@@ -272,7 +268,7 @@ fn main() -> ! {
                 | Usb(Target, event @ ReceiveControl(0))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
-                    match control_usb0.handle_event(&usb0, event) {
+                    match control_usb0.dispatch_event(&usb0, event) {
                         // vendor requests are not handled by control
                         Some((setup_packet, _rx_buffer)) => {
                             handle_vendor_request(&usb0, setup_packet);
@@ -287,7 +283,7 @@ fn main() -> ! {
                 | Usb(Aux, event @ ReceiveControl(0))
                 | Usb(Aux, event @ ReceivePacket(0))
                 | Usb(Aux, event @ SendComplete(0)) => {
-                    match control_usb1.handle_event(&usb1, event) {
+                    match control_usb1.dispatch_event(&usb1, event) {
                         // vendor requests are not handled by control
                         Some((setup_packet, _rx_buffer)) => {
                             handle_vendor_request(&usb1, setup_packet);
@@ -316,12 +312,12 @@ fn main() -> ! {
             match (interface, endpoint, bytes_read, buffer) {
                 // usb0 control endpoint receive packet
                 (Target, 0, _bytes_read, _buffer) => {
-                    control_usb0.handle_event(&usb0, UsbEvent::ReceivePacket(0));
+                    control_usb0.dispatch_event(&usb0, UsbEvent::ReceivePacket(0));
                 }
 
                 // usb1 control endpoint receive packet
                 (Aux, 0, _bytes_read, _buffer) => {
-                    control_usb1.handle_event(&usb1, UsbEvent::ReceivePacket(0));
+                    control_usb1.dispatch_event(&usb1, UsbEvent::ReceivePacket(0));
                 }
 
                 // usb0 receive packet handler
