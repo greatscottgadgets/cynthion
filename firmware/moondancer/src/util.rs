@@ -72,7 +72,6 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
             let endpoint_number = usb0.ep_in.epno().read().bits() as u8;
             usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
 
-            // TODO something a little bit safer would be nice
             unsafe {
                 usb0.clear_tx_ack_active(endpoint_number);
             }
@@ -118,7 +117,6 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
         let endpoint_number = usb1.ep_in.epno().read().bits() as u8;
         usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
 
-        // TODO something a little safer would be nice
         unsafe {
             usb1.clear_tx_ack_active(endpoint_number);
         }
@@ -144,12 +142,11 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
         usb2.clear_pending(pac::Interrupt::USB2_EP_OUT);
         InterruptEvent::Usb(Control, UsbEvent::ReceivePacket(endpoint_number))
 
-    // USB2_EP_IN SendComplete
+    // USB2_EP_IN SendComplete / NAK
     } else if usb2.is_pending(pac::Interrupt::USB2_EP_IN) {
         let endpoint_number = usb2.ep_in.epno().read().bits() as u8;
         usb2.clear_pending(pac::Interrupt::USB2_EP_IN);
 
-        // TODO something a little safer would be nice
         unsafe {
             usb2.clear_tx_ack_active(endpoint_number);
         }

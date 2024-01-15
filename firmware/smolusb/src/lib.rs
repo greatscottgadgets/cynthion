@@ -53,7 +53,7 @@ pub mod event {
         /// for lower latency.
         ///
         /// Contents is (endpoint_number, setup_packet)
-        ReceiveSetupPacket(u8, SetupPacket) = 14,
+        ReceiveSetupPacket(u8, SetupPacket) = 201,
 
         #[cfg(feature = "chonky_events")]
         /// Received a data packet on USBx_EP_OUT
@@ -63,7 +63,7 @@ pub mod event {
         /// for lower latency.
         ///
         /// Contents is (endpoint_number, bytes_read, packet_buffer)
-        ReceiveBuffer(u8, usize, [u8; crate::EP_MAX_PACKET_SIZE]) = 15,
+        ReceiveBuffer(u8, usize, [u8; crate::EP_MAX_PACKET_SIZE]) = 202,
     }
 
     impl core::fmt::Debug for UsbEvent {
@@ -99,10 +99,37 @@ pub mod event {
                 UsbEvent::ReceiveControl(_) => 11,
                 UsbEvent::ReceivePacket(_) => 12,
                 UsbEvent::SendComplete(_) => 13,
-                UsbEvent::ReceiveSetupPacket(_, _) => 14,
+                UsbEvent::ReceiveSetupPacket(_, _) => 201,
                 #[cfg(feature = "chonky_events")]
-                UsbEvent::ReceiveBuffer(_, _, _) => 15,
+                UsbEvent::ReceiveBuffer(_, _, _) => 202,
             }
         }
     }
+
+    impl core::convert::From<UsbEvent> for [u8; 2] {
+        // TODO lose magic numbers
+        fn from(event: UsbEvent) -> Self {
+            use UsbEvent::*;
+            match event {
+                BusReset => [event.into(), 0],
+                ReceiveControl(endpoint_number) => [event.into(), endpoint_number],
+                ReceiveSetupPacket(endpoint_number, _setup_packet) => {
+                    [event.into(), endpoint_number]
+                }
+                ReceivePacket(endpoint_number) => [event.into(), endpoint_number],
+                #[cfg(feature = "chonky_events")]
+                ReceiveBuffer(endpoint_number, _, _) => {
+                    [event.into(), interface as u8, endpoint_number]
+                }
+                SendComplete(endpoint_number) => [event.into(), endpoint_number],
+            }
+        }
+    }
+
+    impl UsbEvent {
+        pub fn into_bytes(self) -> [u8; 2] {
+            self.into()
+        }
+    }
+
 }

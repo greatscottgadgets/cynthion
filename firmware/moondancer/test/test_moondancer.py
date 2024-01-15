@@ -45,19 +45,15 @@ class TestMoondancer(unittest.TestCase):
         # test known values for each item
         response = list(map(InterruptEvent.parse, response))
         self.assertEqual(response[0], InterruptEvent.USB_BUS_RESET)
-        self.assertEqual(response[0].interface, 0)
         self.assertEqual(response[0].endpoint_number, 0)
         self.assertEqual(response[1], InterruptEvent.USB_RECEIVE_CONTROL)
-        self.assertEqual(response[1].interface, 1)
         self.assertEqual(response[1].endpoint_number, 1)
         self.assertEqual(response[2], InterruptEvent.USB_RECEIVE_PACKET)
-        self.assertEqual(response[2].interface, 2)
         self.assertEqual(response[2].endpoint_number, 2)
         self.assertEqual(response[3], InterruptEvent.USB_SEND_COMPLETE)
-        self.assertEqual(response[3].interface, 0)
         self.assertEqual(response[3].endpoint_number, 3)
         for message in response:
-            logging.debug(f"test_get_interrupt_events() -> {message} -> {message.interface} -> {message.endpoint_number}")
+            logging.info(f"test_get_interrupt_events() -> {message} -> {message.endpoint_number}")
 
 
     def test_read_endpoint(self):

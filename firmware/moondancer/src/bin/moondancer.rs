@@ -279,7 +279,7 @@ impl<'a> Firmware<'a> {
                     // - usb0 Target event handlers --
 
                     // enqueue moondancer events
-                    Usb(Target, _event) => self.moondancer.dispatch_event(interrupt_event),
+                    Usb(Target, usb_event) => self.moondancer.dispatch_event(usb_event),
 
                     // Unhandled event
                     _ => {

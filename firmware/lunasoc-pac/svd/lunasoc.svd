@@ -802,7 +802,7 @@
       <baseAddress>0xf0003080</baseAddress>
       <addressBlock>
         <offset>0</offset>
-        <size>0x40</size>
+        <size>0x80</size>
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
@@ -947,9 +947,27 @@
           </fields>
         </register>
         <register>
+          <name>nak</name>
+          <description>usb0_ep_in nak register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>nak</name>
+              <description>
+            Read-only register. Contains a bitmask of endpoints that have responded with a NAK since the
+            last read of this register.
+        </description>
+              <bitRange>[15:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
           <name>ev_status</name>
           <description>usb0_ep_in ev_status register</description>
-          <addressOffset>0x0020</addressOffset>
+          <addressOffset>0x0040</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
           <access>read-only</access>
@@ -964,7 +982,7 @@
         <register>
           <name>ev_pending</name>
           <description>usb0_ep_in ev_pending register</description>
-          <addressOffset>0x0024</addressOffset>
+          <addressOffset>0x0044</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
           <access>read-write</access>
@@ -979,7 +997,7 @@
         <register>
           <name>ev_enable</name>
           <description>usb0_ep_in ev_enable register</description>
-          <addressOffset>0x0028</addressOffset>
+          <addressOffset>0x0048</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
           <access>read-write</access>
@@ -1549,7 +1567,7 @@
       <baseAddress>0xf0004080</baseAddress>
       <addressBlock>
         <offset>0</offset>
-        <size>0x40</size>
+        <size>0x80</size>
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
@@ -1694,9 +1712,27 @@
           </fields>
         </register>
         <register>
+          <name>nak</name>
+          <description>usb1_ep_in nak register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>nak</name>
+              <description>
+            Read-only register. Contains a bitmask of endpoints that have responded with a NAK since the
+            last read of this register.
+        </description>
+              <bitRange>[15:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
           <name>ev_status</name>
           <description>usb1_ep_in ev_status register</description>
-          <addressOffset>0x0020</addressOffset>
+          <addressOffset>0x0040</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
           <access>read-only</access>
@@ -1711,7 +1747,7 @@
         <register>
           <name>ev_pending</name>
           <description>usb1_ep_in ev_pending register</description>
-          <addressOffset>0x0024</addressOffset>
+          <addressOffset>0x0044</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
           <access>read-write</access>
@@ -1726,7 +1762,7 @@
         <register>
           <name>ev_enable</name>
           <description>usb1_ep_in ev_enable register</description>
-          <addressOffset>0x0028</addressOffset>
+          <addressOffset>0x0048</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
           <access>read-write</access>
@@ -2296,7 +2332,7 @@
       <baseAddress>0xf0005080</baseAddress>
       <addressBlock>
         <offset>0</offset>
-        <size>0x40</size>
+        <size>0x80</size>
         <usage>registers</usage>
       </addressBlock>
       <interrupt>
@@ -2441,9 +2477,27 @@
           </fields>
         </register>
         <register>
+          <name>nak</name>
+          <description>usb2_ep_in nak register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>nak</name>
+              <description>
+            Read-only register. Contains a bitmask of endpoints that have responded with a NAK since the
+            last read of this register.
+        </description>
+              <bitRange>[15:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
           <name>ev_status</name>
           <description>usb2_ep_in ev_status register</description>
-          <addressOffset>0x0020</addressOffset>
+          <addressOffset>0x0040</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
           <access>read-only</access>
@@ -2458,7 +2512,7 @@
         <register>
           <name>ev_pending</name>
           <description>usb2_ep_in ev_pending register</description>
-          <addressOffset>0x0024</addressOffset>
+          <addressOffset>0x0044</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
           <access>read-write</access>
@@ -2473,7 +2527,7 @@
         <register>
           <name>ev_enable</name>
           <description>usb2_ep_in ev_enable register</description>
-          <addressOffset>0x0028</addressOffset>
+          <addressOffset>0x0048</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
           <access>read-write</access>

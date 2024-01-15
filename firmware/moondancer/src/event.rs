@@ -6,6 +6,7 @@ use crate::UsbInterface;
 /// InterruptEvent is used to notify the main loop of events received in the
 /// `MachineExternal` interrupt handler.
 #[derive(Copy, Clone)]
+#[repr(u8)]
 pub enum InterruptEvent {
     // interrupt events
     Interrupt(pac::Interrupt),
@@ -44,37 +45,6 @@ impl InterruptEvent {
         match event {
             event => InterruptEvent::Usb(interface, event),
         }
-    }
-}
-
-// - byte conversion ----------------------------------------------------------
-
-impl core::convert::From<InterruptEvent> for [u8; 3] {
-    // TODO lose magic numbers
-    fn from(message: InterruptEvent) -> Self {
-        use UsbEvent::*;
-        match message {
-            InterruptEvent::Usb(interface, event) => match event {
-                BusReset => [event.into(), interface as u8, 0],
-                ReceiveControl(endpoint_number) => [event.into(), interface as u8, endpoint_number],
-                ReceiveSetupPacket(endpoint_number, _setup_packet) => {
-                    [event.into(), interface as u8, endpoint_number]
-                }
-                ReceivePacket(endpoint_number) => [event.into(), interface as u8, endpoint_number],
-                #[cfg(feature = "chonky_events")]
-                ReceiveBuffer(endpoint_number, _, _) => {
-                    [event.into(), interface as u8, endpoint_number]
-                }
-                SendComplete(endpoint_number) => [event.into(), interface as u8, endpoint_number],
-            },
-            _ => [0, 0, 0],
-        }
-    }
-}
-
-impl InterruptEvent {
-    pub fn into_bytes(self) -> [u8; 3] {
-        self.into()
     }
 }
 

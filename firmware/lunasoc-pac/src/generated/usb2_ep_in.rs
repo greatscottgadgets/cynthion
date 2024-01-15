@@ -9,6 +9,8 @@ pub struct RegisterBlock {
     have: HAVE,
     pend: PEND,
     pid: PID,
+    nak: NAK,
+    _reserved9: [u8; 0x1c],
     ev_status: EV_STATUS,
     ev_pending: EV_PENDING,
     ev_enable: EV_ENABLE,
@@ -54,17 +56,22 @@ impl RegisterBlock {
     pub const fn pid(&self) -> &PID {
         &self.pid
     }
-    #[doc = "0x20 - usb2_ep_in ev_status register"]
+    #[doc = "0x20 - usb2_ep_in nak register"]
+    #[inline(always)]
+    pub const fn nak(&self) -> &NAK {
+        &self.nak
+    }
+    #[doc = "0x40 - usb2_ep_in ev_status register"]
     #[inline(always)]
     pub const fn ev_status(&self) -> &EV_STATUS {
         &self.ev_status
     }
-    #[doc = "0x24 - usb2_ep_in ev_pending register"]
+    #[doc = "0x44 - usb2_ep_in ev_pending register"]
     #[inline(always)]
     pub const fn ev_pending(&self) -> &EV_PENDING {
         &self.ev_pending
     }
-    #[doc = "0x28 - usb2_ep_in ev_enable register"]
+    #[doc = "0x48 - usb2_ep_in ev_enable register"]
     #[inline(always)]
     pub const fn ev_enable(&self) -> &EV_ENABLE {
         &self.ev_enable
@@ -110,6 +117,11 @@ module"]
 pub type PID = crate::Reg<pid::PID_SPEC>;
 #[doc = "usb2_ep_in pid register"]
 pub mod pid;
+#[doc = "nak (r) register accessor: usb2_ep_in nak register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`nak::R`].  See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@nak`]
+module"]
+pub type NAK = crate::Reg<nak::NAK_SPEC>;
+#[doc = "usb2_ep_in nak register"]
+pub mod nak;
 #[doc = "ev_status (r) register accessor: usb2_ep_in ev_status register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`ev_status::R`].  See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@ev_status`]
 module"]
 pub type EV_STATUS = crate::Reg<ev_status::EV_STATUS_SPEC>;
