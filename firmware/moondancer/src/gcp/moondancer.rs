@@ -562,7 +562,7 @@ impl Moondancer {
         let endpoint_number: u8 = args.endpoint_number.read();
         let blocking = args.blocking.read() != 0;
         let payload_length = args.payload.len();
-        let iter = args.payload.clone().iter();
+        let iter = args.payload.iter();
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
 
         // check if output FIFO is empty
