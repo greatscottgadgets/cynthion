@@ -6,9 +6,9 @@ use log::{debug, error, info};
 
 use libgreat::GreatResult;
 
-use smolusb::control::{Control, Descriptors};
+use smolusb::control::Control;
 use smolusb::descriptor::*;
-use smolusb::device::Speed;
+use smolusb::device::{Descriptors, Speed};
 use smolusb::event::UsbEvent;
 use smolusb::traits::{ReadEndpoint, UsbDriverOperations};
 
@@ -248,14 +248,14 @@ fn main_loop() -> GreatResult<()> {
                 | Usb(Target, event @ ReceiveSetupPacket(0, _))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
-                    control.handle_event(&usb0, event);
+                    control.dispatch_event(&usb0, event);
                 }
                 #[cfg(not(feature = "chonky_events"))]
                 Usb(Target, event @ BusReset)
                 | Usb(Target, event @ ReceiveControl(0))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
-                    control.handle_event(&usb0, event);
+                    control.dispatch_event(&usb0, event);
                 }
 
                 // Usb0 received packet

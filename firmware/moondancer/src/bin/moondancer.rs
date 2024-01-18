@@ -5,8 +5,8 @@
 use heapless::mpmc::MpMcQueue as Queue;
 use log::{debug, error, info, trace, warn};
 
-use smolusb::control::{Control, Descriptors};
-use smolusb::device::Speed;
+use smolusb::control::Control;
+use smolusb::device::{Descriptors, Speed};
 
 use smolusb::setup::{Direction, RequestType, SetupPacket};
 use smolusb::traits::{UsbDriverOperations, WriteEndpoint};
@@ -266,7 +266,7 @@ impl<'a> Firmware<'a> {
                     | Usb(Aux, event @ SendComplete(0)) => {
                         trace!("Usb(Aux, {:?})", event);
 
-                        match usb1_control.handle_event(&self.usb1, event) {
+                        match usb1_control.dispatch_event(&self.usb1, event) {
                             // vendor requests are not handled by control
                             Some((setup_packet, rx_buffer)) => {
                                 self.handle_vendor_request(setup_packet, rx_buffer)?
@@ -374,13 +374,13 @@ impl<'a> Firmware<'a> {
                 self.usb1.stall_endpoint_in(0);
 
                 warn!(
-                    "handle_control_event Legacy libgreat vendor request '{:?}'",
+                    "handle_vendor_request Legacy libgreat vendor request '{:?}'",
                     vendor_request
                 );
             }
             _ => {
                 error!(
-                    "handle_control_event Unknown control packet '{:?}'",
+                    "handle_vendor_request Unknown control packet '{:?}'",
                     setup_packet
                 );
                 match direction {

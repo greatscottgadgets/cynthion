@@ -7,9 +7,9 @@ use log::{debug, error, info, warn};
 
 use libgreat::{GreatError, GreatResult};
 
-use smolusb::control::{Control, Descriptors};
+use smolusb::control::Control;
 use smolusb::descriptor::*;
-use smolusb::device::Speed;
+use smolusb::device::{Descriptors, Speed};
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Direction, Request, RequestType, SetupPacket};
 use smolusb::traits::AsByteSliceIterator;
@@ -244,7 +244,7 @@ fn main_loop() -> GreatResult<()> {
                 | Usb(Target, event @ ReceiveBuffer(0, _, _))
                 | Usb(Target, event @ SendComplete(0)) => {
                     let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
-                        control.handle_event(&usb0, event)
+                        control.dispatch_event(&usb0, event)
                     });
                     match result {
                         // vendor requests are not handled by control
@@ -263,7 +263,7 @@ fn main_loop() -> GreatResult<()> {
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
                     let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
-                        control.handle_event(&usb0, event)
+                        control.dispatch_event(&usb0, event)
                     });
                     match result {
                         // vendor requests are not handled by control

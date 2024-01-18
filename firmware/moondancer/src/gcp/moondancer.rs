@@ -148,7 +148,7 @@ impl Moondancer {
                 let mut packet = Packet::new(endpoint_number, bytes_read);
                 if packet.bytes_read > packet.buffer.len() {
                     error!(
-                        "MD moondancer::dispatch(ReceivePacket({})) -> bytes_read:{} receive buffer overflow",
+                        "MD moondancer::dispatch_event(ReceivePacket({})) -> bytes_read:{} receive buffer overflow",
                         packet.endpoint_number, packet.bytes_read
                     );
                     // TODO we can probably do better than truncating the packet
@@ -165,7 +165,7 @@ impl Moondancer {
                     }
                     Err(packet) => {
                         error!(
-                            "MD moondancer::dispatch(ReceivePacket({})) packet buffer overflow",
+                            "MD moondancer::dispatch_event(ReceivePacket({})) packet buffer overflow",
                             endpoint_number
                         );
                     }
@@ -562,15 +562,15 @@ impl Moondancer {
         let endpoint_number: u8 = args.endpoint_number.read();
         let blocking = args.blocking.read() != 0;
         let payload_length = args.payload.len();
-        let iter = args.payload.clone().iter();
+        let iter = args.payload.iter();
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
 
         // check if output FIFO is empty
-        // FIXME add a timeout and/or return a GreatError::DeviceOrResourceBusy
+        // FIXME return a GreatError::DeviceOrResourceBusy on timeout
         let mut timeout = 0;
         while self.usb0.ep_in.have().read().have().bit() {
             if timeout == 0 {
-                error!("  USB0 clear tx");
+                warn!("  USB0 clear tx");
             } else if timeout > 25_000_000 {
                 self.usb0.ep_in.reset().write(|w| w.reset().bit(true));
                 error!("  USB0 clear tx timeout");
@@ -648,7 +648,7 @@ impl Moondancer {
                     payload_length,
                     bytes_written
                 );
-                // TODO return an error
+                // TODO return an error on timeout
             }
         }
 

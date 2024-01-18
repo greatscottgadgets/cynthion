@@ -30,10 +30,9 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     // USB0 BusReset
     if usb0.is_pending(pac::Interrupt::USB0) {
         ladybug::trace(Channel::B, Bit::B_IRQ_BUS_RESET, || {
+            usb0.clear_pending(pac::Interrupt::USB0);
             // handle bus reset in interrupt handler for lowest latency
             usb0.bus_reset();
-
-            usb0.clear_pending(pac::Interrupt::USB0);
             InterruptEvent::Usb(Target, UsbEvent::BusReset)
         })
 
@@ -83,9 +82,9 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
 
     // USB1 BusReset
     } else if usb1.is_pending(pac::Interrupt::USB1) {
+        usb1.clear_pending(pac::Interrupt::USB1);
         // handle bus reset in interrupt handler for lowest latency
         usb1.bus_reset();
-        usb1.clear_pending(pac::Interrupt::USB1);
         InterruptEvent::Usb(Aux, UsbEvent::BusReset)
 
     // USB1_EP_CONTROL ReceiveControl
@@ -128,6 +127,8 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
     // USB2 BusReset
     } else if usb2.is_pending(pac::Interrupt::USB2) {
         usb2.clear_pending(pac::Interrupt::USB2);
+        // handle bus reset in interrupt handler for lowest latency
+        usb2.bus_reset();
         InterruptEvent::Usb(Control, UsbEvent::BusReset)
 
     // USB2_EP_CONTROL ReceiveControl

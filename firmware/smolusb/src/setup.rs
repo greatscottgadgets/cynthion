@@ -1,5 +1,4 @@
 ///! Types for working with the SETUP packet.
-use crate::error::SmolError;
 
 /// Represents a USB setup packet.
 #[repr(C)]
@@ -174,17 +173,23 @@ impl From<u8> for Request {
 pub enum Feature {
     EndpointHalt = 0,
     DeviceRemoteWakeup = 1,
+    DeviceTestMode = 2,
+    DeviceBHnpEnable = 3,
+    DeviceAHnpSupport = 4,
+    DeviceAAltHnpSupport = 5,
+    Unknown(u16) = 255,
 }
 
-impl TryFrom<u16> for Feature {
-    type Error = SmolError;
-
-    fn try_from(value: u16) -> core::result::Result<Self, Self::Error> {
-        let result = match value {
+impl From<u16> for Feature {
+    fn from(value: u16) -> Self {
+        match value {
             0 => Feature::EndpointHalt,
             1 => Feature::DeviceRemoteWakeup,
-            _ => return Err(SmolError::FailedConversion),
-        };
-        Ok(result)
+            2 => Feature::DeviceTestMode,
+            3 => Feature::DeviceBHnpEnable,
+            4 => Feature::DeviceAHnpSupport,
+            5 => Feature::DeviceAAltHnpSupport,
+            _ => Feature::Unknown(value),
+        }
     }
 }

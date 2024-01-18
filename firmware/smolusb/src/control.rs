@@ -2,11 +2,10 @@ use core::marker::PhantomData;
 
 use log::{debug, error, info, trace, warn};
 
-use crate::descriptor::*;
-use crate::device::Speed;
+use crate::device::Descriptors;
 use crate::event::UsbEvent;
-use crate::setup::{Direction, Request, RequestType, SetupPacket};
-use crate::traits::{AsByteSliceIterator, UsbDriver};
+use crate::setup::{Direction, Feature, Recipient, Request, RequestType, SetupPacket};
+use crate::traits::UsbDriver;
 
 // - Control ------------------------------------------------------------------
 
@@ -72,6 +71,7 @@ pub struct Control<'a, D, const RX_BUFFER_SIZE: usize> {
     cb_send_complete: Option<Callback>,
     cb_receive_packet: Option<Callback>,
     configuration: Option<u8>,
+    feature_remote_wakeup: bool,
 
     rx_buffer: [u8; RX_BUFFER_SIZE],
     rx_buffer_position: usize,
@@ -92,6 +92,7 @@ where
             cb_send_complete: None,
             cb_receive_packet: None,
             configuration: None,
+            feature_remote_wakeup: false,
 
             rx_buffer: [0; RX_BUFFER_SIZE],
             rx_buffer_position: 0,
@@ -104,7 +105,7 @@ where
         self.state = state;
     }
 
-    pub fn handle_event(&mut self, usb: &D, event: UsbEvent) -> Option<(SetupPacket, &[u8])> {
+    pub fn dispatch_event(&mut self, usb: &D, event: UsbEvent) -> Option<(SetupPacket, &[u8])> {
         if matches!(self.state, State::Stalled) {
             // unstall endpoint?
             error!(
@@ -117,7 +118,6 @@ where
         use UsbEvent::*;
         match event {
             BusReset => {
-                // TODO if latency allows, do this here: usb.bus_reset();
                 self.bus_reset();
                 None
             }
@@ -135,14 +135,14 @@ where
                     return None;
                 }
                 let setup_packet = SetupPacket::from(buffer);
-                self.receive_control(usb, setup_packet)
+                self.handle_receive_control(usb, setup_packet)
                     .map(|setup_packet| (setup_packet, &[] as &[u8]))
             }
             ReceiveSetupPacket(endpoint_number, setup_packet) => {
                 if endpoint_number != self.endpoint_number {
                     error!("event endpoint does not match control endpoint");
                 }
-                self.receive_control(usb, setup_packet)
+                self.handle_receive_control(usb, setup_packet)
                     .map(|setup_packet| (setup_packet, &[] as &[u8]))
             }
             ReceivePacket(endpoint_number) => {
@@ -152,7 +152,7 @@ where
                 let mut packet_buffer: [u8; 512] = [0; 512];
                 let bytes_read = usb.read(self.endpoint_number, &mut packet_buffer);
 
-                let result = self.receive_packet(usb, &packet_buffer[..bytes_read]);
+                let result = self.handle_receive_packet(usb, &packet_buffer[..bytes_read]);
 
                 result
             }
@@ -167,7 +167,7 @@ where
                 if endpoint_number != self.endpoint_number {
                     error!("event endpoint does not match control endpoint");
                 }
-                self.send_complete(usb);
+                self.handle_send_complete(usb);
                 None
             }
         }
@@ -176,7 +176,6 @@ where
     // - bus reset ------------------------------------------------------------
 
     fn bus_reset(&mut self) {
-        // TODO use Default so this doesn't need to be maintained
         self.state = State::Idle;
         self.cb_send_complete = None;
         self.cb_receive_packet = None;
@@ -185,9 +184,9 @@ where
         self.rx_buffer_position = 0;
     }
 
-    // - receive control ------------------------------------------------------
+    // - handle receive control events ----------------------------------------
 
-    fn receive_control(&mut self, usb: &D, setup_packet: SetupPacket) -> Option<SetupPacket> {
+    fn handle_receive_control(&mut self, usb: &D, setup_packet: SetupPacket) -> Option<SetupPacket> {
         if !matches!(self.state, State::Idle) {
             debug!("TODO Control::receive_control() not idle");
         }
@@ -278,11 +277,8 @@ where
             }
 
             (Direction::DeviceToHost, RequestType::Standard, Request::GetStatus) => {
-                let recipient = setup_packet.recipient();
-
-                log::info!("  Request::GetStatus recipient:{:?}", recipient);
-
-                let status: u16 = 0b00; // TODO bit 1:remote-wakeup bit 0:self-powered
+                let status: u16 = 0b01; // bit 1:remote-wakeup bit 0:self-powered
+                let status = status | (self.feature_remote_wakeup as u16) << 1;
 
                 usb.write(0, status.to_le_bytes().into_iter());
 
@@ -293,13 +289,52 @@ where
             (_, RequestType::Standard, Request::ClearFeature) => {
                 // TODO Direction ?
                 info!("  TODO Request::ClearFeature {:?}", direction);
-                // TODO
+
+                let recipient = setup_packet.recipient();
+                let feature = Feature::from(setup_packet.value);
+                match (&recipient, &feature) {
+                    (Recipient::Endpoint, Feature::EndpointHalt) => {
+                        let endpoint_address = setup_packet.index as u8;
+                        usb.clear_feature_endpoint_halt(endpoint_address);
+                        usb.ack(0, setup_packet.direction());
+                        trace!(
+                            "SETUP setup_clear_feature EndpointHalt: 0x{:x}",
+                            endpoint_address
+                        );
+                    }
+                    (Recipient::Device, Feature::DeviceRemoteWakeup) => {
+                        self.feature_remote_wakeup = false;
+                    }
+                    _ => {
+                        warn!(
+                            "SETUP stall: unhandled clear feature {:?}, {:?}",
+                            recipient, feature
+                        );
+                        usb.stall_endpoint_in(self.endpoint_number);
+                        self.set_state(State::Stalled);
+                    }
+                }
             }
 
             (_, RequestType::Standard, Request::SetFeature) => {
                 // TODO Direction ?
                 info!("  TODO Request::SetFeature {:?}", direction);
-                // TODO
+
+                let recipient = setup_packet.recipient();
+                let feature = Feature::from(setup_packet.value);
+                match (&recipient, &feature) {
+                    (Recipient::Device, Feature::DeviceRemoteWakeup) => {
+                        self.feature_remote_wakeup = true;
+                    }
+                    _ => {
+                        warn!(
+                            "SETUP stall: unhandled set feature {:?}, {:?}",
+                            recipient, feature
+                        );
+                        usb.stall_endpoint_in(self.endpoint_number);
+                        self.set_state(State::Stalled);
+                    }
+                }
             }
 
             // unknown requests
@@ -324,9 +359,9 @@ where
         None
     }
 
-    // - receive packet -------------------------------------------------------
+    // - handle receive packet events -----------------------------------------
 
-    fn receive_packet(&mut self, usb: &D, packet_buffer: &[u8]) -> Option<(SetupPacket, &[u8])> {
+    fn handle_receive_packet(&mut self, usb: &D, packet_buffer: &[u8]) -> Option<(SetupPacket, &[u8])> {
         // execute any receive packet callback we may have registered
         if let Some(callback) = self.cb_receive_packet.take() {
             let new_state = callback.call(usb, self.state);
@@ -446,9 +481,9 @@ where
         }
     }
 
-    // - send complete --------------------------------------------------------
+    // - handle send complete events ------------------------------------------
 
-    fn send_complete(&mut self, usb: &D) {
+    fn handle_send_complete(&mut self, usb: &D) {
         debug!("  send_complete()  {}", self.state);
 
         // execute any send complete callback we may have registered
@@ -508,145 +543,5 @@ where
                 info!("send_complete() unhandled state: {:?}", self.state);
             }
         }*/
-    }
-}
-
-// - Descriptors --------------------------------------------------------------
-
-//#[derive(Clone, Copy)]
-pub struct Descriptors<'a> {
-    pub device_speed: Speed,
-    pub device_descriptor: DeviceDescriptor,
-    pub configuration_descriptor: ConfigurationDescriptor<'a>,
-    pub other_speed_configuration_descriptor: Option<ConfigurationDescriptor<'a>>,
-    pub device_qualifier_descriptor: Option<DeviceQualifierDescriptor>,
-    pub string_descriptor_zero: StringDescriptorZero<'a>,
-    pub string_descriptors: &'a [&'a StringDescriptor<'a>],
-}
-
-impl<'a> Descriptors<'a> {
-    // TODO ugly hack because I haven't figured out how to do this at compile time yet
-    pub fn set_total_lengths(mut self) -> Self {
-        self.configuration_descriptor.set_total_length();
-        if let Some(other_speed_configuration_descriptor) =
-            self.other_speed_configuration_descriptor.as_mut()
-        {
-            other_speed_configuration_descriptor.set_total_length();
-        }
-        self
-    }
-
-    pub fn write<D>(
-        &self,
-        usb: &D,
-        endpoint_number: u8,
-        setup_packet: SetupPacket,
-    ) -> Option<SetupPacket>
-    where
-        D: UsbDriver,
-    {
-        // extract the descriptor type and number from our SETUP request
-        let [descriptor_number, descriptor_type_bits] = setup_packet.value.to_le_bytes();
-        let descriptor_type = match DescriptorType::try_from(descriptor_type_bits) {
-            Ok(descriptor_type) => descriptor_type,
-            Err(_e) => {
-                warn!(
-                    "Descriptors::write_descriptor() stall - invalid descriptor type: {} {}",
-                    descriptor_type_bits, descriptor_number
-                );
-                usb.stall_endpoint_in(endpoint_number);
-                return Some(setup_packet);
-            }
-        };
-
-        // if the host is requesting less than the maximum amount of data,
-        // only respond with the amount requested
-        let requested_length = setup_packet.length as usize;
-
-        let bytes_written = match (&descriptor_type, descriptor_number) {
-            (DescriptorType::Device, 0) => usb.write(
-                endpoint_number,
-                self.device_descriptor
-                    .as_iter()
-                    .copied()
-                    .take(requested_length),
-            ),
-            (DescriptorType::Configuration, _) => usb.write(
-                endpoint_number,
-                self.configuration_descriptor
-                    .iter()
-                    .copied()
-                    .take(requested_length),
-            ),
-            (DescriptorType::DeviceQualifier, _) => {
-                if self.device_speed == Speed::High {
-                    if let Some(descriptor) = &self.device_qualifier_descriptor {
-                        usb.write(
-                            endpoint_number,
-                            descriptor.as_iter().copied().take(requested_length),
-                        )
-                    } else {
-                        // no device qualifier configured, ack HostToDevice instead - TODO check check on mac/windows
-                        debug!("  No device qualifier configured for high-speed device");
-                        usb.write(endpoint_number, [].into_iter())
-                    }
-                } else {
-                    // for full/low speed devices, ack HostToDevice instead - TODO check on mac/windows
-                    debug!(
-                        "  Device qualifier request is not supported for full/low-speed devices"
-                    );
-                    // FIXME we should stall instead
-                    usb.write(endpoint_number, [].into_iter())
-                }
-            }
-            (DescriptorType::OtherSpeedConfiguration, _) => {
-                if let Some(descriptor) = self.other_speed_configuration_descriptor {
-                    usb.write(
-                        endpoint_number,
-                        descriptor.iter().copied().take(requested_length),
-                    )
-                } else {
-                    // no other speed configuration, ack HostToDevice instead - TODO check check on mac/windows
-                    debug!("  Descriptors::write_descriptor() - no other speed configuration descriptor configured");
-                    // FIXME we should stall instead
-                    usb.write(endpoint_number, [].into_iter())
-                }
-            }
-            (DescriptorType::String, 0) => usb.write(
-                endpoint_number,
-                self.string_descriptor_zero
-                    .iter()
-                    .copied()
-                    .take(requested_length),
-            ),
-            (DescriptorType::String, number) => {
-                let offset_index: usize = (number - 1).into();
-                if offset_index > self.string_descriptors.len() {
-                    warn!(
-                        "Descriptors::write_descriptor() stall - unknown string descriptor {}",
-                        number
-                    );
-                    return Some(setup_packet);
-                }
-                usb.write(
-                    endpoint_number,
-                    self.string_descriptors[offset_index]
-                        .iter()
-                        .take(requested_length),
-                )
-            }
-            _ => {
-                warn!(
-                    "  Descriptors::write_descriptor() stall - unhandled descriptor request {:?}, {}",
-                    descriptor_type, descriptor_number
-                );
-                return Some(setup_packet);
-            }
-        };
-
-        debug!("  wrote {} byte descriptor", bytes_written);
-
-        // consumed
-        None
     }
 }

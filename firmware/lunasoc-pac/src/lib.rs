@@ -33,7 +33,6 @@ pub mod clock {
 #[deny(overflowing_literals)]
 #[deny(path_statements)]
 #[deny(patterns_in_fns_without_body)]
-#[deny(private_in_public)]
 #[deny(unconditional_recursion)]
 #[deny(unused_allocation)]
 #[deny(unused_comparisons)]
