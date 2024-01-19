@@ -7,12 +7,18 @@ Cynthion Documentation
 
 .. toctree::
   :maxdepth: 2
+  :caption: Getting Started
+
+  cynthion_getting_started
+  packetry_getting_started
+  facedancer_getting_started
+  usbproxy_getting_started
+
+.. toctree::
+  :maxdepth: 2
   :caption: User Documentation
 
-  getting_started
-  packetry
-  facedancer
-  usbproxy
+  facedancer_examples
 
 .. toctree::
   :maxdepth: 2
@@ -26,4 +32,4 @@ Cynthion Documentation
 
   getting_help
   cynthion_project_mentions
-  safety_information
+  cynthion_safety_information
