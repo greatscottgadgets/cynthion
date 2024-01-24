@@ -37,7 +37,6 @@ dependencies = [
 
 [project.optional-dependencies]
 gateware = [
-    "amaranth @ git+https://github.com/amaranth-lang/amaranth",
     "luna @ git+https://github.com/greatscottgadgets/luna@main",
 ]
 gateware-soc = [
