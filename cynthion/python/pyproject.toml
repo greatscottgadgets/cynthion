@@ -41,9 +41,7 @@ gateware = [
     "luna @ git+https://github.com/greatscottgadgets/luna@main",
 ]
 gateware-soc = [
-    "amaranth-soc @ git+https://github.com/amaranth-lang/amaranth-soc",
     "luna-soc @ git+https://github.com/greatscottgadgets/luna-soc@main",
-    "lambdasoc @ git+https://github.com/antoinevg/lambdasoc.git@antoinevg/support-vexriscv",
 ]
 
 [project.scripts]
