@@ -96,7 +96,7 @@ Things can get somewhat hairy over time so I usually clean out my pyenv environm
 
 ### The `cynthion` python package
 
-    cd cynthion.git
+    cd cynthion.git/cynthion/python/
     pip3 install --upgrade ".[gateware,gateware-soc]"
 
 
