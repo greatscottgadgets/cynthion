@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# install latest from oss-cad-suite
 ARG CACHEBUST=1
 RUN curl -L $(curl -s "https://api.github.com/repos/YosysHQ/oss-cad-suite-build/releases/latest" \
     | jq --raw-output '.assets[].browser_download_url' | grep "linux-x64") --output oss-cad-suite-linux-x64.tgz \
@@ -38,8 +39,11 @@ RUN pip3 install git+https://github.com/CapableRobot/CapableRobot_USBHub_Driver 
 
 USER jenkins
 
-# add to PATH for pip/source package installations
+# add oss-cad-suite to PATH for pip/source package installations
 ENV PATH="/root/.local/bin:/oss-cad-suite/bin:$PATH"
+
+# add the Cynthion board rev
+ENV LUNA_PLATFORM="cynthion.gateware.platform:CynthionPlatformRev0D4"
 
 # Inform Docker that the container is listening on port 8080 at runtime
 EXPOSE 8080

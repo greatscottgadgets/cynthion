@@ -3,5 +3,5 @@ set -e
 usbhub --disable-i2c --hub D9D1 power state --port 3 --reset
 sleep 1s
 source ci_env/bin/activate
-python3 ci/interactive-test.py
+python ci/interactive-test.py
 deactivate
