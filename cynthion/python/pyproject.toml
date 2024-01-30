@@ -26,6 +26,7 @@ classifiers = [
     "Topic :: Security",
 ]
 dependencies = [
+    "amaranth==0.4.1",
     "pyusb",
     "future",
     "pyfwup>=0.2",
