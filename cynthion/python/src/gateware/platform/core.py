@@ -76,7 +76,10 @@ class CynthionPlatform(LUNAApolloPlatform, LatticeECP5Platform):
             programmer.configure(bitstream)
 
         # Let the LUNA gateware take over in devices with shared USB port
-        debugger.honor_fpga_adv()
+        try:
+            debugger.honor_fpga_adv()
+        except AttributeError:
+            pass
 
 
     def toolchain_flash(self, products, name="top"):
@@ -98,7 +101,10 @@ class CynthionPlatform(LUNAApolloPlatform, LatticeECP5Platform):
         debugger.soft_reset()
 
         # Let the LUNA gateware take over in devices with shared USB port
-        debugger.honor_fpga_adv()
+        try:
+            debugger.honor_fpga_adv()
+        except AttributeError:
+            pass
 
     def pseudo_power_supply_fragment(self):
         """ Fragment to assign fixed values to the pseudo power supply pins """
