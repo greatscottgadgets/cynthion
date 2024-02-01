@@ -86,33 +86,32 @@ I keep my Rust environment up to date with:
     cargo install-update -a
 
 
-## Build Cynthion Components
+## Install the Cynthion Python Package
 
 Things can get somewhat hairy over time so I usually clean out my pyenv environment before starting:
 
     pyenv activate gsg-cynthion
     pip uninstall -y -r <(pip freeze)
 
-
-### The `cynthion` python package
+Then install the `cynthion` package with:
 
     cd cynthion.git/cynthion/python/
     pip3 install --upgrade ".[gateware,gateware-soc]"
 
 
-### Packetry Gateware
+## Build Packetry Gateware
 
     cd cynthion.git/cynthion/python/
     LUNA_PLATFORM="cynthion.gateware.platform:CynthionPlatformRev1D3" make analyzer
 
 
-### Moondancer SoC
+## Build Moondancer SoC Gateware
 
     cd cynthion.git/cynthion/python/
     LUNA_PLATFORM="cynthion.gateware.platform:CynthionPlatformRev1D3" make soc
 
 
-### Moondancer Firmware
+## Build Moondancer Firmware
 
     cd cynthion.git/firmware/moondancer/
     cargo build --release
@@ -120,3 +119,36 @@ Things can get somewhat hairy over time so I usually clean out my pyenv environm
 Running the firmware will automatically flash the SoC image to the FPGA:
 
     cargo run --release
+
+#### Note
+
+By default the firmware's flash script will look for the SoC UART on `/dev/ttyACM0`, if this is not the case on your machine you will need to specify the correct path using the `UART` environment variable, for example:
+
+    UART=/dev/cu.usbmodem22401 cargo run --release
+
+By default the SoC bitstream is obtained from the latest build in `cynthion.git/cynthion/python/build/top.bit` but you can override it with:
+
+    BITSTREAM=path/to/bitstream.bit cargo run --release
+
+
+### Running Moondancer Firmware Tests
+
+Once the firmware is running on the SoC you can execute some unittests that will exercise the firmware.
+
+In order to do this you will need to connect both the `control` and `aux` ports of the Cynthion to the host and then run:
+
+    cd cynthion.git/firmware/moondancer
+    make unittest
+
+On success, the output should look something like:
+
+    python -m unittest
+    ...............
+    ----------------------------------------------------------------------
+    Ran 15 tests in 1.048s
+
+    OK
+
+If needed, you can also get more detailed log output with:
+
+    LOG_LEVEL=DEBUG make unittest

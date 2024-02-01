@@ -25,7 +25,7 @@ class TestLibgreatProtocol(unittest.TestCase):
     """Tests for libgreat protocol implementation."""
 
     def setUp(self):
-        configure_default_logging(level=os.getenv("LOG_LEVEL", "DEBUG").upper())
+        configure_default_logging(level=os.getenv("LOG_LEVEL", "INFO").upper())
         self.board = cynthion.Cynthion()
 
     def test_error_no_function(self):
@@ -54,13 +54,13 @@ class TestLibgreatProtocol(unittest.TestCase):
         code = get_error_code("EBUSY")
         with self.assertRaises(Exception) as context:
             result = api.test_error_return_code(code)
-        print(f"test_error_return code got: {str(context.exception)}")
+        logging.debug(f"test_error_return code got: {str(context.exception)}")
         self.assertTrue("EBUSY" in str(context.exception))
 
         code = get_error_code("ECONNRESET")
         with self.assertRaises(Exception) as context:
             result = api.test_error_return_code(code)
-        print(f"test_error_return code got: {str(context.exception)}")
+        logging.debug(f"test_error_return code got: {str(context.exception)}")
         self.assertTrue("ECONNRESET" in str(context.exception))
 
 
@@ -68,7 +68,7 @@ class TestLibgreatEndpoints(unittest.TestCase):
     """Tests to verify that libgreat endpoints behave as expected."""
 
     def setUp(self):
-        configure_default_logging(level=os.getenv("LOG_LEVEL", "DEBUG").upper())
+        configure_default_logging(level=os.getenv("LOG_LEVEL", "INFO").upper())
         self.board = cynthion.Cynthion()
 
     def test_device(self):
@@ -77,18 +77,18 @@ class TestLibgreatEndpoints(unittest.TestCase):
 
             device_handle = context.openByVendorIDAndProductID(VENDOR_ID, PRODUCT_ID)
             device = device_handle.getDevice()
-            print(f"device: {device}")
-            print(f"  manufacturer: {device.getManufacturer()}")
-            print(f"  product: {device.getProduct()}")
+            logging.debug(f"device: {device}")
+            logging.debug(f"  manufacturer: {device.getManufacturer()}")
+            logging.debug(f"  product: {device.getProduct()}")
 
             for configuration in device.iterConfigurations():
-                print(f"configuration: {configuration}")
+                logging.debug(f"configuration: {configuration}")
                 for interface in configuration:
-                    print(f"  interface: {interface}")
+                    logging.debug(f"  interface: {interface}")
                     for setting in interface:
-                        print(f"    protocol: {setting.getProtocol()}")
+                        logging.debug(f"    protocol: {setting.getProtocol()}")
                         for endpoint in setting:
-                            print(f"    endpoint: 0x{endpoint.getAddress():x}")
+                            logging.debug(f"    endpoint: 0x{endpoint.getAddress():x}")
 
     def test_api_command(self):
         api = self.board.apis.core
