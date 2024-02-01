@@ -18,7 +18,8 @@ class TestMoondancer(unittest.TestCase):
     """Tests for libgreat class: Moondancer"""
 
     def setUp(self):
-        configure_default_logging(level=os.getenv("LOG_LEVEL", "DEBUG").upper())
+        #print(f"configure logging: {os.getenv('LOG_LEVEL', 'INFO').upper()}")
+        configure_default_logging(level=os.getenv("LOG_LEVEL", "INFO").upper())
 
         self.board = cynthion.Cynthion()
 
@@ -53,7 +54,7 @@ class TestMoondancer(unittest.TestCase):
         self.assertEqual(response[3], InterruptEvent.USB_SEND_COMPLETE)
         self.assertEqual(response[3].endpoint_number, 3)
         for message in response:
-            logging.info(f"test_get_interrupt_events() -> {message} -> {message.endpoint_number}")
+            logging.debug(f"test_get_interrupt_events() -> {message} -> {message.endpoint_number}")
 
 
     def test_read_endpoint(self):

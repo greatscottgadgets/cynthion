@@ -24,7 +24,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
     """Tests for libgreat protocol implementation."""
 
     def setUp(self):
-        configure_default_logging(level=os.getenv("LOG_LEVEL", "DEBUG").upper())
+        configure_default_logging(level=os.getenv("LOG_LEVEL", "INFO").upper())
 
 
     def test_raw_command(self):
@@ -46,7 +46,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
                 data=payload,
                 timeout=1000
             )
-            logging.info(f"test_raw_command control write transfer received response bytes:{response}")
+            logging.debug(f"test_raw_command control write transfer received response bytes:{response}")
 
             response = device_handle.controlRead(
                 request_type=usb1.TYPE_VENDOR | usb1.RECIPIENT_ENDPOINT,
@@ -56,7 +56,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
                 length=backend.LIBGREAT_MAX_COMMAND_SIZE,
                 timeout=1000
             )
-            logging.info(f"test_raw_command control read transfer received response bytes:{len(response)} {response}")
+            logging.debug(f"test_raw_command control read transfer received response bytes:{len(response)} {response}")
             self.assertEqual(response, b"v2023.0.1\0")
 
 
@@ -82,7 +82,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
                 data=payload,
                 timeout=1000
             )
-            logging.info(f"test_raw_command_large_output control write transfer received response bytes:{response}")
+            logging.debug(f"test_raw_command_large_output control write transfer received response bytes:{response}")
 
             response = device_handle.controlRead(
                 request_type=usb1.TYPE_VENDOR | usb1.RECIPIENT_ENDPOINT,
@@ -93,7 +93,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
                 timeout=1000
             )
             response = int.from_bytes(response, byteorder="little", signed=False)
-            logging.info(f"test_raw_command_large_output control read transfer received response: {response}")
+            logging.debug(f"test_raw_command_large_output control read transfer received response: {response}")
             self.assertEqual(response, payload_length)
 
 
@@ -117,7 +117,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
                 data=payload,
                 timeout=1000
             )
-            logging.info(f"test_raw_command_large_input control write transfer received response bytes:{response}")
+            logging.debug(f"test_raw_command_large_input control write transfer received response bytes:{response}")
 
             response = device_handle.controlRead(
                 request_type=usb1.TYPE_VENDOR | usb1.RECIPIENT_ENDPOINT,
@@ -127,7 +127,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
                 length=backend.LIBGREAT_MAX_COMMAND_SIZE,
                 timeout=1000
             )
-            logging.info(f"test_raw_command_large_input control read transfer received response bytes:{len(response)} {response}")
+            logging.debug(f"test_raw_command_large_input control read transfer received response bytes:{len(response)} {response}")
             self.assertEqual(len(response), payload_length)
 
 
