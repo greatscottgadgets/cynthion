@@ -13,7 +13,7 @@ pipeline {
         }
         stage('Test') {
             steps {
-                sh './ci-scripts/configure-hubs.sh --off'
+                sh './ci/configure-hubs.sh --off'
                 retry(3) {
                     sh './ci/test.sh'
                 }
@@ -22,7 +22,7 @@ pipeline {
     }
     post {
         always {
-            sh './ci-scripts/configure-hubs.sh --reset'
+            sh './ci/configure-hubs.sh --reset'
             cleanWs(cleanWhenNotBuilt: false,
                     deleteDirs: true,
                     disableDeferredWipeout: true,
