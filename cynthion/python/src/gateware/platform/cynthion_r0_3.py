@@ -139,8 +139,8 @@ class CynthionPlatformRev0D3(CynthionPlatform):
         Resource("user_io", 1, Pins("D3", dir="io"), Attrs(IO_TYPE="LVCMOS33", SLEWRATE="FAST")),
 
         # Convenience references.
-        Resource("user_pmod", 0, Pins("A3 A4 A5 A6 C6 B6 C7 B7", dir="io"), Attrs(IO_TYPE="LVCMOS33")),
-        Resource("user_pmod", 1, Pins("M5 N5 M4 N3 L4 L5 K4 K5", dir="io"), Attrs(IO_TYPE="LVCMOS33")),
+        Resource("user_pmod", 0, Pins("1 2 3 4 7 8 9 10", conn=("pmod", 0), dir="io"), Attrs(IO_TYPE="LVCMOS33")),
+        Resource("user_pmod", 1, Pins("1 2 3 4 7 8 9 10", conn=("pmod", 1), dir="io"), Attrs(IO_TYPE="LVCMOS33")),
     ]
 
     connectors = [
