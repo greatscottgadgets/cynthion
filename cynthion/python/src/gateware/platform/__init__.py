@@ -15,3 +15,4 @@ from .cynthion_r1_0 import CynthionPlatformRev1D0
 from .cynthion_r1_1 import CynthionPlatformRev1D1
 from .cynthion_r1_2 import CynthionPlatformRev1D2
 from .cynthion_r1_3 import CynthionPlatformRev1D3
+from .cynthion_r1_4 import CynthionPlatformRev1D4
