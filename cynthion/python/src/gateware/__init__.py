@@ -12,4 +12,5 @@ APOLLO_PLATFORMS = {
     (1, 1): 'cynthion.gateware.platform:CynthionPlatformRev1D1',
     (1, 2): 'cynthion.gateware.platform:CynthionPlatformRev1D2',
     (1, 3): 'cynthion.gateware.platform:CynthionPlatformRev1D3',
+    (1, 4): 'cynthion.gateware.platform:CynthionPlatformRev1D4',
 }
