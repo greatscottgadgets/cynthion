@@ -34,6 +34,6 @@ fn main() -> ! {
             }
         }
 
-        leds.output.write(|w| unsafe { w.output().bits(led_state) });
+        leds.output().write(|w| unsafe { w.output().bits(led_state) });
     }
 }

@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_mut, unused_variables)]
 #![no_std]
 #![no_main]
 
@@ -11,19 +10,17 @@ use pac::csr;
 #[entry]
 fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
-    let leds = &peripherals.LEDS;
     let timer = &peripherals.TIMER;
-    let uart = &peripherals.UART;
 
     // configure and enable timer
-    timer.reload.write(|w| unsafe { w.reload().bits(0) });
+    timer.reload().write(|w| unsafe { w.reload().bits(0) });
     timer
-        .ctr
+        .ctr()
         .write(|w| unsafe { w.ctr().bits(pac::clock::sysclk() / 2) });
-    timer.en.write(|w| w.en().bit(true));
+    timer.en().write(|w| w.en().bit(true));
 
     // enable timer events
-    timer.ev_enable.write(|w| w.enable().bit(true));
+    timer.ev_enable().write(|w| w.enable().bit(true));
 
     // enable interrupts
     unsafe {
@@ -58,14 +55,14 @@ unsafe fn MachineExternal() {
 
     if csr::interrupt::pending(pac::Interrupt::TIMER) {
         // clear interrupt
-        let pending = timer.ev_pending.read().pending().bit();
-        timer.ev_pending.write(|w| w.pending().bit(pending));
+        let pending = timer.ev_pending().read().pending().bit();
+        timer.ev_pending().write(|w| w.pending().bit(pending));
 
         // blinkenlights
         if TOGGLE {
-            leds.output.write(|w| unsafe { w.output().bits(255) });
+            leds.output().write(|w| unsafe { w.output().bits(255) });
         } else {
-            leds.output.write(|w| unsafe { w.output().bits(0) });
+            leds.output().write(|w| unsafe { w.output().bits(0) });
         }
         TOGGLE = !TOGGLE;
     } else {
@@ -77,7 +74,7 @@ unsafe fn MachineExternal() {
 
 #[allow(non_snake_case)]
 #[no_mangle]
-unsafe fn ExceptionHandler(trap_frame: &riscv_rt::TrapFrame) -> ! {
+unsafe fn ExceptionHandler(_trap_frame: &riscv_rt::TrapFrame) -> ! {
     uart_tx("ExceptionHandler\n");
     loop {}
 }
@@ -89,11 +86,11 @@ fn uart_tx(string: &str) {
     let uart = &peripherals.UART;
 
     for c in string.chars() {
-        while uart.tx_rdy.read().tx_rdy().bit() == false {
+        while uart.tx_rdy().read().tx_rdy().bit() == false {
             unsafe {
                 riscv::asm::nop();
             }
         }
-        uart.tx_data.write(|w| unsafe { w.tx_data().bits(c as u8) })
+        uart.tx_data().write(|w| unsafe { w.tx_data().bits(c as u8) })
     }
 }

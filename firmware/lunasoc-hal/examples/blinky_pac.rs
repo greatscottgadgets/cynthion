@@ -32,22 +32,22 @@ fn main() -> ! {
             }
         }
 
-        leds.output.write(|w| unsafe { w.output().bits(led_state) });
+        leds.output().write(|w| unsafe { w.output().bits(led_state) });
     }
 }
 
 fn delay_ms(timer: &pac::TIMER, sys_clk: u32, ms: u32) {
     let ticks: u32 = sys_clk / 1_000 * ms;
 
-    timer.reload.write(|w| unsafe { w.reload().bits(0) });
-    timer.ctr.write(|w| unsafe { w.ctr().bits(ticks) });
-    timer.en.write(|w| w.en().bit(true));
+    timer.reload().write(|w| unsafe { w.reload().bits(0) });
+    timer.ctr().write(|w| unsafe { w.ctr().bits(ticks) });
+    timer.en().write(|w| w.en().bit(true));
 
-    while timer.ctr.read().ctr().bits() > 0 {
+    while timer.ctr().read().ctr().bits() > 0 {
         unsafe {
             riscv::asm::nop();
         }
     }
 
-    timer.en.write(|w| w.en().bit(false));
+    timer.en().write(|w| w.en().bit(false));
 }

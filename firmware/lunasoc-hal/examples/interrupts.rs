@@ -67,9 +67,9 @@ fn MachineExternal() {
         let leds = &peripherals.LEDS;
 
         if unsafe { TOGGLE } {
-            leds.output.write(|w| unsafe { w.output().bits(255) });
+            leds.output().write(|w| unsafe { w.output().bits(255) });
         } else {
-            leds.output.write(|w| unsafe { w.output().bits(0) });
+            leds.output().write(|w| unsafe { w.output().bits(0) });
         }
         unsafe { TOGGLE = !TOGGLE };
     } else {
