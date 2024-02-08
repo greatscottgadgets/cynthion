@@ -1,15 +1,6 @@
-///! Great Communications Protocol Class Registry
-///!
-use crate::error::{GreatError, GreatResult};
+//! Great Communications Protocol Class Registry
 
-use super::class_core;
-use super::{Command, CommandPrelude};
-
-use log::{debug, error};
-use zerocopy::{AsBytes, BigEndian, FromBytes, LittleEndian, Unaligned, U32};
-
-use core::any::Any;
-use core::slice;
+use zerocopy::{LittleEndian, U32};
 
 // - Classes ------------------------------------------------------------------
 

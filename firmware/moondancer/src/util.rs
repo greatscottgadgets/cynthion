@@ -1,12 +1,8 @@
-#![allow(dead_code, unused_imports, unused_variables)] // TODO
-
 use ladybug::{Bit, Channel};
 
 use smolusb::event::UsbEvent;
 use smolusb::setup::SetupPacket;
-use smolusb::traits::{
-    ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
-};
+use smolusb::traits::{ReadControl, UnsafeUsbDriverOperations, UsbDriverOperations};
 
 use crate::event::InterruptEvent;
 use crate::{hal, pac};
@@ -18,7 +14,6 @@ use pac::csr::interrupt;
 pub fn get_usb_interrupt_event() -> InterruptEvent {
     use crate::UsbInterface::{Aux, Control, Target};
 
-    let peripherals = unsafe { pac::Peripherals::steal() };
     let usb0 = unsafe { hal::Usb0::summon() }; // target
     let usb1 = unsafe { hal::Usb1::summon() }; // aux
     let usb2 = unsafe { hal::Usb2::summon() }; // control
@@ -190,7 +185,7 @@ pub mod UsbEventExt {
     ///
     /// Contents is (usb_interface, endpoint_number, bytes_read, packet_buffer)
     #[derive(Clone, Copy)]
-    pub struct ReceivePacket(UsbInterface, u8, usize, [u8; crate::EP_MAX_PACKET_SIZE]);
+    pub struct ReceivePacket(UsbInterface, u8, usize, [u8; smolusb::EP_MAX_PACKET_SIZE]);
 }
 
 /// So the problem this solves is that some events are much larger

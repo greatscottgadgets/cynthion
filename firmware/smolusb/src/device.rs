@@ -65,7 +65,7 @@ impl Speed {
 use crate::descriptor::*;
 use crate::setup::SetupPacket;
 use crate::traits::{AsByteSliceIterator, UsbDriver};
-use log::{warn, debug};
+use log::{debug, warn};
 
 // /// The set of descriptors describing a USB device.
 pub struct Descriptors<'a> {

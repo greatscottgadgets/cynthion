@@ -1,14 +1,11 @@
-use super::{ClassId, Command, Verb, VerbDescriptor};
+use log::trace;
+use zerocopy::{FromBytes, LittleEndian, Unaligned, U32};
 
 use crate::error::{GreatError, GreatResult};
 use crate::firmware::BoardInformation;
 use crate::gcp::{self, Classes};
 
-use log::{error, trace};
-use zerocopy::{AsBytes, BigEndian, ByteSlice, FromBytes, LittleEndian, Unaligned, U32};
-
-use core::any::Any;
-use core::slice;
+use super::{Verb, VerbDescriptor};
 
 pub static CLASS: gcp::Class = gcp::Class {
     id: gcp::ClassId::core,
@@ -242,7 +239,7 @@ impl Core {
                 Ok(verb.out_param_names.as_bytes().into_iter().copied())
             }
             VerbDescriptor::Doc => Ok(verb.doc.as_bytes().into_iter().copied()),
-            VerbDescriptor::Unknown(value) => Err(GreatError::InvalidRequestDescriptor),
+            VerbDescriptor::Unknown(_value) => Err(GreatError::InvalidRequestDescriptor),
         }
     }
 
@@ -281,8 +278,6 @@ impl Core {
 // - dispatch -----------------------------------------------------------------
 
 use crate::gcp::{iter_to_response, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
-
-use core::{array, iter};
 
 impl Core {
     pub fn dispatch(
@@ -353,7 +348,7 @@ impl Core {
                 Ok(response)
             }
 
-            verb_number => Err(GreatError::InvalidArgument),
+            _verb_number => Err(GreatError::InvalidArgument),
         }
     }
 }

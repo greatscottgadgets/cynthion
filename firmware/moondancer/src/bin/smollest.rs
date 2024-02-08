@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_imports, unused_mut, unused_variables)]
 #![no_std]
 #![no_main]
 

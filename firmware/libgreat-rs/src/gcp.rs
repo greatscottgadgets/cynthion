@@ -1,14 +1,15 @@
-#![allow(dead_code, unused_imports, unused_variables)] // TODO
+//! Rust implementation of the Great Communications Protocol.
+//!
+//! More information:
+//!
+//! * [LibGreat Verb Signatures](https://greatfet.readthedocs.io/en/latest/libgreat_verb_signatures.html)
+//! * [LibGreat Class Registry](https://greatfet.readthedocs.io/en/latest/greatfet_classes.html)
 
-///! Great Communications Protocol
 pub mod class;
 pub mod class_core;
 pub use class::*;
 
-use zerocopy::{
-    AsBytes, BigEndian, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, LittleEndian,
-    Unaligned, U16, U32,
-};
+use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, LittleEndian, Unaligned, U32};
 
 /// Maximum length of a libgreat command or response
 pub const LIBGREAT_MAX_COMMAND_SIZE: usize = 1024;
@@ -49,15 +50,6 @@ where
     }
 }
 
-impl<B> Command<B>
-where
-    B: ByteSliceMut,
-{
-    fn set_class(&mut self, class: u32) {
-        self.prelude.class = class.into();
-    }
-}
-
 // - helpers ------------------------------------------------------------------
 
 pub type GreatResponse = core::iter::Take<core::array::IntoIter<u8, LIBGREAT_MAX_COMMAND_SIZE>>;
@@ -91,13 +83,15 @@ unsafe fn iter_ref_to_response<'a>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    use crate::firmware::BoardInformation;
-
     use core::array;
     use core::iter;
     use core::slice;
+
+    use zerocopy::U16;
+
+    use crate::firmware::BoardInformation;
+
+    use super::*;
 
     // - fixtures -------------------------------------------------------------
 
@@ -382,17 +376,6 @@ mod tests {
         println!("iter_to_response: {} bytes - {:?}", length, response);
         let response: iter::Take<array::IntoIter<u8, 32>> = response.into_iter().take(length);
         response
-    }
-
-    fn iter_ref_to_response<'a>(iter: impl Iterator<Item = &'a u8>) -> impl Iterator<Item = u8> {
-        let mut response: [u8; 32] = [0; 32];
-        let mut length = 0;
-        for (ret, src) in response.iter_mut().zip(iter) {
-            *ret = *src;
-            length += 1;
-        }
-        println!("iter_to_response: {} bytes - {:?}", length, response);
-        response.into_iter().take(length)
     }
 
     fn get_some_other_iterator() -> impl Iterator<Item = u8> {

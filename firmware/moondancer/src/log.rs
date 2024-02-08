@@ -1,14 +1,12 @@
 //! A simple logger for the `log` crate which can log to any object
 //! implementing `Write`
 
-#![allow(unused_imports, unused_mut, unused_variables)]
-
-use crate::{hal, pac};
+use core::cell::RefCell;
+use core::fmt::Write;
 
 use log::{Level, LevelFilter, Metadata, Record};
 
-use core::cell::RefCell;
-use core::fmt::Write;
+use crate::hal;
 
 // - initialization -----------------------------------------------------------
 
@@ -66,17 +64,6 @@ where
         if !self.enabled(record.metadata()) {
             return;
         }
-
-        // evil, scary version that is guaranteed to not be interrupt safe
-        /*unsafe {
-            let mut writer = hal::Serial::summon();
-            match writeln!(writer, "{}\t{}", record.level(), record.args()) {
-                Ok(()) => (),
-                Err(_e) => {
-                    panic!("Logger failed to write to device");
-                }
-            }
-        }*/
 
         #[cfg(target_has_atomic)]
         {

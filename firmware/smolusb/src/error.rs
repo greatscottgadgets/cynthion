@@ -18,14 +18,6 @@ impl core::convert::From<core::num::TryFromIntError> for SmolError {
     }
 }
 
-// trait: libgreat::error::Error
-// impl libgreat::error::GreatErrorTrait for SmolError {
-//     type Error = Self;
-//     fn kind(&self) -> Self::Error {
-//         *self
-//     }
-// }
-
 #[cfg(feature = "nightly")]
 // trait: core::error::Error
 impl core::error::Error for SmolError {

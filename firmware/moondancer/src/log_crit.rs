@@ -1,8 +1,6 @@
 //! A simple logger for the `log` crate which can log to any object
 //! implementing `Write`
 
-#![allow(unused_imports, unused_mut, unused_variables)]
-
 use crate::{hal, pac};
 
 use log::{Level, LevelFilter, Metadata, Record};

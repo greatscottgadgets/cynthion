@@ -8,10 +8,7 @@ use core::slice;
 // - UsbDriverOperations ------------------------------------------------------
 
 // convenience alias
-pub trait UsbDriver:
-    ReadControl + ReadEndpoint + WriteEndpoint + UsbDriverOperations
-{
-}
+pub trait UsbDriver: ReadControl + ReadEndpoint + WriteEndpoint + UsbDriverOperations {}
 
 pub trait UsbDriverOperations {
     /// Connect the device.

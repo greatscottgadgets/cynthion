@@ -1,14 +1,10 @@
-#![allow(dead_code, unused_imports, unused_variables)] // TODO
-
 use log::{debug, error, trace, warn};
 use zerocopy::{FromBytes, LittleEndian, Unaligned, U16, U32};
 
 use smolusb::device::Speed;
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Direction, SetupPacket};
-use smolusb::traits::{
-    ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
-};
+use smolusb::traits::{ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations};
 
 use ladybug::{Bit, Channel};
 
@@ -30,7 +26,7 @@ pub mod QuirkFlag {
 struct Packet {
     endpoint_number: u8,
     bytes_read: usize,
-    buffer: [u8; crate::EP_MAX_PACKET_SIZE],
+    buffer: [u8; smolusb::EP_MAX_PACKET_SIZE],
 }
 
 impl Packet {
@@ -38,14 +34,13 @@ impl Packet {
         Self {
             endpoint_number,
             bytes_read,
-            buffer: [0; crate::EP_MAX_PACKET_SIZE],
+            buffer: [0; smolusb::EP_MAX_PACKET_SIZE],
         }
     }
 }
 
 // - Moondancer --------------------------------------------------------------
 
-use crate::event::InterruptEvent;
 use heapless::spsc::Queue;
 use heapless::Vec;
 
@@ -53,8 +48,8 @@ use heapless::Vec;
 pub struct Moondancer {
     usb0: hal::Usb0,
     quirk_flags: u16,
-    ep_in_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
-    ep_out_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
+    ep_in_max_packet_size: [u16; smolusb::EP_MAX_ENDPOINTS],
+    ep_out_max_packet_size: [u16; smolusb::EP_MAX_ENDPOINTS],
     irq_queue: Queue<UsbEvent, 64>,
     control_queue: Queue<SetupPacket, 8>,
     packet_buffer: Vec<Packet, 4>,
@@ -66,8 +61,8 @@ impl Moondancer {
         Self {
             usb0,
             quirk_flags: 0,
-            ep_in_max_packet_size: [0; crate::EP_MAX_ENDPOINTS],
-            ep_out_max_packet_size: [0; crate::EP_MAX_ENDPOINTS],
+            ep_in_max_packet_size: [0; smolusb::EP_MAX_ENDPOINTS],
+            ep_out_max_packet_size: [0; smolusb::EP_MAX_ENDPOINTS],
             irq_queue: Queue::new(),
             control_queue: Queue::new(),
             packet_buffer: Vec::new(),
@@ -128,7 +123,7 @@ impl Moondancer {
                 UsbEvent::ReceiveControl(endpoint_number)
             }
 
-            UsbEvent::SendComplete(endpoint_number) => {
+            UsbEvent::SendComplete(_endpoint_number) => {
                 // catch EP_IN SendComplete after SetAddress ack
                 if let Some(address) = self.pending_set_address.take() {
                     self.usb0.set_address(address);
@@ -141,7 +136,8 @@ impl Moondancer {
 
             UsbEvent::ReceivePacket(endpoint_number) => {
                 // drain FIFO
-                let mut rx_buffer: [u8; crate::EP_MAX_PACKET_SIZE] = [0; crate::EP_MAX_PACKET_SIZE];
+                let mut rx_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] =
+                    [0; smolusb::EP_MAX_PACKET_SIZE];
                 let bytes_read = self.usb0.read(endpoint_number, &mut rx_buffer);
 
                 // create Packet
@@ -163,7 +159,7 @@ impl Moondancer {
                     Ok(()) => {
                         // all good
                     }
-                    Err(packet) => {
+                    Err(_packet) => {
                         error!(
                             "MD moondancer::dispatch_event(ReceivePacket({})) packet buffer overflow",
                             endpoint_number
@@ -262,8 +258,8 @@ impl Moondancer {
 
         // reset connection state
         self.quirk_flags = 0;
-        self.ep_in_max_packet_size = [0; crate::EP_MAX_ENDPOINTS];
-        self.ep_out_max_packet_size = [0; crate::EP_MAX_ENDPOINTS];
+        self.ep_in_max_packet_size = [0; smolusb::EP_MAX_ENDPOINTS];
+        self.ep_out_max_packet_size = [0; smolusb::EP_MAX_ENDPOINTS];
         self.pending_set_address = None;
 
         // flush queues
@@ -380,12 +376,12 @@ impl Moondancer {
             }
 
             // ignore endpoint configurations we won't be able to handle
-            if endpoint.max_packet_size.get() as usize > crate::EP_MAX_PACKET_SIZE {
+            if endpoint.max_packet_size.get() as usize > smolusb::EP_MAX_PACKET_SIZE {
                 error!(
                     "  failed to configure endpoint address 0x{:x} with max packet size {} > {}",
                     endpoint.address,
                     endpoint.max_packet_size,
-                    crate::EP_MAX_PACKET_SIZE,
+                    smolusb::EP_MAX_PACKET_SIZE,
                 );
                 return Err(GreatError::InvalidArgument);
             }
@@ -730,7 +726,6 @@ impl Moondancer {
     ) -> GreatResult<impl Iterator<Item = u8>> {
         debug!("MD moondancer::test_get_interrupt_events()");
 
-        use crate::UsbInterface::{Aux, Control, Target};
         self.irq_queue.enqueue(UsbEvent::BusReset).ok();
         self.irq_queue.enqueue(UsbEvent::ReceiveControl(1)).ok();
         self.irq_queue.enqueue(UsbEvent::ReceivePacket(2)).ok();

@@ -1,5 +1,3 @@
-#![allow(dead_code, unused_variables)] // TODO
-
 use smolusb::descriptor::*;
 
 // - constants ----------------------------------------------------------------

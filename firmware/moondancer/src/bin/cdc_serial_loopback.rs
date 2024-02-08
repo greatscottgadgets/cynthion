@@ -1,4 +1,3 @@
-#![allow(unused_imports)] // TODO
 #![no_std]
 #![no_main]
 
@@ -28,7 +27,7 @@ pub struct UsbDataPacket {
     pub interface: moondancer::UsbInterface,
     pub endpoint: u8,
     pub bytes_read: usize,
-    pub buffer: [u8; moondancer::EP_MAX_PACKET_SIZE],
+    pub buffer: [u8; smolusb::EP_MAX_PACKET_SIZE],
 }
 
 // - global static state ------------------------------------------------------
@@ -36,9 +35,8 @@ pub struct UsbDataPacket {
 use heapless::mpmc::MpMcQueue as Queue;
 use moondancer::event::InterruptEvent;
 
-static EVENT_QUEUE: Queue<InterruptEvent, { moondancer::EP_MAX_ENDPOINTS }> = Queue::new();
-static USB_RECEIVE_PACKET_QUEUE: Queue<UsbDataPacket, { moondancer::EP_MAX_ENDPOINTS }> =
-    Queue::new();
+static EVENT_QUEUE: Queue<InterruptEvent, { smolusb::EP_MAX_ENDPOINTS }> = Queue::new();
+static USB_RECEIVE_PACKET_QUEUE: Queue<UsbDataPacket, { smolusb::EP_MAX_ENDPOINTS }> = Queue::new();
 
 #[inline(always)]
 fn dispatch_event(event: InterruptEvent) {
@@ -103,7 +101,7 @@ fn MachineExternal() {
             interface: Target,
             endpoint,
             bytes_read: 0,
-            buffer: [0_u8; moondancer::EP_MAX_PACKET_SIZE],
+            buffer: [0_u8; smolusb::EP_MAX_PACKET_SIZE],
         };
         receive_packet.bytes_read = usb0.read(endpoint, &mut receive_packet.buffer);
 
@@ -132,7 +130,7 @@ fn MachineExternal() {
             interface: Aux,
             endpoint,
             bytes_read: 0,
-            buffer: [0_u8; moondancer::EP_MAX_PACKET_SIZE],
+            buffer: [0_u8; smolusb::EP_MAX_PACKET_SIZE],
         };
         receive_packet.bytes_read = usb1.read(endpoint, &mut receive_packet.buffer);
 

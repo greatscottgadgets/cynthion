@@ -186,7 +186,11 @@ where
 
     // - handle receive control events ----------------------------------------
 
-    fn handle_receive_control(&mut self, usb: &D, setup_packet: SetupPacket) -> Option<SetupPacket> {
+    fn handle_receive_control(
+        &mut self,
+        usb: &D,
+        setup_packet: SetupPacket,
+    ) -> Option<SetupPacket> {
         if !matches!(self.state, State::Idle) {
             debug!("TODO Control::receive_control() not idle");
         }
@@ -361,7 +365,11 @@ where
 
     // - handle receive packet events -----------------------------------------
 
-    fn handle_receive_packet(&mut self, usb: &D, packet_buffer: &[u8]) -> Option<(SetupPacket, &[u8])> {
+    fn handle_receive_packet(
+        &mut self,
+        usb: &D,
+        packet_buffer: &[u8],
+    ) -> Option<(SetupPacket, &[u8])> {
         // execute any receive packet callback we may have registered
         if let Some(callback) = self.cb_receive_packet.take() {
             let new_state = callback.call(usb, self.state);

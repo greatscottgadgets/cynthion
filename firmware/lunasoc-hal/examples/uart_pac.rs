@@ -35,7 +35,8 @@ fn main() -> ! {
             }
         }
 
-        leds.output().write(|w| unsafe { w.output().bits(led_state) });
+        leds.output()
+            .write(|w| unsafe { w.output().bits(led_state) });
     }
 }
 
@@ -62,6 +63,7 @@ fn uart_tx(uart: &pac::UART, string: &str) {
                 riscv::asm::nop();
             }
         }
-        uart.tx_data().write(|w| unsafe { w.tx_data().bits(c as u8) })
+        uart.tx_data()
+            .write(|w| unsafe { w.tx_data().bits(c as u8) })
     }
 }

@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_imports, unused_mut, unused_variables)] // TODO
 #![no_std]
 #![no_main]
 
@@ -288,9 +287,6 @@ impl<'a> Firmware<'a> {
                 }
             }
         }
-
-        #[allow(unreachable_code)] // TODO
-        Ok(())
     }
 }
 
@@ -470,8 +466,6 @@ impl<'a> Firmware<'a> {
     }
 
     fn dispatch_libgreat_response(&mut self, _setup_packet: &SetupPacket) -> GreatResult<()> {
-        use smolusb::traits::UnsafeUsbDriverOperations;
-
         // do we have a response ready?
         if let Some(response) = &mut self.libgreat_response {
             // send response

@@ -32,13 +32,13 @@ default = [
     #"nightly",
 
     #"chonky_events",
-    #"chonky_control_events",
-    #"chonky_receive_events",
     #"ladybug",
 ]
 
-# pack setup packet and rx packet buffers into event queue
+# pack rx packet buffers into event queue
 chonky_events = ["smolusb/chonky_events"]
+
+# support for using a logic analyzer and the gpio ports for debugging
 ladybug = ["ladybug/enable"]
 
 # select softcore

@@ -1,18 +1,16 @@
-#![allow(dead_code, unused_imports, unused_mut, unused_variables)]
 #![no_std]
 #![no_main]
 
 use heapless::mpmc::MpMcQueue as Queue;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 
-use libgreat::{GreatError, GreatResult};
+use libgreat::GreatResult;
 
 use smolusb::control::Control;
 use smolusb::descriptor::*;
 use smolusb::device::{Descriptors, Speed};
 use smolusb::event::UsbEvent;
-use smolusb::setup::{Direction, Request, RequestType, SetupPacket};
-use smolusb::traits::AsByteSliceIterator;
+use smolusb::setup::{Direction, SetupPacket};
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
 };
@@ -35,7 +33,7 @@ const VENDOR_VALUE_BULK_IN: u16 = 0x0004;
 const ENDPOINT_BULK_OUT: u8 = 0x01;
 const ENDPOINT_BULK_IN: u8 = 0x81;
 
-const MAX_TRANSFER_SIZE: usize = moondancer::EP_MAX_PACKET_SIZE * 4;
+const MAX_TRANSFER_SIZE: usize = smolusb::EP_MAX_PACKET_SIZE * 4;
 
 // - global static state ------------------------------------------------------
 
@@ -104,8 +102,8 @@ fn MachineExternal() {
             #[cfg(feature = "chonky_events")]
             {
                 // #1 empty fifo into a receive buffer
-                let mut packet_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] =
-                    [0; moondancer::EP_MAX_PACKET_SIZE];
+                let mut packet_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] =
+                    [0; smolusb::EP_MAX_PACKET_SIZE];
                 let bytes_read = usb0.read(endpoint, &mut packet_buffer);
 
                 // #2 dispatch receive buffer to the main loop
@@ -277,8 +275,8 @@ fn main_loop() -> GreatResult<()> {
                     }
                 }
                 Usb(Target, ReceivePacket(endpoint @ ENDPOINT_BULK_OUT)) => {
-                    let mut rx_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] =
-                        [0; moondancer::EP_MAX_PACKET_SIZE];
+                    let mut rx_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] =
+                        [0; smolusb::EP_MAX_PACKET_SIZE];
                     let bytes_read = usb0.read(endpoint, &mut rx_buffer);
                     usb0.ep_out_prime_receive(endpoint);
                     debug!("VENDOR_VALUE_BULK_IN received {} bytes", bytes_read);
