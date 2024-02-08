@@ -230,8 +230,7 @@ impl Moondancer {
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let ep0_max_packet_size = args.ep0_max_packet_size.into();
-        //let device_speed = Speed::from_libusb(args.device_speed);
-        let device_speed = Speed::Full;
+        let device_speed = Speed::from_libusb(args.device_speed);
         let quirk_flags = args.quirk_flags.into();
 
         self.ep_in_max_packet_size[0] = ep0_max_packet_size;

@@ -1,9 +1,10 @@
-///! `smolusb` device types
+//! `smolusb` device types
+//!
 
 /// USB Speed
 ///
 /// Note: These match UTMI xcvr_select constant so the mapping may not be correct for other contexts.
-///       See: https://github.com/greatscottgadgets/luna/blob/main/luna/gateware/usb/usb2/__init__.py
+///       See: <https://github.com/greatscottgadgets/luna/blob/main/luna/gateware/usb/usb2/__init__.py>
 #[derive(Clone, Copy, Debug, PartialEq)]
 #[repr(u8)]
 pub enum Speed {
@@ -36,7 +37,7 @@ impl From<u8> for Speed {
 impl Speed {
     /// Convert from a libusb speed constant to smolusb
     ///
-    /// See: https://github.com/libusb/libusb/blob/6bf2db6feaf3b611c9adedb6c4962a07f5cb07ae/libusb/libusb.h#L1126
+    /// See: <https://github.com/libusb/libusb/blob/6bf2db6feaf3b611c9adedb6c4962a07f5cb07ae/libusb/libusb.h#L1126>
     pub fn from_libusb(value: u8) -> Self {
         match value {
             0 => Speed::Unknown,

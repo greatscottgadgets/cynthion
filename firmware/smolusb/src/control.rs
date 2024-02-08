@@ -161,7 +161,7 @@ where
                 if endpoint_number != self.endpoint_number {
                     error!("event endpoint does not match control endpoint");
                 }
-                self.receive_packet(usb, &packet_buffer[..bytes_read])
+                self.handle_receive_packet(usb, &packet_buffer[..bytes_read])
             }
             SendComplete(endpoint_number) => {
                 if endpoint_number != self.endpoint_number {

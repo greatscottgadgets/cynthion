@@ -1,4 +1,4 @@
-/// [`smolusb`] Error type
+/// [`smolusb`](crate) Error type
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum SmolError {
     FailedConversion,
@@ -38,5 +38,5 @@ impl core::error::Error for SmolError {
     }
 }
 
-/// Result<T>
+/// [`smolusb`](crate) [`Result`] type.
 pub type SmolResult<T> = core::result::Result<T, SmolError>;

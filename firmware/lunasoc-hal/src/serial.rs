@@ -14,12 +14,12 @@ macro_rules! impl_serial {
 
             // lifecycle
             impl $SERIALX {
-                /// Create a new `Serial` from the [`UART`](pac::UART) peripheral.
+                /// Create a new `Serial` from the [`UART`](crate::pac::UART) peripheral.
                 pub fn new(registers: $PACUARTX) -> Self {
                     Self { registers }
                 }
 
-                /// Release the [`Uart`](pac::UART) peripheral and consume self.
+                /// Release the [`Uart`](crate::pac::UART) peripheral and consume self.
                 pub fn free(self) -> $PACUARTX {
                     self.registers
                 }

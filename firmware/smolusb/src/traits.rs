@@ -14,22 +14,22 @@ pub trait UsbDriver:
 }
 
 pub trait UsbDriverOperations {
-    /// Connect
+    /// Connect the device.
     fn connect(&mut self, device_speed: Speed);
-    /// Disconnect
+    /// Disconnect the device.
     fn disconnect(&mut self);
-    /// Bus Reset
+    /// Perform a reset of the device.
     fn bus_reset(&self);
     /// Acknowledge the status stage of an incoming control request.
     fn ack(&self, endpoint_number: u8, direction: Direction);
-    /// Set the device address
+    /// Set the device address.
     fn set_address(&self, address: u8);
-    /// Stall the given IN endpoint
+    /// Stall the given IN endpoint number.
     fn stall_endpoint_in(&self, endpoint_number: u8);
-    /// Stall the given OUT endpoint
+    /// Stall the given OUT endpoint number.
     fn stall_endpoint_out(&self, endpoint_number: u8);
 
-    /// Clear any halt condition on the target endpoint, and clear the data toggle bit.
+    /// Clear any halt condition on the target endpoint address, and clear the data toggle bit.
     fn clear_feature_endpoint_halt(&self, endpoint_address: u8);
 }
 
@@ -50,7 +50,7 @@ pub trait UnsafeUsbDriverOperations {
 // - UsbRead/UsbWrite ---------------------------------------------------------
 
 pub trait ReadControl {
-    /// Read a setup packet from the control endpoint
+    /// Read a setup packet from the control endpoint.
     ///
     /// Returns the number of bytes read from the control endpoint.
     fn read_control(&self, buffer: &mut [u8]) -> usize;

@@ -120,8 +120,8 @@ unsafe impl<W: Write + Send> Sync for WriteLogger<W> {}
 
 /// format! macro for no_std, no alloc environments
 ///
-/// Props: https://stackoverflow.com/questions/50200268/
-/// Props: https://github.com/Simsys/arrform
+/// Props: <https://stackoverflow.com/questions/50200268/>
+/// Props: <https://github.com/Simsys/arrform>
 ///
 /// TODO Re-use buffer
 
