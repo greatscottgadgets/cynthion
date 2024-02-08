@@ -49,6 +49,7 @@ cynthion = "cynthion.commands.cli:main"
 cynthion_analyzer = "cynthion.commands.cynthion_analyzer:main"
 cynthion_info = "cynthion.commands.cynthion_info:main"
 cynthion_program = "cynthion.commands.cynthion_program:main"
+cynthion_selftest = "cynthion.commands.cynthion_selftest:main"
 
 [tool.setuptools]
 include-package-data = true
