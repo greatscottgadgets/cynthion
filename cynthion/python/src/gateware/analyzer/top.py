@@ -205,12 +205,22 @@ class USBAnalyzerApplet(Elaboratable):
         # Strap our power controls to be in VBUS passthrough by default,
         # on the target port.
         try:
+            # On Cynthion r1.4, Target-C to Target-A VBUS passthrough is
+            # off by default and must be enabled by the gateware.
+            m.d.comb += [
+                platform.request("target_c_vbus_en").o  .eq(1),
+            ]
+            # On Cynthion r0.6 - r1.3 this passthrough is enabled by
+            # default, even with the hardware unpowered, but it does no
+            # harm to explicitly set it here.
+        except ResourceError:
+            # On Cynthion r0.1 - r0.5, there is no `target_c_vbus_en`
+            # signal. The following two signals are needed to have
+            # the same effect:
             m.d.comb += [
                 platform.request("power_a_port").o      .eq(0),
                 platform.request("pass_through_vbus").o .eq(1),
             ]
-        except ResourceError:
-            pass
 
         # Set up our parameters.
         m.d.comb += [
