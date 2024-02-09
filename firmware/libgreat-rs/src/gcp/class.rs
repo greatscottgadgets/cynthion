@@ -18,6 +18,12 @@ impl Classes {
     }
 }
 
+impl Default for Classes {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl core::ops::Deref for Classes {
     type Target = &'static [Class];
     fn deref(&self) -> &Self::Target {

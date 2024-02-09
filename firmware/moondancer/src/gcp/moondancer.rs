@@ -178,11 +178,6 @@ impl Moondancer {
             Ok(()) => {}
             Err(_) => {
                 error!("Moondancer - irq queue overflow: {:?}", event);
-                /*loop {
-                    unsafe {
-                        riscv::asm::nop();
-                    }
-                }*/
             }
         }
     }
@@ -191,6 +186,13 @@ impl Moondancer {
 // - usb0 interrupt handlers --------------------------------------------------
 
 impl Moondancer {
+    /// Enable USB events and CPU interrupts for the USB controller.
+    ///
+    /// # Safety
+    ///
+    /// This function operates directly on the CPU's Machine IRQ Mask
+    /// register. It is not thread-safe and any pending interrupts
+    /// may be dropped when calling it.
     pub unsafe fn enable_usb_interrupts(&self) {
         interrupt::enable(pac::Interrupt::USB0);
         interrupt::enable(pac::Interrupt::USB0_EP_CONTROL);
@@ -201,6 +203,13 @@ impl Moondancer {
         self.usb0.enable_interrupts();
     }
 
+    /// Disable USB events and CPU interrupts for the USB controller.
+    ///
+    /// # Safety
+    ///
+    /// This function operates directly on the CPU's Machine IRQ Mask
+    /// register. It is not thread-safe and any pending interrupts
+    /// may be dropped when calling it.
     pub unsafe fn disable_usb_interrupts(&self) {
         // disable all usb events
         self.usb0.disable_interrupts();
@@ -253,7 +262,8 @@ impl Moondancer {
 
     /// Terminate all existing communication and disconnects the USB interface.
     pub fn disconnect(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        // disconnect USB interface
+        // disable interrupts and disconnect USB interface
+        unsafe { self.disable_usb_interrupts() };
         self.usb0.disconnect();
 
         // reset connection state
@@ -263,8 +273,8 @@ impl Moondancer {
         self.pending_set_address = None;
 
         // flush queues
-        while let Some(_) = self.irq_queue.dequeue() {}
-        while let Some(_) = self.control_queue.dequeue() {}
+        while self.irq_queue.dequeue().is_some() {}
+        while self.control_queue.dequeue().is_some() {}
 
         // clear quirk flags
         self.quirk_flags = 0;
@@ -356,7 +366,7 @@ impl Moondancer {
         while let Some((endpoint, next)) =
             zerocopy::LayoutVerified::<_, ArgEndpoint>::new_from_prefix(byte_slice)
         {
-            let endpoint_number = (endpoint.address & 0x7f) as u8;
+            let endpoint_number = endpoint.address & 0x7f;
 
             log::debug!(
                 "  moondancer::configure_endpoint(0x{:x}) -> {} -> max_packet_size:{}",
@@ -652,7 +662,7 @@ impl Moondancer {
             endpoint_number,
             blocking,
             payload_length,
-            args.payload.iter().count(),
+            args.payload.iter().len(),
             max_packet_size,
             bytes_written,
         );
@@ -925,83 +935,83 @@ impl Moondancer {
             0x0 => {
                 // moondancer::connect
                 let iter = self.connect(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x1 => {
                 // moondancer::disconnect
                 let iter = self.disconnect(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x2 => {
                 // moondancer::bus_reset
                 let iter = self.bus_reset(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x3 => {
                 // moondancer::read_control
                 let iter = self.read_control(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x4 => {
                 // moondancer::set_address
                 let iter = self.set_address(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x5 => {
                 // moondancer::configure_endpoints
                 let iter = self.configure_endpoints(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x6 => {
                 // moondancer::stall_endpoint_in
                 let iter = self.stall_endpoint_in(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x7 => {
                 // moondancer::stall_endpoint_out
                 let iter = self.stall_endpoint_out(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x8 => {
                 // moondancer::read_endpoint
                 ladybug::trace(Channel::A, Bit::A_READ_ENDPOINT, || {
                     let iter = self.read_endpoint(arguments)?;
-                    let response = unsafe { iter_to_response(iter, response_buffer) };
+                    let response = iter_to_response(iter, response_buffer);
                     Ok(response)
                 })
             }
             0x9 => {
                 // moondancer::ep_out_prime_receive
                 let iter = self.ep_out_prime_receive(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0xa => {
                 // moondancer::write_endpoint
                 ladybug::trace(Channel::A, Bit::A_WRITE_ENDPOINT, || {
                     let iter = self.write_endpoint(arguments)?;
-                    let response = unsafe { iter_to_response(iter, response_buffer) };
+                    let response = iter_to_response(iter, response_buffer);
                     Ok(response)
                 })
             }
             0xb => {
                 // moondancer::get_interrupt_events
                 let iter = self.get_interrupt_events(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0xc => {
                 // moondancer::get_nak_status
                 let iter = self.get_nak_status(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
 
@@ -1009,19 +1019,19 @@ impl Moondancer {
             0x28 => {
                 // moondancer::test_read_endpoint
                 let iter = self.test_read_endpoint(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x2a => {
                 // moondancer::test_write_endpoint
                 let iter = self.test_write_endpoint(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x2b => {
                 // moondancer::test_get_interrupt_events
                 let iter = self.test_get_interrupt_events(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
 

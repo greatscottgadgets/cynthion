@@ -393,6 +393,7 @@ macro_rules! impl_usb {
                 use smolusb::EP_MAX_ENDPOINTS;
 
                 #[cfg(target_has_atomic)]
+                #[allow(clippy::declare_interior_mutable_const)]
                 const ATOMIC_FALSE: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
 
                 #[cfg(not(target_has_atomic))]

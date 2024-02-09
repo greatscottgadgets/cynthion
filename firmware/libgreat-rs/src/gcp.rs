@@ -54,7 +54,12 @@ where
 
 pub type GreatResponse = core::iter::Take<core::array::IntoIter<u8, LIBGREAT_MAX_COMMAND_SIZE>>;
 
-pub unsafe fn iter_to_response(
+/// Squashes an arbitrary Iterator type into a [`GreatResponse`].
+///
+/// This is not entirely great but it is one solution to the problem
+/// of how to dispatch on verbs that return arbiratory iterator types
+/// as their response.
+pub fn iter_to_response(
     iter: impl Iterator<Item = u8>,
     mut response: [u8; LIBGREAT_MAX_COMMAND_SIZE],
 ) -> GreatResponse {
@@ -65,19 +70,6 @@ pub unsafe fn iter_to_response(
     }
     response.into_iter().take(length)
 }
-/*
-unsafe fn iter_ref_to_response<'a>(
-    iter: impl Iterator<Item = &'a u8>,
-    _response: &mut [u8; LIBGREAT_MAX_COMMAND_SIZE],
-) -> GreatResponse {
-    let mut response: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
-    let mut length = 0;
-    for (ret, src) in response.iter_mut().zip(iter) {
-        *ret = *src;
-        length += 1;
-    }
-    response.into_iter().take(length)
-}*/
 
 // - tests --------------------------------------------------------------------
 

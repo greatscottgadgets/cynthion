@@ -266,13 +266,11 @@ fn main() -> ! {
                 | Usb(Target, event @ ReceiveControl(0))
                 | Usb(Target, event @ ReceivePacket(0))
                 | Usb(Target, event @ SendComplete(0)) => {
-                    match control_usb0.dispatch_event(&usb0, event) {
+                    if let Some((setup_packet, _rx_buffer)) =
+                        control_usb0.dispatch_event(&usb0, event)
+                    {
                         // vendor requests are not handled by control
-                        Some((setup_packet, _rx_buffer)) => {
-                            handle_vendor_request(&usb0, setup_packet);
-                        }
-                        // control event was handled
-                        None => (),
+                        handle_vendor_request(&usb0, setup_packet);
                     }
                 }
 
@@ -281,13 +279,11 @@ fn main() -> ! {
                 | Usb(Aux, event @ ReceiveControl(0))
                 | Usb(Aux, event @ ReceivePacket(0))
                 | Usb(Aux, event @ SendComplete(0)) => {
-                    match control_usb1.dispatch_event(&usb1, event) {
+                    if let Some((setup_packet, _rx_buffer)) =
+                        control_usb1.dispatch_event(&usb1, event)
+                    {
                         // vendor requests are not handled by control
-                        Some((setup_packet, _rx_buffer)) => {
-                            handle_vendor_request(&usb1, setup_packet);
-                        }
-                        // control event was handled
-                        None => (),
+                        handle_vendor_request(&usb1, setup_packet);
                     }
                 }
 
@@ -327,10 +323,7 @@ fn main() -> ! {
                             endpoint,
                             &buffer[0..8],
                         );
-                        usb1.write(
-                            endpoint,
-                            buffer.iter().copied().take(bytes_read).into_iter(),
-                        );
+                        usb1.write(endpoint, buffer.iter().copied().take(bytes_read));
                         info!("Sent {} bytes to usb1 endpoint: {}", bytes_read, endpoint);
                     }
                     usb0.ep_out_prime_receive(endpoint);
@@ -345,10 +338,7 @@ fn main() -> ! {
                             endpoint,
                             &buffer[0..8],
                         );
-                        usb0.write(
-                            endpoint,
-                            buffer.iter().copied().take(bytes_read).into_iter(),
-                        );
+                        usb0.write(endpoint, buffer.iter().copied().take(bytes_read));
                         info!("Sent {} bytes to usb0 endpoint: {}", bytes_read, endpoint);
                     }
                     usb1.ep_out_prime_receive(endpoint);
@@ -363,7 +353,7 @@ fn main() -> ! {
 
 // - vendor request handler ---------------------------------------------------
 
-fn handle_vendor_request<'a, D>(usb: &D, setup_packet: SetupPacket)
+fn handle_vendor_request<D>(usb: &D, setup_packet: SetupPacket)
 where
     D: ReadControl + ReadEndpoint + WriteEndpoint + UsbDriverOperations,
 {

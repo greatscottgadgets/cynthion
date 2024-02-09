@@ -64,8 +64,11 @@ impl Bit {
 
 // - public methods -----------------------------------------------------------
 
-pub unsafe fn set_analyzer(analyzer: &'static dyn LogicAnalyzer) {
-    LADYBUG = analyzer;
+/// Sets the [`LogicAnalyzer`] used by ladybug.
+pub fn set_analyzer(analyzer: &'static dyn LogicAnalyzer) {
+    unsafe {
+        LADYBUG = analyzer;
+    }
 }
 
 /// Returns a reference to the logic analyzer.
@@ -73,6 +76,13 @@ pub fn ladybug() -> &'static dyn LogicAnalyzer {
     unsafe { LADYBUG }
 }
 
+/// Issues a pulse on the given GPIO channel and bit number.
+///
+/// # Safety
+///
+/// This is not interrupt safe so you'll want to make sure you use
+/// separate channels for tracing in your main program loop vs
+/// interrupt handlers.
 #[inline(always)]
 pub fn trace<R>(channel: Channel, bit_number: u8, f: impl FnOnce() -> R) -> R {
     #[cfg(not(feature = "enable"))]

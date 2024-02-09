@@ -265,13 +265,11 @@ impl<'a> Firmware<'a> {
                     | Usb(Aux, event @ SendComplete(0)) => {
                         trace!("Usb(Aux, {:?})", event);
 
-                        match usb1_control.dispatch_event(&self.usb1, event) {
+                        if let Some((setup_packet, rx_buffer)) =
+                            usb1_control.dispatch_event(&self.usb1, event)
+                        {
                             // vendor requests are not handled by control
-                            Some((setup_packet, rx_buffer)) => {
-                                self.handle_vendor_request(setup_packet, rx_buffer)?
-                            }
-                            // control event was handled
-                            None => (),
+                            self.handle_vendor_request(setup_packet, rx_buffer)?
                         }
                     }
 

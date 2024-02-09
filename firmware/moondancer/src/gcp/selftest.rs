@@ -44,10 +44,10 @@ pub fn test_error_return_code<'a>(
         0_u32 => {
             let s = "ok";
             debug!("  test_error_return_code -> 0 -> Ok('ok')");
-            Ok(s.as_bytes().into_iter().copied())
+            Ok(s.as_bytes().iter().copied())
         }
         code => {
-            let code: GreatError = unsafe { core::mem::transmute(code as u32) };
+            let code: GreatError = unsafe { core::mem::transmute(code) };
             debug!("  test_error_return_code -> {} -> Err({})", args.code, code);
             Err(code)
         }
@@ -69,7 +69,7 @@ pub fn dispatch(
         0x10 => {
             // selftest::test_error_return_code
             let iter = test_error_return_code(arguments, &no_context)?;
-            let response = unsafe { iter_to_response(iter, response_buffer) };
+            let response = iter_to_response(iter, response_buffer);
             Ok(response)
         }
 

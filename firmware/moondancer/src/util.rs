@@ -188,6 +188,8 @@ pub mod UsbEventExt {
     pub struct ReceivePacket(UsbInterface, u8, usize, [u8; smolusb::EP_MAX_PACKET_SIZE]);
 }
 
+/// An event queue with separate queues for interrupt events and usb events.
+///
 /// So the problem this solves is that some events are much larger
 /// than others.
 ///
@@ -200,19 +202,18 @@ pub mod UsbEventExt {
 /// It goes something like this:
 ///
 ///     use core::any::Any;
-///     use moondancer::util::EventQueue;
+///     use moondancer::util::MultiEventQueue;
 ///
-///     static EVENT_QUEUE_ALT: EventQueue = EventQueue::new();
-///     fn dispatch_event_alt<T: Any>(event: T) {
-///         match EVENT_QUEUE_ALT.enqueue(event) {
+///     static EVENT_QUEUE: MultiEventQueue = MultiEventQueue::new();
+///     fn dispatch_event<T: Any>(event: T) {
+///         match EVENT_QUEUE.enqueue(event) {
 ///             Ok(()) => (),
 ///             Err(_) => {
-///                 error!("MachineExternal - event queue overflow");
 ///                 panic!("MachineExternal - event queue overflow");
 ///             }
 ///         }
 ///     }
-pub struct EventQueue {
+pub struct MultiEventQueue {
     receive_control: Queue<UsbEventExt::ReceiveControl, 16>,
     receive_packet: Queue<UsbEventExt::ReceivePacket, 16>,
     interrupt_event: Queue<InterruptEvent, 64>,
@@ -220,7 +221,7 @@ pub struct EventQueue {
 
 use core::any::Any;
 
-impl EventQueue {
+impl MultiEventQueue {
     pub const fn new() -> Self {
         Self {
             receive_control: Queue::new(),
@@ -241,36 +242,28 @@ impl EventQueue {
         self.receive_packet.dequeue()
     }
 
-    pub fn enqueue<T: Any>(&self, event: T) -> Result<(), ()> {
+    pub fn enqueue<T: Any>(&self, event: T) -> Result<(), T> {
         let any = &event as &dyn Any;
-        match any.downcast_ref::<InterruptEvent>() {
-            Some(event) => match self.interrupt_event.enqueue(*event) {
-                Ok(()) => (),
-                Err(_) => {
-                    log::error!("EventQueue - interrupt event queue overflow");
-                }
-            },
-            None => {}
+
+        if let Some(eventref) = any.downcast_ref::<InterruptEvent>() {
+            if self.interrupt_event.enqueue(*eventref).is_err() {
+                log::error!("MultiEventQueue - interrupt event queue overflow");
+                return Err(event);
+            }
         }
 
-        match any.downcast_ref::<UsbEventExt::ReceiveControl>() {
-            Some(event) => match self.receive_control.enqueue(*event) {
-                Ok(()) => (),
-                Err(_) => {
-                    log::error!("EventQueue - usb receive control queue overflow");
-                }
-            },
-            None => {}
+        if let Some(eventref) = any.downcast_ref::<UsbEventExt::ReceiveControl>() {
+            if self.receive_control.enqueue(*eventref).is_err() {
+                log::error!("MultiEventQueue - usb receive control queue overflow");
+                return Err(event);
+            }
         }
 
-        match any.downcast_ref::<UsbEventExt::ReceivePacket>() {
-            Some(event) => match self.receive_packet.enqueue(*event) {
-                Ok(()) => (),
-                Err(_) => {
-                    log::error!("EventQueue - usb receive packet queue overflow");
-                }
-            },
-            None => {}
+        if let Some(eventref) = any.downcast_ref::<UsbEventExt::ReceivePacket>() {
+            if self.receive_packet.enqueue(*eventref).is_err() {
+                log::error!("MultiEventQueue - usb receive packet queue overflow");
+                return Err(event);
+            }
         }
 
         Ok(())

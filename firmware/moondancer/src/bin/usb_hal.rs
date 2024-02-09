@@ -244,15 +244,11 @@ fn main_loop() -> GreatResult<()> {
                     let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
                         control.dispatch_event(&usb0, event)
                     });
-                    match result {
+                    if let Some((setup_packet, rx_buffer)) = result {
                         // vendor requests are not handled by control
-                        Some((setup_packet, rx_buffer)) => {
-                            ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
-                                handle_vendor_request(&usb0, setup_packet, rx_buffer);
-                            });
-                        }
-                        // control event was handled
-                        None => (),
+                        ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
+                            handle_vendor_request(&usb0, setup_packet, rx_buffer);
+                        });
                     }
                 }
                 #[cfg(not(feature = "chonky_events"))]
@@ -263,15 +259,11 @@ fn main_loop() -> GreatResult<()> {
                     let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
                         control.dispatch_event(&usb0, event)
                     });
-                    match result {
+                    if let Some((setup_packet, rx_buffer)) = result {
                         // vendor requests are not handled by control
-                        Some((setup_packet, rx_buffer)) => {
-                            ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
-                                handle_vendor_request(&usb0, setup_packet, rx_buffer);
-                            });
-                        }
-                        // control event was handled
-                        None => (),
+                        ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
+                            handle_vendor_request(&usb0, setup_packet, rx_buffer);
+                        });
                     }
                 }
                 Usb(Target, ReceivePacket(endpoint @ ENDPOINT_BULK_OUT)) => {
@@ -294,7 +286,7 @@ fn main_loop() -> GreatResult<()> {
 
 // - vendor request handler ---------------------------------------------------
 
-fn handle_vendor_request<'a, D>(usb: &D, setup_packet: SetupPacket, rx_buffer: &[u8])
+fn handle_vendor_request<D>(usb: &D, setup_packet: SetupPacket, rx_buffer: &[u8])
 where
     D: ReadControl + ReadEndpoint + WriteEndpoint + UsbDriverOperations + UnsafeUsbDriverOperations,
 {

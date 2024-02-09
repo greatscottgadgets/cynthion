@@ -1,4 +1,4 @@
-///! Types for working with the SETUP packet.
+//! Types for working with the SETUP packet.
 
 /// Represents a USB setup packet.
 #[repr(C)]

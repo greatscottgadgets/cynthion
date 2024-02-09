@@ -39,8 +39,29 @@ pub trait UsbDriverOperations {
 ///
 /// This is not a particularly safe approach.
 pub trait UnsafeUsbDriverOperations {
+    /// Sets an atomic flag for the given endpoint number in order to
+    /// be able to block on an event in an interrupt handler.
+    ///
+    /// # Safety
+    ///
+    /// Remember that the flag will stay set if your interrupt event
+    /// never happens!
     unsafe fn set_tx_ack_active(&self, endpoint_number: u8);
+    /// Clears an atomic flag for the given endpoint number in order to
+    /// be able to block on an event in an interrupt handler.
+    ///
+    /// # Safety
+    ///
+    /// Remember that the flag will stay set if your interrupt event
+    /// never happens!
     unsafe fn clear_tx_ack_active(&self, endpoint_number: u8);
+    /// Tests an atomic flag for the given endpoint number in order to
+    /// be able to block on an event in an interrupt handler.
+    ///
+    /// # Safety
+    ///
+    /// Remember that the flag will stay set if your interrupt event
+    /// never happens!
     unsafe fn is_tx_ack_active(&self, endpoint_number: u8) -> bool;
 }
 
@@ -67,19 +88,14 @@ pub trait WriteEndpoint {
     /// Write iterator to endpoint
     ///
     /// Returns the number of bytes written to the endpoint.
-    fn write<'a, I>(&self, endpoint_number: u8, iter: I) -> usize
+    fn write<I>(&self, endpoint_number: u8, iter: I) -> usize
     where
         I: Iterator<Item = u8>;
 
     /// Write iterator to endpoint using the given packet size
     ///
     /// Returns the number of bytes written to the endpoint.
-    fn write_with_packet_size<'a, I>(
-        &self,
-        endpoint_number: u8,
-        iter: I,
-        packet_size: usize,
-    ) -> usize
+    fn write_with_packet_size<I>(&self, endpoint_number: u8, iter: I, packet_size: usize) -> usize
     where
         I: Iterator<Item = u8>;
 }

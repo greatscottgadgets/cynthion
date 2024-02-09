@@ -4,6 +4,11 @@ pub mod interrupt {
     use crate::register;
     use crate::Interrupt;
 
+    /// Unmask the given [`Interrupt`] in the CPU's Machines IRQ Mask register.
+    ///
+    /// # Safety
+    ///
+    /// Passing incorrect value can cause undefined behaviour. See CPU reference manual.
     pub unsafe fn enable(interrupt: Interrupt) {
         let mask = register::mim::read();
         let mask = mask | (1 << interrupt as usize);
@@ -11,6 +16,11 @@ pub mod interrupt {
         while register::mim::read() != mask {}
     }
 
+    /// Mask the given [`Interrupt`] in the CPU's Machines IRQ Mask register.
+    ///
+    /// # Safety
+    ///
+    /// Passing incorrect value can cause undefined behaviour. See CPU reference manual.
     pub unsafe fn disable(interrupt: Interrupt) {
         let mask = register::mim::read();
         let mask = mask & !(1 << interrupt as usize);

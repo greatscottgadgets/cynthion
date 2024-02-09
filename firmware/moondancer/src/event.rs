@@ -42,9 +42,7 @@ impl TryFrom<InterruptEvent> for UsbEvent {
 impl InterruptEvent {
     /// Convert a `[smolusb::Event]` to an `[InterruptEvent]`
     pub fn from_smolusb_event(interface: UsbInterface, event: UsbEvent) -> InterruptEvent {
-        match event {
-            event => InterruptEvent::Usb(interface, event),
-        }
+        InterruptEvent::Usb(interface, event)
     }
 }
 

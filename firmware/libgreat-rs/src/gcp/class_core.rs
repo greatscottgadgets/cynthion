@@ -149,7 +149,7 @@ impl Core {
     pub fn read_version_string(&self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let version_string = self.board_information.version_string;
         trace!("  sending version string: {:?}", version_string);
-        Ok(version_string.as_bytes().into_iter().copied())
+        Ok(version_string.as_bytes().iter().copied())
     }
 
     pub fn read_part_id(&self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
@@ -211,7 +211,7 @@ impl Core {
         let verb = class
             .verb(args.verb_number.into())
             .ok_or(GreatError::InvalidArgument)?;
-        Ok(verb.name.as_bytes().into_iter().copied())
+        Ok(verb.name.as_bytes().iter().copied())
     }
 
     pub fn get_verb_descriptor(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
@@ -232,13 +232,11 @@ impl Core {
             .verb(args.verb_number.into())
             .ok_or(GreatError::InvalidArgument)?;
         match args.descriptor.into() {
-            VerbDescriptor::InSignature => Ok(verb.in_signature.as_bytes().into_iter().copied()),
-            VerbDescriptor::InParamNames => Ok(verb.in_param_names.as_bytes().into_iter().copied()),
-            VerbDescriptor::OutSignature => Ok(verb.out_signature.as_bytes().into_iter().copied()),
-            VerbDescriptor::OutParamNames => {
-                Ok(verb.out_param_names.as_bytes().into_iter().copied())
-            }
-            VerbDescriptor::Doc => Ok(verb.doc.as_bytes().into_iter().copied()),
+            VerbDescriptor::InSignature => Ok(verb.in_signature.as_bytes().iter().copied()),
+            VerbDescriptor::InParamNames => Ok(verb.in_param_names.as_bytes().iter().copied()),
+            VerbDescriptor::OutSignature => Ok(verb.out_signature.as_bytes().iter().copied()),
+            VerbDescriptor::OutParamNames => Ok(verb.out_param_names.as_bytes().iter().copied()),
+            VerbDescriptor::Doc => Ok(verb.doc.as_bytes().iter().copied()),
             VerbDescriptor::Unknown(_value) => Err(GreatError::InvalidRequestDescriptor),
         }
     }
@@ -271,7 +269,7 @@ impl Core {
             .classes
             .class(class_id)
             .ok_or(GreatError::InvalidArgument)?;
-        Ok(class.docs.as_bytes().into_iter().copied())
+        Ok(class.docs.as_bytes().iter().copied())
     }
 }
 
@@ -290,61 +288,61 @@ impl Core {
             0x0 => {
                 // core::read_board_id
                 let iter = self.read_board_id(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x1 => {
                 // core::read_version_string
                 let iter = self.read_version_string(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x2 => {
                 // core::read_part_id
                 let iter = self.read_part_id(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x3 => {
                 // core::read_serial_number
                 let iter = self.read_serial_number(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x4 => {
                 // core::get_available_classes
                 let iter = self.get_available_classes(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x5 => {
                 // core::get_available_verbs
                 let iter = self.get_available_verbs(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x6 => {
                 // core::get_verb_name
                 let iter = self.get_verb_name(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x7 => {
                 // core::get_verb_descriptor
                 let iter = self.get_verb_descriptor(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x8 => {
                 // core::get_class_name
                 let iter = self.get_class_name(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x9 => {
                 // core::get_class_docs
                 let iter = self.get_class_docs(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
 

@@ -211,8 +211,12 @@ fn main_loop() -> GreatResult<()> {
     let mut test_stats = TestStats::new();
     let test_data = {
         let mut test_data = [0_u8; smolusb::EP_MAX_PACKET_SIZE];
-        for n in 0..smolusb::EP_MAX_PACKET_SIZE {
-            test_data[n] = (n % 256) as u8;
+        for (n, value) in test_data
+            .iter_mut()
+            .enumerate()
+            .take(smolusb::EP_MAX_PACKET_SIZE)
+        {
+            *value = (n % 256) as u8;
         }
         test_data
     };

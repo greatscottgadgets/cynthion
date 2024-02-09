@@ -1,4 +1,4 @@
-///! Error and Result types
+//! Error and Result types
 
 /// GreatResult
 pub type GreatResult<T> = core::result::Result<T, GreatError>;
