@@ -11,6 +11,8 @@ use pac::csr::interrupt;
 
 // - generic usb isr ----------------------------------------------------------
 
+#[must_use]
+#[allow(clippy::cast_possible_truncation)]
 pub fn get_usb_interrupt_event() -> InterruptEvent {
     use crate::UsbInterface::{Aux, Control, Target};
 
@@ -161,29 +163,29 @@ use heapless::mpmc::MpMcQueue as Queue;
 
 #[allow(non_snake_case)]
 pub mod UsbEventExt {
-    //! Alternate implementation of some UsbEvent values that also
+    //! Alternate implementation of some [`UsbEvent`] values that also
     //! contain their associated data.
 
     use crate::UsbInterface;
     use smolusb::setup::SetupPacket;
 
-    /// Received a setup packet on USBx_EP_CONTROL
+    /// Received a setup packet on [`USB0_EP_CONTROL`]
     ///
     /// An alternate version of `ReceiveControl` that can be used
     /// when the setup packet is read inside the interrupt handler
     /// for lower latency.
     ///
-    /// Contents is (usb_interface, endpoint_number, setup_packet)
+    /// Contents is (`usb_interface`, `endpoint_number`, `setup_packet`)
     #[derive(Clone, Copy)]
     pub struct ReceiveControl(UsbInterface, u8, SetupPacket);
 
-    /// Received a data packet on USBx_EP_OUT
+    /// Received a data packet on [`USB0_EP_OUT`]
     ///
     /// An alternate version of `ReceivePacket` that can be used
     /// when the packet is read inside the interrupt handler
     /// for lower latency.
     ///
-    /// Contents is (usb_interface, endpoint_number, bytes_read, packet_buffer)
+    /// Contents is (`usb_interface`, `endpoint_number`, `bytes_read`, `packet_buffer`)
     #[derive(Clone, Copy)]
     pub struct ReceivePacket(UsbInterface, u8, usize, [u8; smolusb::EP_MAX_PACKET_SIZE]);
 }
@@ -222,6 +224,7 @@ pub struct MultiEventQueue {
 use core::any::Any;
 
 impl MultiEventQueue {
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             receive_control: Queue::new(),
@@ -242,6 +245,11 @@ impl MultiEventQueue {
         self.receive_packet.dequeue()
     }
 
+    /// Enqueues the given event if there is sufficient space in its corresponding queue.
+    ///
+    /// # Errors
+    ///
+    /// If the queue is full it will return the event.
     pub fn enqueue<T: Any>(&self, event: T) -> Result<(), T> {
         let any = &event as &dyn Any;
 

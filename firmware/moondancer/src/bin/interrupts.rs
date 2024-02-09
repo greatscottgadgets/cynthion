@@ -10,7 +10,7 @@ use riscv_rt::entry;
 
 #[allow(non_snake_case)]
 #[no_mangle]
-fn MachineExternal() {
+extern "C" fn MachineExternal() {
     static mut TOGGLE: bool = true;
 
     if pac::csr::interrupt::pending(pac::Interrupt::TIMER) {
@@ -60,7 +60,7 @@ fn main() -> ! {
         riscv::register::mie::set_mext();
 
         // write csr: enable timer interrupt
-        pac::csr::interrupt::enable(pac::Interrupt::TIMER)
+        pac::csr::interrupt::enable(pac::Interrupt::TIMER);
     }
 
     info!("Peripherals initialized, entering main loop.");

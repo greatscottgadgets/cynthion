@@ -32,7 +32,9 @@ pub trait UsbDriverOperations {
 
 /// These are used to deal with the situation where we need to block
 /// on receipt of the host ACK following a usb write inside an ongoing
-/// operation and are unable to process SendComplete interrupt events.
+/// operation and are unable to process
+/// [`UsbEvent::SendComplete`](crate::event::UsbEvent::SendComplete)
+/// interrupt events.
 ///
 /// Not having to do this is a powerful argument for implementing
 /// async support.

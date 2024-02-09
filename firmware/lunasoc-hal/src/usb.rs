@@ -6,7 +6,7 @@ mod error;
 pub use error::ErrorKind;
 
 use smolusb::device::Speed;
-use smolusb::setup::*;
+use smolusb::setup::Direction;
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriver, UsbDriverOperations,
     WriteEndpoint,
@@ -18,7 +18,7 @@ use pac::interrupt::Interrupt;
 use ladybug::{Bit, Channel};
 use log::{trace, warn};
 
-/// Macro to generate hal wrappers for pac::USBx peripherals
+/// Macro to generate hal wrappers for [`pac::USB0`] peripherals
 ///
 /// For example:
 ///
@@ -206,6 +206,7 @@ macro_rules! impl_usb {
                 }
 
                 /// Returns the status of the given interrupt event.
+                #[must_use]
                 #[inline(always)]
                 pub fn status_pending(&self, interrupt: Interrupt) -> u32 {
                     // for reasons that are still to be understood the
@@ -236,6 +237,7 @@ macro_rules! impl_usb {
                 }
 
                 /// Returns the address of the control endpoint.
+                #[must_use]
                 pub fn ep_control_address(&self) -> u8 {
                     self.ep_control.address().read().address().bits()
                 }
@@ -416,8 +418,8 @@ macro_rules! impl_usb {
                     }
                     #[cfg(target_has_atomic)]
                     {
-                        let endpoint_number = endpoint_number as usize;
                         use core::sync::atomic::Ordering;
+                        let endpoint_number = endpoint_number as usize;
                         $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].store(true, Ordering::Relaxed);
                     }
                 }
@@ -432,8 +434,8 @@ macro_rules! impl_usb {
                     }
                     #[cfg(target_has_atomic)]
                     {
-                        let endpoint_number = endpoint_number as usize;
                         use core::sync::atomic::Ordering;
+                        let endpoint_number = endpoint_number as usize;
                         $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].store(false, Ordering::Relaxed);
                     }
                 }
@@ -449,8 +451,8 @@ macro_rules! impl_usb {
                     }
                     #[cfg(target_has_atomic)]
                     {
-                        let endpoint_number = endpoint_number as usize;
                         use core::sync::atomic::Ordering;
+                        let endpoint_number = endpoint_number as usize;
                         $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].load(Ordering::Relaxed)
                     }
                 }

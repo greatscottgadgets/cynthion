@@ -4,15 +4,17 @@ use zerocopy::{LittleEndian, U32};
 
 // - Classes ------------------------------------------------------------------
 
-/// Classes
+/// Collection of Great Communications Protocol classes
 #[derive(Copy, Clone)]
 pub struct Classes(pub &'static [Class]);
 
 impl Classes {
+    #[must_use]
     pub fn class(&self, id: ClassId) -> Option<&Class> {
         self.0.iter().find(|&class| class.id == id)
     }
 
+    #[must_use]
     pub fn new() -> Self {
         Self(&[])
     }
@@ -33,6 +35,7 @@ impl core::ops::Deref for Classes {
 
 // - Class --------------------------------------------------------------------
 
+/// Great Communications Protocol class
 #[derive(Copy, Clone)]
 pub struct Class {
     pub id: ClassId,
@@ -42,6 +45,7 @@ pub struct Class {
 }
 
 impl Class {
+    #[must_use]
     pub fn verb(&self, id: u32) -> Option<&Verb> {
         self.verbs.iter().find(|&verb| verb.id == id)
     }
@@ -49,7 +53,7 @@ impl Class {
 
 // - Verb ---------------------------------------------------------------------
 
-/// Verb
+/// Great Communications Protocol verb
 #[derive(Copy, Clone)]
 pub struct Verb {
     pub id: u32,
@@ -61,7 +65,7 @@ pub struct Verb {
     pub doc: &'static str,
 }
 
-/// Verb Descriptor
+/// Great Communications Protocol verb descriptor
 #[repr(u8)]
 pub enum VerbDescriptor {
     OutSignature = 0,
@@ -88,7 +92,7 @@ impl core::convert::From<u8> for VerbDescriptor {
 
 // - ClassId ------------------------------------------------------------------
 
-/// ClassId
+/// Great Communications Protocol class id
 #[repr(u32)]
 #[derive(Debug, PartialEq, Copy, Clone)]
 #[allow(non_camel_case_types)]
@@ -117,6 +121,7 @@ impl core::convert::From<u32> for ClassId {
 }
 
 impl ClassId {
+    #[must_use]
     pub const fn into_u32(&self) -> u32 {
         match self {
             ClassId::core => 0x0000,

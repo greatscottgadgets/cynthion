@@ -1,23 +1,27 @@
+//! Implementation for the GCP `moondancer` class.
+
 use log::{debug, error, trace, warn};
 use zerocopy::{FromBytes, LittleEndian, Unaligned, U16, U32};
+
+use crate::{hal, pac};
+use hal::smolusb;
+use pac::csr::interrupt;
 
 use smolusb::device::Speed;
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Direction, SetupPacket};
 use smolusb::traits::{ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations};
 
-use ladybug::{Bit, Channel};
-
 use libgreat::error::{GreatError, GreatResult};
-use libgreat::gcp::{self, iter_to_response, GreatResponse, Verb, LIBGREAT_MAX_COMMAND_SIZE};
+use libgreat::gcp::{
+    self, iter_to_response, GreatDispatch, GreatResponse, Verb, LIBGREAT_MAX_COMMAND_SIZE,
+};
 
-use crate::{hal, pac};
-use hal::smolusb;
-use pac::csr::interrupt;
+use ladybug::{Bit, Channel};
 
 // - types --------------------------------------------------------------------
 
-/// QuirkFlags
+/// USB quirk flags
 #[allow(non_snake_case, non_upper_case_globals)]
 pub mod QuirkFlag {
     pub const SetAddressManually: u16 = 0x0001;
@@ -57,6 +61,7 @@ pub struct Moondancer {
 }
 
 impl Moondancer {
+    #[must_use]
     pub fn new(usb0: hal::Usb0) -> Self {
         Self {
             usb0,
@@ -70,7 +75,6 @@ impl Moondancer {
         }
     }
 
-    #[inline(always)]
     pub fn dispatch_event(&mut self, event: UsbEvent) {
         // filter interrupt events
         let event = match event {
@@ -170,7 +174,16 @@ impl Moondancer {
                 event
             }
 
-            _ => event,
+            UsbEvent::ReceiveControl(_) => {
+                // no-op, just pass it on through
+                event
+            }
+
+            #[cfg(feature = "chonky_events")]
+            UsbEvent::ReceiveBuffer(_, _, _) => {
+                // no-op, just pass it on through
+                event
+            }
         };
 
         // enqueue interrupt event
@@ -191,7 +204,7 @@ impl Moondancer {
     /// # Safety
     ///
     /// This function operates directly on the CPU's Machine IRQ Mask
-    /// register. It is not thread-safe and any pending interrupts
+    /// register. It is not interrupt-safe and any pending interrupts
     /// may be dropped when calling it.
     pub unsafe fn enable_usb_interrupts(&self) {
         interrupt::enable(pac::Interrupt::USB0);
@@ -208,7 +221,7 @@ impl Moondancer {
     /// # Safety
     ///
     /// This function operates directly on the CPU's Machine IRQ Mask
-    /// register. It is not thread-safe and any pending interrupts
+    /// register. It is not interrupt-safe and any pending interrupts
     /// may be dropped when calling it.
     pub unsafe fn disable_usb_interrupts(&self) {
         // disable all usb events
@@ -298,7 +311,7 @@ impl Moondancer {
 // - verb implementations: status & control -----------------------------------
 
 impl Moondancer {
-    /// Read a control packet from SetupFIFOInterface.
+    /// Returns the earliest control packet in the queue.
     pub fn read_control(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let setup_packet = match self.control_queue.dequeue() {
             Some(setup_packet) => setup_packet,
@@ -397,7 +410,7 @@ impl Moondancer {
             }
 
             // configure endpoint max packet sizes
-            if Direction::from_endpoint_address(endpoint.address) == Direction::HostToDevice {
+            if Direction::from(endpoint.address) == Direction::HostToDevice {
                 self.ep_out_max_packet_size[endpoint_number as usize] =
                     endpoint.max_packet_size.into();
             } else {
@@ -406,7 +419,7 @@ impl Moondancer {
             }
 
             // prime any OUT endpoints
-            if Direction::from_endpoint_address(endpoint.address) == Direction::HostToDevice {
+            if Direction::from(endpoint.address) == Direction::HostToDevice {
                 log::debug!(
                     "  priming HostToDevice (OUT) endpoint address: {}",
                     endpoint.address
@@ -519,8 +532,9 @@ impl Moondancer {
         }
 
         let mut rx_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
+        #[allow(clippy::cast_possible_truncation)] // seriously clippy?
         for (index, byte) in rx_buffer.iter_mut().enumerate() {
-            *byte = (index % u8::MAX as usize) as u8;
+            *byte = (index % usize::from(u8::MAX)) as u8;
         }
 
         Ok(rx_buffer.into_iter().take(payload_length))
@@ -750,7 +764,7 @@ impl Moondancer {
     ///
     /// bitmask
     pub fn get_nak_status(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        let nak_status = self.usb0.ep_in.nak().read().bits() as u16;
+        let nak_status = (self.usb0.ep_in.nak().read().bits() & 0xffff) as u16;
         Ok(nak_status.to_le_bytes().into_iter())
     }
 }
@@ -924,8 +938,8 @@ pub static VERBS: [Verb; 16] = [
 
 // - dispatch -----------------------------------------------------------------
 
-impl Moondancer {
-    pub fn dispatch(
+impl GreatDispatch for Moondancer {
+    fn dispatch(
         &mut self,
         verb_number: u32,
         arguments: &[u8],

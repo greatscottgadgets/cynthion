@@ -49,16 +49,16 @@ impl core::fmt::Debug for UsbEvent {
                 write!(f, "BusReset")
             }
             UsbEvent::ReceiveControl(endpoint) => {
-                write!(f, "ReceiveControl({})", endpoint)
+                write!(f, "ReceiveControl({endpoint})")
             }
             UsbEvent::ReceivePacket(endpoint) => {
-                write!(f, "ReceivePacket({})", endpoint)
+                write!(f, "ReceivePacket({endpoint})")
             }
             UsbEvent::SendComplete(endpoint) => {
-                write!(f, "SendComplete({})", endpoint)
+                write!(f, "SendComplete({endpoint})")
             }
             UsbEvent::ReceiveSetupPacket(endpoint, setup_packet) => {
-                write!(f, "ReceiveSetupPacket({}, {:?})", endpoint, setup_packet)
+                write!(f, "ReceiveSetupPacket({endpoint}, {setup_packet:?})")
             }
             #[cfg(feature = "chonky_events")]
             UsbEvent::ReceiveBuffer(endpoint, bytes_read, _buffer) => {
@@ -93,7 +93,7 @@ impl core::convert::From<UsbEvent> for [u8; 2] {
             ReceivePacket(endpoint_number) => [event.into(), endpoint_number],
             #[cfg(feature = "chonky_events")]
             ReceiveBuffer(endpoint_number, _, _) => {
-                [event.into(), interface as u8, endpoint_number]
+                [event.into(), endpoint_number]
             }
             SendComplete(endpoint_number) => [event.into(), endpoint_number],
         }
@@ -101,6 +101,7 @@ impl core::convert::From<UsbEvent> for [u8; 2] {
 }
 
 impl UsbEvent {
+    #[must_use]
     pub fn into_bytes(self) -> [u8; 2] {
         self.into()
     }

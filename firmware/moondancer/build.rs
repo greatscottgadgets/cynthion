@@ -3,10 +3,7 @@ use std::str;
 
 fn main() {
     // TODO Tracking Issue: https://github.com/rust-lang/rust/issues/94039
-    let target = match rustc_target() {
-        Some(target) => target,
-        None => return,
-    };
+    let Some(target) = rustc_target() else { return };
     if target_has_atomic(&target) {
         println!("cargo:rustc-cfg=target_has_atomic");
     }

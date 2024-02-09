@@ -7,7 +7,11 @@ use log::{debug, error, info};
 use libgreat::GreatResult;
 
 use smolusb::control::Control;
-use smolusb::descriptor::*;
+use smolusb::descriptor::{
+    ConfigurationDescriptor, ConfigurationDescriptorHeader, DescriptorType, DeviceDescriptor,
+    DeviceQualifierDescriptor, EndpointDescriptor, InterfaceDescriptor, InterfaceDescriptorHeader,
+    LanguageId, StringDescriptor, StringDescriptorZero,
+};
 use smolusb::device::{Descriptors, Speed};
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Direction, SetupPacket};
@@ -54,7 +58,7 @@ fn dispatch_event(event: InterruptEvent) {
 
 #[allow(non_snake_case)]
 #[no_mangle]
-fn MachineExternal() {
+extern "C" fn MachineExternal() {
     use moondancer::UsbInterface::Target;
 
     let usb0 = unsafe { hal::Usb0::summon() };
@@ -237,10 +241,7 @@ fn main_loop() -> GreatResult<()> {
             // Usb0 received a control event
             match event {
                 #[cfg(feature = "chonky_events")]
-                Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveSetupPacket(0, _))
-                | Usb(Target, event @ ReceiveBuffer(0, _, _))
-                | Usb(Target, event @ SendComplete(0)) => {
+                Usb(Target, event @ (BusReset | ReceiveSetupPacket(0, _) | ReceiveBuffer(0, _, _) | SendComplete(0))) => {
                     let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
                         control.dispatch_event(&usb0, event)
                     });
@@ -252,10 +253,7 @@ fn main_loop() -> GreatResult<()> {
                     }
                 }
                 #[cfg(not(feature = "chonky_events"))]
-                Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveSetupPacket(0, _))
-                | Usb(Target, event @ ReceivePacket(0))
-                | Usb(Target, event @ SendComplete(0)) => {
+                Usb(Target, event @ (BusReset | ReceiveSetupPacket(0, _) | ReceivePacket(0) | SendComplete(0))) => {
                     let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
                         control.dispatch_event(&usb0, event)
                     });
@@ -359,7 +357,8 @@ where
         }
         (VENDOR_REQUEST, VENDOR_VALUE_BULK_IN) => {
             let endpoint_number = ENDPOINT_BULK_IN & 0x7f;
-            let test_data: [u8; MAX_TRANSFER_SIZE] = core::array::from_fn(|x| x as u8);
+            #[allow(clippy::cast_possible_truncation)]
+            let test_data: [u8; MAX_TRANSFER_SIZE] = core::array::from_fn(|x| (x & 0xff) as u8);
             let test_data = test_data.iter().take(payload_length);
 
             // send zlp response because there was no data TODO see above

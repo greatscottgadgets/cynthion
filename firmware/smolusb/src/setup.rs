@@ -25,6 +25,7 @@ impl From<[u8; 8]> for SetupPacket {
 
 // TODO use impl From and same semantics as InterruptEvent conversion
 impl SetupPacket {
+    #[must_use]
     pub fn as_bytes(setup_packet: SetupPacket) -> [u8; 8] {
         // Serialize into bytes in the most cursed manner available to us
         // TODO do this properly
@@ -33,18 +34,22 @@ impl SetupPacket {
 }
 
 impl SetupPacket {
+    #[must_use]
     pub fn request_type(&self) -> RequestType {
         RequestType::from(self.request_type)
     }
 
+    #[must_use]
     pub fn recipient(&self) -> Recipient {
         Recipient::from(self.request_type)
     }
 
+    #[must_use]
     pub fn direction(&self) -> Direction {
         Direction::from(self.request_type)
     }
 
+    #[must_use]
     pub fn request(&self) -> Request {
         Request::from(self.request)
     }
@@ -110,19 +115,11 @@ impl Direction {
 }
 
 impl From<u8> for Direction {
-    fn from(request_type: u8) -> Self {
-        match (request_type & 0b1000_0000) == 0 {
-            true => Direction::HostToDevice,
-            false => Direction::DeviceToHost,
-        }
-    }
-}
-
-impl Direction {
-    pub fn from_endpoint_address(endpoint_address: u8) -> Self {
-        match (endpoint_address & 0b10000000) == 0 {
-            true => Direction::HostToDevice,
-            false => Direction::DeviceToHost,
+    fn from(endpoint_or_request_type: u8) -> Self {
+        if endpoint_or_request_type & 0b1000_0000 == 0 {
+            Direction::HostToDevice
+        } else {
+            Direction::DeviceToHost
         }
     }
 }

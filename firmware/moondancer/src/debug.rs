@@ -1,6 +1,7 @@
 //! ladybug implementation for cynthion
 use crate::pac;
 
+#[allow(clippy::needless_pass_by_value)]
 pub fn init(_gpioa: pac::GPIOA, _gpiob: pac::GPIOB) {
     #[cfg(feature = "ladybug")]
     unsafe {

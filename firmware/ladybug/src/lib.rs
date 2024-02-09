@@ -72,6 +72,7 @@ pub fn set_analyzer(analyzer: &'static dyn LogicAnalyzer) {
 }
 
 /// Returns a reference to the logic analyzer.
+#[must_use]
 pub fn ladybug() -> &'static dyn LogicAnalyzer {
     unsafe { LADYBUG }
 }
@@ -83,6 +84,7 @@ pub fn ladybug() -> &'static dyn LogicAnalyzer {
 /// This is not interrupt safe so you'll want to make sure you use
 /// separate channels for tracing in your main program loop vs
 /// interrupt handlers.
+#[allow(clippy::inline_always)]
 #[inline(always)]
 pub fn trace<R>(channel: Channel, bit_number: u8, f: impl FnOnce() -> R) -> R {
     #[cfg(not(feature = "enable"))]

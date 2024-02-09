@@ -10,7 +10,7 @@ use zerocopy::{AsBytes, FromBytes};
 use crate::traits::AsByteSliceIterator;
 use crate::SmolError;
 
-/// DescriptorType
+/// USB descriptor type.
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(u8)]
 pub enum DescriptorType {
@@ -91,6 +91,8 @@ pub struct DeviceDescriptor {
 impl AsByteSliceIterator for DeviceDescriptor {}
 
 impl DeviceDescriptor {
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn new() -> Self {
         Self {
             _length: size_of::<Self>() as u8,
@@ -137,6 +139,8 @@ pub struct DeviceQualifierDescriptor {
 impl AsByteSliceIterator for DeviceQualifierDescriptor {}
 
 impl DeviceQualifierDescriptor {
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn new() -> Self {
         Self {
             _length: size_of::<Self>() as u8,
@@ -177,6 +181,8 @@ pub struct ConfigurationDescriptorHeader {
 impl AsByteSliceIterator for ConfigurationDescriptorHeader {}
 
 impl ConfigurationDescriptorHeader {
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn new() -> Self {
         Self {
             _length: size_of::<Self>() as u8,
@@ -199,6 +205,8 @@ pub struct ConfigurationDescriptor<'a> {
 }
 
 impl<'a> ConfigurationDescriptor<'a> {
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn new(
         mut head: ConfigurationDescriptorHeader,
         tail: &'a [InterfaceDescriptor],
@@ -212,10 +220,21 @@ impl<'a> ConfigurationDescriptor<'a> {
     /// Calculate and update the descriptor total length field
     pub fn set_total_length(&mut self) -> usize {
         let total_length = self.iter().count();
-        self.head._total_length = total_length as u16;
+        if let Ok(total_length) = u16::try_from(total_length) {
+            self.head._total_length = total_length;
+        } else {
+            log::warn!(
+                "Configuration descriptor is too long. Truncating to {} bytes.",
+                u16::MAX
+            );
+            self.head._total_length = u16::MAX;
+        }
+
         total_length
     }
 
+    #[must_use]
+    #[allow(clippy::iter_without_into_iter)]
     pub fn iter(&self) -> ConfigurationDescriptorIterator {
         ConfigurationDescriptorIterator::new(self)
     }
@@ -227,6 +246,7 @@ pub struct ConfigurationDescriptorIterator<'a> {
 }
 
 impl<'a> ConfigurationDescriptorIterator<'a> {
+    #[must_use]
     pub fn new(descriptor: &'a ConfigurationDescriptor) -> Self {
         let head_iter: slice::Iter<'a, u8> = descriptor.head.as_iter();
         let tail_iter: ConfigurationDescriptorTailIterator = descriptor
@@ -276,6 +296,8 @@ pub struct InterfaceDescriptorHeader {
 impl AsByteSliceIterator for InterfaceDescriptorHeader {}
 
 impl InterfaceDescriptorHeader {
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn new() -> Self {
         Self {
             _length: size_of::<Self>() as u8,
@@ -298,12 +320,16 @@ pub struct InterfaceDescriptor<'a> {
 }
 
 impl<'a> InterfaceDescriptor<'a> {
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn new(mut head: InterfaceDescriptorHeader, tail: &'a [EndpointDescriptor]) -> Self {
         head._length = size_of::<InterfaceDescriptorHeader>() as u8;
         head._num_endpoints = tail.len() as u8;
         Self { head, tail }
     }
 
+    #[must_use]
+    #[allow(clippy::iter_without_into_iter)]
     pub fn iter(&'a self) -> CompositeIterator<'a, InterfaceDescriptorHeader, EndpointDescriptor> {
         let iter = CompositeIterator::new(&self.head, self.tail);
         iter
@@ -327,6 +353,8 @@ pub struct EndpointDescriptor {
 impl AsByteSliceIterator for EndpointDescriptor {}
 
 impl EndpointDescriptor {
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn new() -> Self {
         Self {
             _length: size_of::<Self>() as u8,
@@ -367,6 +395,8 @@ pub struct StringDescriptorZero<'a> {
 }
 
 impl<'a> StringDescriptorZero<'a> {
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn new(language_ids: &'a [LanguageId]) -> Self {
         let head_length = size_of::<StringDescriptorHeader>();
         let tail_length = language_ids.len() * size_of::<LanguageId>();
@@ -379,6 +409,8 @@ impl<'a> StringDescriptorZero<'a> {
         }
     }
 
+    #[must_use]
+    #[allow(clippy::iter_without_into_iter)]
     pub fn iter(&'a self) -> CompositeIterator<'a, StringDescriptorHeader, LanguageId> {
         let iter = CompositeIterator::new(&self.head, self.tail);
         iter
@@ -396,6 +428,7 @@ pub struct StringDescriptorHeader {
 }
 
 impl StringDescriptorHeader {
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             _length: 0,
@@ -414,6 +447,8 @@ pub struct StringDescriptor<'a> {
 }
 
 impl<'a> StringDescriptor<'a> {
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn new(string: &'a str) -> Self {
         let head_length = size_of::<StringDescriptorHeader>();
         // TODO this may not be accurate
@@ -431,13 +466,27 @@ impl<'a> StringDescriptor<'a> {
 
 impl<'a> StringDescriptor<'a> {
     /// Calculate and update the descriptor length field
+    ///
+    /// TODO for consistency we should consume self and return the
+    /// updated version instead of the length.
     pub fn set_length(&mut self) -> usize {
         let length = self.iter().count();
-        self.head._length = length as u8;
+        //self.head._length = length as u8;
+        if let Ok(length) = u8::try_from(length) {
+            self.head._length = length;
+        } else {
+            log::warn!(
+                "String descriptor is too long. Truncating to {} bytes.",
+                u8::MAX
+            );
+            self.head._length = u8::MAX;
+        }
         length
     }
 
     /// Returns an iterator to the descriptor
+    #[allow(clippy::cloned_instead_of_copied)]
+    #[allow(clippy::iter_without_into_iter)]
     pub fn iter(&'a self) -> StringDescriptorIterator<'a> {
         let head_iter: slice::Iter<'a, u8> = self.head.as_iter();
 
@@ -451,14 +500,6 @@ impl<'a> StringDescriptor<'a> {
 pub type StringDescriptorIterator<'a> =
     iter::Chain<iter::Cloned<slice::Iter<'a, u8>>, Utf16ByteIterator<'a>>;
 
-#[allow(dead_code)]
-fn static_test_string_descriptor() {
-    let descriptor = StringDescriptor::new("TRI-FIFO Example");
-    for byte in descriptor.iter() {
-        let _byte: u8 = byte;
-    }
-}
-
 // - Utf16ByteIterator --------------------------------------------------------
 
 #[derive(Clone)]
@@ -468,6 +509,7 @@ pub struct Utf16ByteIterator<'a> {
 }
 
 impl<'a> Utf16ByteIterator<'a> {
+    #[must_use]
     pub fn new(encode_utf16: core::str::EncodeUtf16<'a>) -> Self {
         Self {
             encode_utf16,

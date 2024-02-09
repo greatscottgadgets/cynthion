@@ -9,12 +9,16 @@ pub mod class;
 pub mod class_core;
 pub use class::*;
 
-use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, LittleEndian, Unaligned, U32};
+// - constants ----------------------------------------------------------------
 
 /// Maximum length of a libgreat command or response
 pub const LIBGREAT_MAX_COMMAND_SIZE: usize = 1024;
 
-/// CommandPrelude
+// - types --------------------------------------------------------------------
+
+use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, LittleEndian, Unaligned, U32};
+
+/// Great Communication Protocol command prelude
 #[repr(C)]
 #[derive(Debug, FromBytes, AsBytes, Unaligned)]
 pub struct CommandPrelude {
@@ -50,9 +54,27 @@ where
     }
 }
 
-// - helpers ------------------------------------------------------------------
-
 pub type GreatResponse = core::iter::Take<core::array::IntoIter<u8, LIBGREAT_MAX_COMMAND_SIZE>>;
+
+// - traits -------------------------------------------------------------------
+
+use crate::GreatResult;
+
+pub trait GreatDispatch {
+    /// Dispatches a GCP verb.
+    ///
+    /// # Errors
+    ///
+    /// Will return [`GreatError`](crate::error::GreatError) on failure.
+    fn dispatch(
+        &mut self,
+        verb_number: u32,
+        arguments: &[u8],
+        response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE],
+    ) -> GreatResult<GreatResponse>;
+}
+
+// - helpers ------------------------------------------------------------------
 
 /// Squashes an arbitrary Iterator type into a [`GreatResponse`].
 ///

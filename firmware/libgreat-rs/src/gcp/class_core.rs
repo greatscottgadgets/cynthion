@@ -1,4 +1,5 @@
-use log::trace;
+#![allow(clippy::missing_errors_doc)]
+
 use zerocopy::{FromBytes, LittleEndian, Unaligned, U32};
 
 use crate::error::{GreatError, GreatResult};
@@ -129,6 +130,7 @@ pub struct Core {
 }
 
 impl Core {
+    #[must_use]
     pub fn new(classes: Classes, board_information: BoardInformation) -> Self {
         Self {
             classes,
@@ -142,25 +144,21 @@ impl Core {
 impl Core {
     pub fn read_board_id(&self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let board_id = self.board_information.board_id;
-        trace!("  sending board id: {:?}", board_id);
         Ok(board_id.into_iter())
     }
 
     pub fn read_version_string(&self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let version_string = self.board_information.version_string;
-        trace!("  sending version string: {:?}", version_string);
         Ok(version_string.as_bytes().iter().copied())
     }
 
     pub fn read_part_id(&self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let part_id = self.board_information.part_id;
-        trace!("  sending part id: {:?}", part_id);
         Ok(part_id.into_iter())
     }
 
     pub fn read_serial_number(&self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let serial_number = self.board_information.serial_number;
-        trace!("  sending serial number: {:?}", serial_number);
         Ok(serial_number.into_iter())
     }
 }
@@ -242,7 +240,6 @@ impl Core {
     }
 
     pub fn get_class_name(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        trace!("  get_class_name: {:?}", arguments);
         #[repr(C)]
         #[derive(FromBytes, Unaligned)]
         struct Args {
@@ -275,11 +272,11 @@ impl Core {
 
 // - dispatch -----------------------------------------------------------------
 
-use crate::gcp::{iter_to_response, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
+use crate::gcp::{iter_to_response, GreatDispatch, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
 
-impl Core {
-    pub fn dispatch(
-        &self,
+impl GreatDispatch for Core {
+    fn dispatch(
+        &mut self,
         verb_number: u32,
         arguments: &[u8],
         response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE],

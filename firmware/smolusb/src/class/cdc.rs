@@ -1,4 +1,8 @@
-use crate::descriptor::*;
+use crate::descriptor::{
+    ConfigurationDescriptor, ConfigurationDescriptorHeader, DescriptorType, DeviceDescriptor,
+    DeviceQualifierDescriptor, EndpointDescriptor, InterfaceDescriptor, InterfaceDescriptorHeader,
+    LanguageId, StringDescriptor, StringDescriptorZero,
+};
 
 pub const VENDOR_ID: u16 = 0x1a86; // QinHeng Electronics
 pub const PRODUCT_ID: u16 = 0x7523; // CH341 in serial mode, usb to serial port converter

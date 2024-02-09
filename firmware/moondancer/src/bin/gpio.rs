@@ -16,7 +16,7 @@ use riscv_rt::entry;
 
 #[allow(non_snake_case)]
 #[no_mangle]
-fn MachineExternal() {
+extern "C" fn MachineExternal() {
     let peripherals = unsafe { pac::Peripherals::steal() };
     let gpioa = &peripherals.GPIOA;
 
@@ -64,7 +64,7 @@ fn main() -> ! {
         riscv::register::mie::set_mext();
 
         // write csr: enable gpioa interrupt
-        pac::csr::interrupt::enable(pac::Interrupt::GPIOA)
+        pac::csr::interrupt::enable(pac::Interrupt::GPIOA);
     }
 
     info!("Peripherals initialized, entering main loop.");

@@ -28,21 +28,18 @@ pub mod interrupt {
         while register::mim::read() != mask {}
     }
 
+    #[must_use]
     pub fn reg_mask() -> usize {
         register::mim::read()
     }
 
-    // TODO decide on params - basically what we need to know is
-    // whether minerva gets ratty inbetween calls to read the csr
-    // registers
-    //pub fn is_pending(pending: usize, interrupt: Interrupt) -> bool {
-    //    (pending & (1 << interrupt as usize)) != 0
-    //}
+    #[must_use]
     pub fn pending(interrupt: Interrupt) -> bool {
         let pending = register::mip::read();
         (pending & (1 << interrupt as usize)) != 0
     }
 
+    #[must_use]
     pub fn reg_pending() -> usize {
         register::mip::read()
     }

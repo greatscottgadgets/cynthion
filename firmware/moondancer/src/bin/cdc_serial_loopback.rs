@@ -21,8 +21,7 @@ const MAX_CONTROL_RESPONSE_SIZE: usize = 8;
 
 // - types --------------------------------------------------------------------
 
-/// The UsbDataPacket struct represents a single packet of data
-/// received from a USB port.
+/// Represents a single packet of data received from a USB port.
 pub struct UsbDataPacket {
     pub interface: moondancer::UsbInterface,
     pub endpoint: u8,
@@ -62,7 +61,7 @@ fn dispatch_receive_packet(usb_receive_packet: UsbDataPacket) {
 
 #[allow(non_snake_case)]
 #[no_mangle]
-fn MachineExternal() {
+extern "C" fn MachineExternal() {
     use moondancer::UsbInterface::{Aux, Target};
 
     // peripherals
@@ -262,10 +261,7 @@ fn main() -> ! {
 
             match event {
                 // Usb0 received a control event
-                Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveControl(0))
-                | Usb(Target, event @ ReceivePacket(0))
-                | Usb(Target, event @ SendComplete(0)) => {
+                Usb(Target, event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0))) => {
                     if let Some((setup_packet, _rx_buffer)) =
                         control_usb0.dispatch_event(&usb0, event)
                     {
@@ -275,10 +271,7 @@ fn main() -> ! {
                 }
 
                 // Usb1 received a control event
-                Usb(Aux, event @ BusReset)
-                | Usb(Aux, event @ ReceiveControl(0))
-                | Usb(Aux, event @ ReceivePacket(0))
-                | Usb(Aux, event @ SendComplete(0)) => {
+                Usb(Aux, event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0))) => {
                     if let Some((setup_packet, _rx_buffer)) =
                         control_usb1.dispatch_event(&usb1, event)
                     {

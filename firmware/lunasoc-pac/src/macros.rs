@@ -34,6 +34,7 @@ macro_rules! read_csr_as_usize {
         crate::macros::read_csr!($csr_number);
 
         #[inline]
+        #[allow(clippy::must_use_candidate)]
         pub fn read() -> usize {
             unsafe { _read() }
         }

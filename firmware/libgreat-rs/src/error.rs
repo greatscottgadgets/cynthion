@@ -1,11 +1,11 @@
 //! Error and Result types
 
-/// GreatResult
+/// libgreat [`Result`] type.
 pub type GreatResult<T> = core::result::Result<T, GreatError>;
 
-/// GreatError provides a uniform set of error codes common to all
-/// libgreat implementations, and that are consistent over platform
-/// and RPC boundaries.
+/// Provides a uniform set of error codes common to all libgreat
+/// implementations, and that are consistent over platform and RPC
+/// boundaries.
 ///
 /// Derived from: [libgreat/firmware/include/errno.h](https://github.com/greatscottgadgets/libgreat/blob/master/firmware/include/errno.h)
 #[cfg(feature = "errno_minimal")]
