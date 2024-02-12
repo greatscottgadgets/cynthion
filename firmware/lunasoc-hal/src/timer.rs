@@ -20,12 +20,12 @@ macro_rules! impl_timer {
 
             // lifecycle
             impl $TIMERX {
-                /// Create a new `Timer` from the [`TIMER`](pac::TIMER) peripheral.
+                /// Create a new `Timer` from the [`TIMER`](crate::pac::TIMER) peripheral.
                 pub fn new(registers: $PACTIMERX, clk: u32) -> Self {
                     Self { registers, clk }
                 }
 
-                /// Release the [`TIMER`](pac::TIMER) peripheral and consume self.
+                /// Release the [`TIMER`](crate::pac::TIMER) peripheral and consume self.
                 pub fn free(self) -> $PACTIMERX {
                     self.registers
                 }

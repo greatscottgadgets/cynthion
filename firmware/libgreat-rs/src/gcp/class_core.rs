@@ -1,14 +1,12 @@
-use super::{ClassId, Command, Verb, VerbDescriptor};
+#![allow(clippy::missing_errors_doc)]
+
+use zerocopy::{FromBytes, LittleEndian, Unaligned, U32};
 
 use crate::error::{GreatError, GreatResult};
 use crate::firmware::BoardInformation;
 use crate::gcp::{self, Classes};
 
-use log::{error, trace};
-use zerocopy::{AsBytes, BigEndian, ByteSlice, FromBytes, LittleEndian, Unaligned, U32};
-
-use core::any::Any;
-use core::slice;
+use super::{Verb, VerbDescriptor};
 
 pub static CLASS: gcp::Class = gcp::Class {
     id: gcp::ClassId::core,
@@ -132,6 +130,7 @@ pub struct Core {
 }
 
 impl Core {
+    #[must_use]
     pub fn new(classes: Classes, board_information: BoardInformation) -> Self {
         Self {
             classes,
@@ -145,25 +144,21 @@ impl Core {
 impl Core {
     pub fn read_board_id(&self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let board_id = self.board_information.board_id;
-        trace!("  sending board id: {:?}", board_id);
         Ok(board_id.into_iter())
     }
 
     pub fn read_version_string(&self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let version_string = self.board_information.version_string;
-        trace!("  sending version string: {:?}", version_string);
-        Ok(version_string.as_bytes().into_iter().copied())
+        Ok(version_string.as_bytes().iter().copied())
     }
 
     pub fn read_part_id(&self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let part_id = self.board_information.part_id;
-        trace!("  sending part id: {:?}", part_id);
         Ok(part_id.into_iter())
     }
 
     pub fn read_serial_number(&self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let serial_number = self.board_information.serial_number;
-        trace!("  sending serial number: {:?}", serial_number);
         Ok(serial_number.into_iter())
     }
 }
@@ -214,7 +209,7 @@ impl Core {
         let verb = class
             .verb(args.verb_number.into())
             .ok_or(GreatError::InvalidArgument)?;
-        Ok(verb.name.as_bytes().into_iter().copied())
+        Ok(verb.name.as_bytes().iter().copied())
     }
 
     pub fn get_verb_descriptor(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
@@ -235,19 +230,16 @@ impl Core {
             .verb(args.verb_number.into())
             .ok_or(GreatError::InvalidArgument)?;
         match args.descriptor.into() {
-            VerbDescriptor::InSignature => Ok(verb.in_signature.as_bytes().into_iter().copied()),
-            VerbDescriptor::InParamNames => Ok(verb.in_param_names.as_bytes().into_iter().copied()),
-            VerbDescriptor::OutSignature => Ok(verb.out_signature.as_bytes().into_iter().copied()),
-            VerbDescriptor::OutParamNames => {
-                Ok(verb.out_param_names.as_bytes().into_iter().copied())
-            }
-            VerbDescriptor::Doc => Ok(verb.doc.as_bytes().into_iter().copied()),
-            VerbDescriptor::Unknown(value) => Err(GreatError::InvalidRequestDescriptor),
+            VerbDescriptor::InSignature => Ok(verb.in_signature.as_bytes().iter().copied()),
+            VerbDescriptor::InParamNames => Ok(verb.in_param_names.as_bytes().iter().copied()),
+            VerbDescriptor::OutSignature => Ok(verb.out_signature.as_bytes().iter().copied()),
+            VerbDescriptor::OutParamNames => Ok(verb.out_param_names.as_bytes().iter().copied()),
+            VerbDescriptor::Doc => Ok(verb.doc.as_bytes().iter().copied()),
+            VerbDescriptor::Unknown(_value) => Err(GreatError::InvalidRequestDescriptor),
         }
     }
 
     pub fn get_class_name(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        trace!("  get_class_name: {:?}", arguments);
         #[repr(C)]
         #[derive(FromBytes, Unaligned)]
         struct Args {
@@ -274,19 +266,17 @@ impl Core {
             .classes
             .class(class_id)
             .ok_or(GreatError::InvalidArgument)?;
-        Ok(class.docs.as_bytes().into_iter().copied())
+        Ok(class.docs.as_bytes().iter().copied())
     }
 }
 
 // - dispatch -----------------------------------------------------------------
 
-use crate::gcp::{iter_to_response, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
+use crate::gcp::{iter_to_response, GreatDispatch, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
 
-use core::{array, iter};
-
-impl Core {
-    pub fn dispatch(
-        &self,
+impl GreatDispatch for Core {
+    fn dispatch(
+        &mut self,
         verb_number: u32,
         arguments: &[u8],
         response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE],
@@ -295,65 +285,65 @@ impl Core {
             0x0 => {
                 // core::read_board_id
                 let iter = self.read_board_id(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x1 => {
                 // core::read_version_string
                 let iter = self.read_version_string(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x2 => {
                 // core::read_part_id
                 let iter = self.read_part_id(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x3 => {
                 // core::read_serial_number
                 let iter = self.read_serial_number(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x4 => {
                 // core::get_available_classes
                 let iter = self.get_available_classes(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x5 => {
                 // core::get_available_verbs
                 let iter = self.get_available_verbs(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x6 => {
                 // core::get_verb_name
                 let iter = self.get_verb_name(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x7 => {
                 // core::get_verb_descriptor
                 let iter = self.get_verb_descriptor(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x8 => {
                 // core::get_class_name
                 let iter = self.get_class_name(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x9 => {
                 // core::get_class_docs
                 let iter = self.get_class_docs(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
 
-            verb_number => Err(GreatError::InvalidArgument),
+            _verb_number => Err(GreatError::InvalidArgument),
         }
     }
 }

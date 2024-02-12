@@ -1,14 +1,12 @@
 //! A simple logger for the `log` crate which can log to any object
 //! implementing `Write`
 
-#![allow(unused_imports, unused_mut, unused_variables)]
-
-use crate::{hal, pac};
+use core::cell::RefCell;
+use core::fmt::Write;
 
 use log::{Level, LevelFilter, Metadata, Record};
 
-use core::cell::RefCell;
-use core::fmt::Write;
+use crate::hal;
 
 // - initialization -----------------------------------------------------------
 
@@ -17,6 +15,11 @@ static LOGGER: WriteLogger<hal::Serial> = WriteLogger {
     level: Level::Trace,
 };
 
+/// Initialized the log using the given serial peripheral.
+///
+/// # Panics
+///
+/// This function will panic if the logger cannot be initialized.
 pub fn init(writer: hal::Serial) {
     LOGGER.writer.replace(Some(writer));
 
@@ -45,7 +48,7 @@ pub fn init(writer: hal::Serial) {
 
 // - implementation -----------------------------------------------------------
 
-/// WriteLogger
+/// Logger for objects implementing [`Write`] and [`Send`].
 pub struct WriteLogger<W>
 where
     W: Write + Send,
@@ -62,31 +65,22 @@ where
         metadata.level() <= self.level
     }
 
+    /// Write the given record to the log
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if the logger has not been initialized.
     fn log(&self, record: &Record) {
         if !self.enabled(record.metadata()) {
             return;
         }
 
-        // evil, scary version that is guaranteed to not be interrupt safe
-        /*unsafe {
-            let mut writer = hal::Serial::summon();
-            match writeln!(writer, "{}\t{}", record.level(), record.args()) {
-                Ok(()) => (),
-                Err(_e) => {
-                    panic!("Logger failed to write to device");
-                }
-            }
-        }*/
-
         #[cfg(target_has_atomic)]
         {
             match self.writer.borrow_mut().as_mut() {
-                Some(writer) => match writeln!(writer, "{}\t{}", record.level(), record.args()) {
-                    Ok(()) => (),
-                    Err(_e) => {
-                        panic!("Logger failed to write to device");
-                    }
-                },
+                Some(writer) => {
+                    writeln!(writer, "{}\t{}", record.level(), record.args()).unwrap_or(());
+                }
                 None => {
                     panic!("Logger has not been initialized");
                 }
@@ -96,12 +90,9 @@ where
         #[cfg(not(target_has_atomic))]
         {
             riscv::interrupt::free(|| match self.writer.borrow_mut().as_mut() {
-                Some(writer) => match writeln!(writer, "{}\t{}", record.level(), record.args()) {
-                    Ok(()) => (),
-                    Err(_e) => {
-                        panic!("Logger failed to write to device");
-                    }
-                },
+                Some(writer) => {
+                    writeln!(writer, "{}\t{}", record.level(), record.args()).unwrap_or(());
+                }
                 None => {
                     panic!("Logger has not been initialized");
                 }
@@ -118,10 +109,10 @@ unsafe impl<W: Write + Send> Sync for WriteLogger<W> {}
 
 // - format! ------------------------------------------------------------------
 
-/// format! macro for no_std, no alloc environments
+/// format! macro for `no_std`, `no_alloc` environments
 ///
-/// Props: https://stackoverflow.com/questions/50200268/
-/// Props: https://github.com/Simsys/arrform
+/// Props: <https://stackoverflow.com/questions/50200268/>
+/// Props: <https://github.com/Simsys/arrform>
 ///
 /// TODO Re-use buffer
 
@@ -151,6 +142,7 @@ pub mod format_nostd {
     }
 
     impl BufferWriter {
+        #[must_use]
         pub fn new(buffer: [u8; SIZE]) -> Self {
             BufferWriter { buffer, cursor: 0 }
         }
@@ -159,12 +151,14 @@ pub mod format_nostd {
             self.cursor = 0;
         }
 
+        #[must_use]
         pub fn as_bytes(&self) -> &[u8] {
             &self.buffer[0..self.cursor]
         }
 
+        #[must_use]
         pub fn as_str(&self) -> &str {
-            core::str::from_utf8(&self.buffer[0..self.cursor]).expect("invalid utf-8 string")
+            core::str::from_utf8(&self.buffer[0..self.cursor]).unwrap_or("invalid utf-8 string")
         }
     }
 

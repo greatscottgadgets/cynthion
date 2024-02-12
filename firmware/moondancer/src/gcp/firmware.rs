@@ -75,7 +75,7 @@ pub fn initialize<'a>(
     let response = page_size
         .to_le_bytes()
         .into_iter()
-        .chain(total_size.to_le_bytes().into_iter());
+        .chain(total_size.to_le_bytes());
     Ok(response)
 }
 
@@ -142,31 +142,31 @@ pub fn dispatch(
         0x0 => {
             // firmware::initialize
             let iter = initialize(arguments, &no_context)?;
-            let response = unsafe { iter_to_response(iter, response_buffer) };
+            let response = iter_to_response(iter, response_buffer);
             Ok(response)
         }
         0x1 => {
             // firmware::full_erase
             let iter = full_erase(arguments, &no_context)?;
-            let response = unsafe { iter_to_response(iter, response_buffer) };
+            let response = iter_to_response(iter, response_buffer);
             Ok(response)
         }
         0x2 => {
             // firmware::page_erase
             let iter = page_erase(arguments, &no_context)?;
-            let response = unsafe { iter_to_response(iter, response_buffer) };
+            let response = iter_to_response(iter, response_buffer);
             Ok(response)
         }
         0x3 => {
             // firmware::write_page
             let iter = write_page(arguments, &no_context)?;
-            let response = unsafe { iter_to_response(iter, response_buffer) };
+            let response = iter_to_response(iter, response_buffer);
             Ok(response)
         }
         0x4 => {
             // firmware::read_page
             let iter = read_page(arguments, &no_context)?;
-            let response = unsafe { iter_to_response(iter, response_buffer) };
+            let response = iter_to_response(iter, response_buffer);
             Ok(response)
         }
 

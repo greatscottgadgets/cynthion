@@ -3,25 +3,30 @@ use smolusb::event::UsbEvent;
 use crate::pac;
 use crate::UsbInterface;
 
-/// InterruptEvent is used to notify the main loop of events received in the
-/// `MachineExternal` interrupt handler.
+/// Interrupt events are used to notify the main loop of events
+/// received in the `MachineExternal` interrupt handler.
 #[derive(Copy, Clone)]
 #[repr(u8)]
 pub enum InterruptEvent {
-    // interrupt events
+    /// Received an interrupt event
     Interrupt(pac::Interrupt),
+
+    /// Received an unknown interrupt event
     UnknownInterrupt(usize),
+
+    /// Received an unhandled interrupt event
     UnhandledInterrupt(usize),
 
-    // timer events
+    /// Received a timer event
     Timer(usize),
 
-    // usb events
     /// Received a USB event
     Usb(UsbInterface, UsbEvent),
 
-    // diagnostic events
+    /// Notify main loop of an error message
     ErrorMessage(&'static str),
+
+    /// Notify main loop of a debug message
     DebugMessage(&'static str),
 }
 
@@ -41,10 +46,9 @@ impl TryFrom<InterruptEvent> for UsbEvent {
 
 impl InterruptEvent {
     /// Convert a `[smolusb::Event]` to an `[InterruptEvent]`
+    #[must_use]
     pub fn from_smolusb_event(interface: UsbInterface, event: UsbEvent) -> InterruptEvent {
-        match event {
-            event => InterruptEvent::Usb(interface, event),
-        }
+        InterruptEvent::Usb(interface, event)
     }
 }
 
@@ -54,28 +58,28 @@ impl core::fmt::Debug for InterruptEvent {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             // interrupts
-            InterruptEvent::Interrupt(interrupt) => write!(f, "Event({:?})", interrupt),
+            InterruptEvent::Interrupt(interrupt) => write!(f, "Event({interrupt:?})"),
             InterruptEvent::UnknownInterrupt(interrupt) => {
-                write!(f, "UnknownInterrupt({})", interrupt)
+                write!(f, "UnknownInterrupt({interrupt})")
             }
             InterruptEvent::UnhandledInterrupt(interrupt) => {
-                write!(f, "UnhandledInterrupt({})", interrupt)
+                write!(f, "UnhandledInterrupt({interrupt})")
             }
 
             // timer events
-            InterruptEvent::Timer(n) => write!(f, "Timer({})", n),
+            InterruptEvent::Timer(n) => write!(f, "Timer({n})"),
 
             // usb events
             InterruptEvent::Usb(interface, event) => {
-                write!(f, "{:?} on {:?}", event, interface)
+                write!(f, "{event:?} on {interface:?}")
             }
 
             // misc
             InterruptEvent::ErrorMessage(message) => {
-                write!(f, "ErrorMessage({})", message)
+                write!(f, "ErrorMessage({message})")
             }
             InterruptEvent::DebugMessage(message) => {
-                write!(f, "DebugMessage({})", message)
+                write!(f, "DebugMessage({message})")
             }
         }
     }

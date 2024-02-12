@@ -1,4 +1,3 @@
-#![allow(dead_code, unused_imports, unused_mut, unused_variables)] // TODO
 #![no_std]
 #![no_main]
 
@@ -13,7 +12,7 @@ use smolusb::traits::{UsbDriverOperations, WriteEndpoint};
 
 use ladybug::{Bit, Channel};
 
-use libgreat::gcp::{GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
+use libgreat::gcp::{GreatDispatch, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
 use libgreat::{GreatError, GreatResult};
 
 use moondancer::event::InterruptEvent;
@@ -47,7 +46,7 @@ fn dispatch_event(event: InterruptEvent) {
 
 #[allow(non_snake_case)]
 #[no_mangle]
-fn MachineExternal() {
+extern "C" fn MachineExternal() {
     match moondancer::util::get_usb_interrupt_event() {
         InterruptEvent::UnhandledInterrupt(pending) => {
             dispatch_event(InterruptEvent::UnknownInterrupt(pending));
@@ -112,6 +111,15 @@ struct Firmware<'a> {
 
 impl<'a> Firmware<'a> {
     fn new(peripherals: pac::Peripherals) -> Self {
+        // initialize libgreat class registry
+        static CLASSES: [libgreat::gcp::Class; 4] = [
+            libgreat::gcp::class_core::CLASS,
+            moondancer::gcp::firmware::CLASS,
+            moondancer::gcp::selftest::CLASS,
+            moondancer::gcp::moondancer::CLASS,
+        ];
+        let classes = libgreat::gcp::Classes(&CLASSES);
+
         // initialize logging
         moondancer::log::init(hal::Serial::new(peripherals.UART));
         info!(
@@ -139,15 +147,6 @@ impl<'a> Firmware<'a> {
             peripherals.USB0_EP_IN,
             peripherals.USB0_EP_OUT,
         );
-
-        // initialize libgreat class registry
-        static CLASSES: [libgreat::gcp::Class; 4] = [
-            libgreat::gcp::class_core::CLASS,
-            moondancer::gcp::firmware::CLASS,
-            moondancer::gcp::selftest::CLASS,
-            moondancer::gcp::moondancer::CLASS,
-        ];
-        let classes = libgreat::gcp::Classes(&CLASSES);
 
         // initialize libgreat classes
         let core = libgreat::gcp::class_core::Core::new(classes, moondancer::BOARD_INFORMATION);
@@ -227,7 +226,7 @@ impl<'a> Firmware<'a> {
             // leds: main loop is responsive, interrupts are firing
             self.leds
                 .output()
-                .write(|w| unsafe { w.output().bits((counter % 256) as u8) });
+                .write(|w| unsafe { w.output().bits((counter % 0xff) as u8) });
 
             if queue_length > max_queue_length {
                 max_queue_length = queue_length;
@@ -236,6 +235,12 @@ impl<'a> Firmware<'a> {
             queue_length = 0;
 
             while let Some(interrupt_event) = EVENT_QUEUE.dequeue() {
+                use moondancer::{
+                    event::InterruptEvent::*,
+                    UsbInterface::{Aux, Target},
+                };
+                use smolusb::event::UsbEvent::*;
+
                 counter += 1;
                 queue_length += 1;
 
@@ -243,12 +248,6 @@ impl<'a> Firmware<'a> {
                 self.leds
                     .output()
                     .write(|w| unsafe { w.output().bits(1 << 0) });
-
-                use moondancer::{
-                    event::InterruptEvent::*,
-                    UsbInterface::{Aux, Target},
-                };
-                use smolusb::event::UsbEvent::*;
 
                 match interrupt_event {
                     // - misc event handlers --
@@ -259,20 +258,21 @@ impl<'a> Firmware<'a> {
                     // - usb1 Aux event handlers --
 
                     // Usb1 received a control event
-                    Usb(Aux, event @ BusReset)
-                    | Usb(Aux, event @ ReceiveControl(0))
-                    | Usb(Aux, event @ ReceiveSetupPacket(0, _))
-                    | Usb(Aux, event @ ReceivePacket(0))
-                    | Usb(Aux, event @ SendComplete(0)) => {
+                    Usb(
+                        Aux,
+                        event @ (BusReset
+                        | ReceiveControl(0)
+                        | ReceiveSetupPacket(0, _)
+                        | ReceivePacket(0)
+                        | SendComplete(0)),
+                    ) => {
                         trace!("Usb(Aux, {:?})", event);
 
-                        match usb1_control.dispatch_event(&self.usb1, event) {
+                        if let Some((setup_packet, rx_buffer)) =
+                            usb1_control.dispatch_event(&self.usb1, event)
+                        {
                             // vendor requests are not handled by control
-                            Some((setup_packet, rx_buffer)) => {
-                                self.handle_vendor_request(setup_packet, rx_buffer)?
-                            }
-                            // control event was handled
-                            None => (),
+                            self.handle_vendor_request(setup_packet, rx_buffer)?;
                         }
                     }
 
@@ -288,9 +288,6 @@ impl<'a> Firmware<'a> {
                 }
             }
         }
-
-        #[allow(unreachable_code)] // TODO
-        Ok(())
     }
 }
 
@@ -328,7 +325,7 @@ impl<'a> Firmware<'a> {
                     (VendorValue::Execute, Direction::DeviceToHost) => {
                         trace!("  GOT RESPONSE REQUEST");
                         ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_RESPONSE, || {
-                            self.dispatch_libgreat_response(&setup_packet)
+                            self.dispatch_libgreat_response(setup_packet)
                         })?;
                     }
 
@@ -336,7 +333,7 @@ impl<'a> Firmware<'a> {
                     (VendorValue::Cancel, Direction::DeviceToHost) => {
                         debug!("  GOT ABORT");
                         ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_ABORT, || {
-                            self.dispatch_libgreat_abort(&setup_packet)
+                            self.dispatch_libgreat_abort(setup_packet)
                         })?;
                     }
 
@@ -469,9 +466,7 @@ impl<'a> Firmware<'a> {
         Ok(())
     }
 
-    fn dispatch_libgreat_response(&mut self, _setup_packet: &SetupPacket) -> GreatResult<()> {
-        use smolusb::traits::UnsafeUsbDriverOperations;
-
+    fn dispatch_libgreat_response(&mut self, _setup_packet: SetupPacket) -> GreatResult<()> {
         // do we have a response ready?
         if let Some(response) = &mut self.libgreat_response {
             // send response
@@ -506,7 +501,7 @@ impl<'a> Firmware<'a> {
         Ok(())
     }
 
-    fn dispatch_libgreat_abort(&mut self, _setup_packet: &SetupPacket) -> GreatResult<()> {
+    fn dispatch_libgreat_abort(&mut self, _setup_packet: SetupPacket) -> GreatResult<()> {
         error!("dispatch_libgreat_response abort");
 
         // cancel any queued response

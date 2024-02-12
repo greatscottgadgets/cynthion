@@ -1,6 +1,7 @@
-//! Peripheral access API for Luna SoC designs generated using svd2rust.
+//! Peripheral access API for Luna System-on-Chip designs generated using svd2rust.
 
 #![no_std]
+#![allow(clippy::inline_always)]
 
 #[cfg(all(feature = "minerva", feature = "vexriscv"))]
 compile_error!(r#"Only one of the "minerva" or "vexriscv" features can be selected"#);
@@ -20,6 +21,7 @@ pub mod register {
 pub mod clock {
     const SYSTEM_CLOCK_FREQUENCY: u32 = 60_000_000;
 
+    #[must_use]
     pub const fn sysclk() -> u32 {
         SYSTEM_CLOCK_FREQUENCY
     }
@@ -40,6 +42,8 @@ pub mod clock {
 #[deny(while_true)]
 #[allow(non_camel_case_types)]
 #[allow(non_snake_case)]
+#[allow(clippy::must_use_candidate)]
+#[allow(clippy::semicolon_if_nothing_returned)]
 mod generated;
 
 pub use generated::generic::*;

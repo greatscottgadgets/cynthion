@@ -1,4 +1,3 @@
-#![allow(unused_imports)] // TODO
 #![no_std]
 #![no_main]
 
@@ -22,13 +21,12 @@ const MAX_CONTROL_RESPONSE_SIZE: usize = 8;
 
 // - types --------------------------------------------------------------------
 
-/// The UsbDataPacket struct represents a single packet of data
-/// received from a USB port.
+/// Represents a single packet of data received from a USB port.
 pub struct UsbDataPacket {
     pub interface: moondancer::UsbInterface,
     pub endpoint: u8,
     pub bytes_read: usize,
-    pub buffer: [u8; moondancer::EP_MAX_PACKET_SIZE],
+    pub buffer: [u8; smolusb::EP_MAX_PACKET_SIZE],
 }
 
 // - global static state ------------------------------------------------------
@@ -36,9 +34,8 @@ pub struct UsbDataPacket {
 use heapless::mpmc::MpMcQueue as Queue;
 use moondancer::event::InterruptEvent;
 
-static EVENT_QUEUE: Queue<InterruptEvent, { moondancer::EP_MAX_ENDPOINTS }> = Queue::new();
-static USB_RECEIVE_PACKET_QUEUE: Queue<UsbDataPacket, { moondancer::EP_MAX_ENDPOINTS }> =
-    Queue::new();
+static EVENT_QUEUE: Queue<InterruptEvent, { smolusb::EP_MAX_ENDPOINTS }> = Queue::new();
+static USB_RECEIVE_PACKET_QUEUE: Queue<UsbDataPacket, { smolusb::EP_MAX_ENDPOINTS }> = Queue::new();
 
 #[inline(always)]
 fn dispatch_event(event: InterruptEvent) {
@@ -64,7 +61,7 @@ fn dispatch_receive_packet(usb_receive_packet: UsbDataPacket) {
 
 #[allow(non_snake_case)]
 #[no_mangle]
-fn MachineExternal() {
+extern "C" fn MachineExternal() {
     use moondancer::UsbInterface::{Aux, Target};
 
     // peripherals
@@ -103,7 +100,7 @@ fn MachineExternal() {
             interface: Target,
             endpoint,
             bytes_read: 0,
-            buffer: [0_u8; moondancer::EP_MAX_PACKET_SIZE],
+            buffer: [0_u8; smolusb::EP_MAX_PACKET_SIZE],
         };
         receive_packet.bytes_read = usb0.read(endpoint, &mut receive_packet.buffer);
 
@@ -132,7 +129,7 @@ fn MachineExternal() {
             interface: Aux,
             endpoint,
             bytes_read: 0,
-            buffer: [0_u8; moondancer::EP_MAX_PACKET_SIZE],
+            buffer: [0_u8; smolusb::EP_MAX_PACKET_SIZE],
         };
         receive_packet.bytes_read = usb1.read(endpoint, &mut receive_packet.buffer);
 
@@ -264,32 +261,28 @@ fn main() -> ! {
 
             match event {
                 // Usb0 received a control event
-                Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveControl(0))
-                | Usb(Target, event @ ReceivePacket(0))
-                | Usb(Target, event @ SendComplete(0)) => {
-                    match control_usb0.dispatch_event(&usb0, event) {
+                Usb(
+                    Target,
+                    event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0)),
+                ) => {
+                    if let Some((setup_packet, _rx_buffer)) =
+                        control_usb0.dispatch_event(&usb0, event)
+                    {
                         // vendor requests are not handled by control
-                        Some((setup_packet, _rx_buffer)) => {
-                            handle_vendor_request(&usb0, setup_packet);
-                        }
-                        // control event was handled
-                        None => (),
+                        handle_vendor_request(&usb0, setup_packet);
                     }
                 }
 
                 // Usb1 received a control event
-                Usb(Aux, event @ BusReset)
-                | Usb(Aux, event @ ReceiveControl(0))
-                | Usb(Aux, event @ ReceivePacket(0))
-                | Usb(Aux, event @ SendComplete(0)) => {
-                    match control_usb1.dispatch_event(&usb1, event) {
+                Usb(
+                    Aux,
+                    event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0)),
+                ) => {
+                    if let Some((setup_packet, _rx_buffer)) =
+                        control_usb1.dispatch_event(&usb1, event)
+                    {
                         // vendor requests are not handled by control
-                        Some((setup_packet, _rx_buffer)) => {
-                            handle_vendor_request(&usb1, setup_packet);
-                        }
-                        // control event was handled
-                        None => (),
+                        handle_vendor_request(&usb1, setup_packet);
                     }
                 }
 
@@ -329,10 +322,7 @@ fn main() -> ! {
                             endpoint,
                             &buffer[0..8],
                         );
-                        usb1.write(
-                            endpoint,
-                            buffer.iter().copied().take(bytes_read).into_iter(),
-                        );
+                        usb1.write(endpoint, buffer.iter().copied().take(bytes_read));
                         info!("Sent {} bytes to usb1 endpoint: {}", bytes_read, endpoint);
                     }
                     usb0.ep_out_prime_receive(endpoint);
@@ -347,10 +337,7 @@ fn main() -> ! {
                             endpoint,
                             &buffer[0..8],
                         );
-                        usb0.write(
-                            endpoint,
-                            buffer.iter().copied().take(bytes_read).into_iter(),
-                        );
+                        usb0.write(endpoint, buffer.iter().copied().take(bytes_read));
                         info!("Sent {} bytes to usb0 endpoint: {}", bytes_read, endpoint);
                     }
                     usb1.ep_out_prime_receive(endpoint);
@@ -365,7 +352,7 @@ fn main() -> ! {
 
 // - vendor request handler ---------------------------------------------------
 
-fn handle_vendor_request<'a, D>(usb: &D, setup_packet: SetupPacket)
+fn handle_vendor_request<D>(usb: &D, setup_packet: SetupPacket)
 where
     D: ReadControl + ReadEndpoint + WriteEndpoint + UsbDriverOperations,
 {

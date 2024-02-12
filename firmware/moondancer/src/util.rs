@@ -1,12 +1,8 @@
-#![allow(dead_code, unused_imports, unused_variables)] // TODO
-
 use ladybug::{Bit, Channel};
 
 use smolusb::event::UsbEvent;
 use smolusb::setup::SetupPacket;
-use smolusb::traits::{
-    ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
-};
+use smolusb::traits::{ReadControl, UnsafeUsbDriverOperations, UsbDriverOperations};
 
 use crate::event::InterruptEvent;
 use crate::{hal, pac};
@@ -15,10 +11,11 @@ use pac::csr::interrupt;
 
 // - generic usb isr ----------------------------------------------------------
 
+#[must_use]
+#[allow(clippy::cast_possible_truncation)]
 pub fn get_usb_interrupt_event() -> InterruptEvent {
     use crate::UsbInterface::{Aux, Control, Target};
 
-    let peripherals = unsafe { pac::Peripherals::steal() };
     let usb0 = unsafe { hal::Usb0::summon() }; // target
     let usb1 = unsafe { hal::Usb1::summon() }; // aux
     let usb2 = unsafe { hal::Usb2::summon() }; // control
@@ -166,33 +163,35 @@ use heapless::mpmc::MpMcQueue as Queue;
 
 #[allow(non_snake_case)]
 pub mod UsbEventExt {
-    //! Alternate implementation of some UsbEvent values that also
+    //! Alternate implementation of some [`UsbEvent`] values that also
     //! contain their associated data.
 
     use crate::UsbInterface;
     use smolusb::setup::SetupPacket;
 
-    /// Received a setup packet on USBx_EP_CONTROL
+    /// Received a setup packet on [`USB0_EP_CONTROL`]
     ///
     /// An alternate version of `ReceiveControl` that can be used
     /// when the setup packet is read inside the interrupt handler
     /// for lower latency.
     ///
-    /// Contents is (usb_interface, endpoint_number, setup_packet)
+    /// Contents is (`usb_interface`, `endpoint_number`, `setup_packet`)
     #[derive(Clone, Copy)]
     pub struct ReceiveControl(UsbInterface, u8, SetupPacket);
 
-    /// Received a data packet on USBx_EP_OUT
+    /// Received a data packet on [`USB0_EP_OUT`]
     ///
     /// An alternate version of `ReceivePacket` that can be used
     /// when the packet is read inside the interrupt handler
     /// for lower latency.
     ///
-    /// Contents is (usb_interface, endpoint_number, bytes_read, packet_buffer)
+    /// Contents is (`usb_interface`, `endpoint_number`, `bytes_read`, `packet_buffer`)
     #[derive(Clone, Copy)]
-    pub struct ReceivePacket(UsbInterface, u8, usize, [u8; crate::EP_MAX_PACKET_SIZE]);
+    pub struct ReceivePacket(UsbInterface, u8, usize, [u8; smolusb::EP_MAX_PACKET_SIZE]);
 }
 
+/// An event queue with separate queues for interrupt events and usb events.
+///
 /// So the problem this solves is that some events are much larger
 /// than others.
 ///
@@ -205,19 +204,18 @@ pub mod UsbEventExt {
 /// It goes something like this:
 ///
 ///     use core::any::Any;
-///     use moondancer::util::EventQueue;
+///     use moondancer::util::MultiEventQueue;
 ///
-///     static EVENT_QUEUE_ALT: EventQueue = EventQueue::new();
-///     fn dispatch_event_alt<T: Any>(event: T) {
-///         match EVENT_QUEUE_ALT.enqueue(event) {
+///     static EVENT_QUEUE: MultiEventQueue = MultiEventQueue::new();
+///     fn dispatch_event<T: Any>(event: T) {
+///         match EVENT_QUEUE.enqueue(event) {
 ///             Ok(()) => (),
 ///             Err(_) => {
-///                 error!("MachineExternal - event queue overflow");
 ///                 panic!("MachineExternal - event queue overflow");
 ///             }
 ///         }
 ///     }
-pub struct EventQueue {
+pub struct MultiEventQueue {
     receive_control: Queue<UsbEventExt::ReceiveControl, 16>,
     receive_packet: Queue<UsbEventExt::ReceivePacket, 16>,
     interrupt_event: Queue<InterruptEvent, 64>,
@@ -225,7 +223,8 @@ pub struct EventQueue {
 
 use core::any::Any;
 
-impl EventQueue {
+impl MultiEventQueue {
+    #[must_use]
     pub const fn new() -> Self {
         Self {
             receive_control: Queue::new(),
@@ -246,36 +245,33 @@ impl EventQueue {
         self.receive_packet.dequeue()
     }
 
-    pub fn enqueue<T: Any>(&self, event: T) -> Result<(), ()> {
+    /// Enqueues the given event if there is sufficient space in its corresponding queue.
+    ///
+    /// # Errors
+    ///
+    /// If the queue is full it will return the event.
+    pub fn enqueue<T: Any>(&self, event: T) -> Result<(), T> {
         let any = &event as &dyn Any;
-        match any.downcast_ref::<InterruptEvent>() {
-            Some(event) => match self.interrupt_event.enqueue(*event) {
-                Ok(()) => (),
-                Err(_) => {
-                    log::error!("EventQueue - interrupt event queue overflow");
-                }
-            },
-            None => {}
+
+        if let Some(eventref) = any.downcast_ref::<InterruptEvent>() {
+            if self.interrupt_event.enqueue(*eventref).is_err() {
+                log::error!("MultiEventQueue - interrupt event queue overflow");
+                return Err(event);
+            }
         }
 
-        match any.downcast_ref::<UsbEventExt::ReceiveControl>() {
-            Some(event) => match self.receive_control.enqueue(*event) {
-                Ok(()) => (),
-                Err(_) => {
-                    log::error!("EventQueue - usb receive control queue overflow");
-                }
-            },
-            None => {}
+        if let Some(eventref) = any.downcast_ref::<UsbEventExt::ReceiveControl>() {
+            if self.receive_control.enqueue(*eventref).is_err() {
+                log::error!("MultiEventQueue - usb receive control queue overflow");
+                return Err(event);
+            }
         }
 
-        match any.downcast_ref::<UsbEventExt::ReceivePacket>() {
-            Some(event) => match self.receive_packet.enqueue(*event) {
-                Ok(()) => (),
-                Err(_) => {
-                    log::error!("EventQueue - usb receive packet queue overflow");
-                }
-            },
-            None => {}
+        if let Some(eventref) = any.downcast_ref::<UsbEventExt::ReceivePacket>() {
+            if self.receive_packet.enqueue(*eventref).is_err() {
+                log::error!("MultiEventQueue - usb receive packet queue overflow");
+                return Err(event);
+            }
         }
 
         Ok(())

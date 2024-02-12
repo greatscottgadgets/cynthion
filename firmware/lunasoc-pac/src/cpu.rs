@@ -43,7 +43,7 @@ pub mod vexriscv {
     }
 
     pub mod register {
-        //! Micro-architecture specific CSR extensions for the VexRiscv RISC-V
+        //! Micro-architecture specific CSR extensions for the `VexRiscv` RISC-V
         //! soft processor.
         //!
         //! See: [ExternalInterruptArrayPlugin.scala](https://github.com/SpinalHDL/VexRiscv/blob/master/src/main/scala/vexriscv/plugin/ExternalInterruptArrayPlugin.scala)
@@ -70,7 +70,7 @@ pub mod vexriscv {
             crate::macros::read_csr_as_usize!(0xDC0);
         }
 
-        /// DCache Info
+        /// Data Cache Info
         pub mod dci {
             crate::macros::read_csr_as_usize!(0xCC0);
         }

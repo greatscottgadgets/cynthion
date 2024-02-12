@@ -1,15 +1,16 @@
 [package]
 name = "lunasoc-hal"
 version = "0.0.1"
-authors = ["Antoine van Gelder <antoine@greatscottgadgets.com>"]
+authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license-file = "LICENSE.txt"
 description = "Hardware Abstraction Layer implementation for LunaSoC cores"
 categories = ["embedded", "hardware-support", "no-std"]
-keywords = ["luna", "riscv", "hal", "embedded-hal"]
+keywords = ["cynthion", "luna", "riscv", "luna-soc", "hal", "embedded-hal"]
 repository = "https://github.com/greatscottgadgets/cynthion"
-documentation = "https://cynthion.readthedocs.io"
+documentation = "https://docs.rs/lunasoc-hal"
 edition = "2021"
 rust-version = "1.68"
+
 include = ["examples/**/*", "src/**/*", "README.md", "memory.x"]
 
 [package.metadata.docs.rs]
@@ -53,7 +54,7 @@ embedded-hal = "=1.0.0-alpha.9"
 embedded-hal-0 = { package = "embedded-hal", version = "=0.2.7", features = ["unproven"] }
 embedded-hal-nb = "=1.0.0-alpha.1"
 lunasoc-pac = { path = "../lunasoc-pac", default-features = false }
-nb = "=1.0.0"
+nb = "=1.1.0"
 smolusb = { path = "../smolusb", optional = true }
 
 # TODO remove debug logging from usb driver and then lose these

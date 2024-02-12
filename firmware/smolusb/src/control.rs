@@ -56,7 +56,7 @@ impl core::fmt::Display for State {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
             State::Data(direction, _) => {
-                write!(f, "Data({:?})", direction)
+                write!(f, "Data({direction:?})")
             }
             _state => core::fmt::Debug::fmt(self, f),
         }
@@ -83,6 +83,7 @@ impl<'a, D, const RX_BUFFER_SIZE: usize> Control<'a, D, RX_BUFFER_SIZE>
 where
     D: UsbDriver,
 {
+    #[must_use]
     pub fn new(endpoint_number: u8, descriptors: Descriptors<'a>) -> Self {
         Self {
             endpoint_number,
@@ -106,6 +107,8 @@ where
     }
 
     pub fn dispatch_event(&mut self, usb: &D, event: UsbEvent) -> Option<(SetupPacket, &[u8])> {
+        use UsbEvent::*;
+
         if matches!(self.state, State::Stalled) {
             // unstall endpoint?
             error!(
@@ -115,7 +118,6 @@ where
             return None;
         }
 
-        use UsbEvent::*;
         match event {
             BusReset => {
                 self.bus_reset();
@@ -161,7 +163,7 @@ where
                 if endpoint_number != self.endpoint_number {
                     error!("event endpoint does not match control endpoint");
                 }
-                self.receive_packet(usb, &packet_buffer[..bytes_read])
+                self.handle_receive_packet(usb, &packet_buffer[..bytes_read])
             }
             SendComplete(endpoint_number) => {
                 if endpoint_number != self.endpoint_number {
@@ -186,7 +188,12 @@ where
 
     // - handle receive control events ----------------------------------------
 
-    fn handle_receive_control(&mut self, usb: &D, setup_packet: SetupPacket) -> Option<SetupPacket> {
+    #[allow(clippy::too_many_lines)] // clippy _does_ make a good point though
+    fn handle_receive_control(
+        &mut self,
+        usb: &D,
+        setup_packet: SetupPacket,
+    ) -> Option<SetupPacket> {
         if !matches!(self.state, State::Idle) {
             debug!("TODO Control::receive_control() not idle");
         }
@@ -247,7 +254,10 @@ where
             }
 
             (Direction::HostToDevice, RequestType::Standard, Request::SetConfiguration) => {
-                let configuration: u8 = setup_packet.value as u8;
+                let configuration: u8 = (setup_packet.value & 0xff) as u8;
+
+                // check whether this is a valid configuration
+                // TODO support multiple configurations
                 if configuration > 1 {
                     warn!(
                         "Request::SetConfiguration stall - unknown configuration {}",
@@ -257,9 +267,10 @@ where
                     usb.stall_endpoint_out(self.endpoint_number);
                     self.set_state(State::Stalled);
                     return None;
-                } else {
-                    self.configuration = Some(configuration);
                 }
+
+                // set configuration
+                self.configuration = Some(configuration);
 
                 // send ZLP to host to end status stage
                 usb.ack(self.endpoint_number, Direction::HostToDevice);
@@ -278,7 +289,7 @@ where
 
             (Direction::DeviceToHost, RequestType::Standard, Request::GetStatus) => {
                 let status: u16 = 0b01; // bit 1:remote-wakeup bit 0:self-powered
-                let status = status | (self.feature_remote_wakeup as u16) << 1;
+                let status = status | u16::from(self.feature_remote_wakeup) << 1;
 
                 usb.write(0, status.to_le_bytes().into_iter());
 
@@ -294,7 +305,7 @@ where
                 let feature = Feature::from(setup_packet.value);
                 match (&recipient, &feature) {
                     (Recipient::Endpoint, Feature::EndpointHalt) => {
-                        let endpoint_address = setup_packet.index as u8;
+                        let endpoint_address = (setup_packet.index & 0xff) as u8;
                         usb.clear_feature_endpoint_halt(endpoint_address);
                         usb.ack(0, setup_packet.direction());
                         trace!(
@@ -340,17 +351,19 @@ where
             // unknown requests
             (Direction::HostToDevice, _, _) => {
                 if length == 0 {
-                    // no incoming data from host so we can pass it back to the caller for handling
+                    // no incoming data from host so we can pass the
+                    // setup packeet back to the caller for handling
                     return Some(setup_packet);
-                } else {
-                    // has incoming data from host so we should hold on to it for now
-                    // ... and prime for reception
-                    self.rx_buffer_position = 0;
-                    usb.ep_out_prime_receive(self.endpoint_number);
                 }
+
+                // has incoming data from host so we should hold on to it for now
+                // and prime for reception
+                self.rx_buffer_position = 0;
+                usb.ep_out_prime_receive(self.endpoint_number);
             }
             (Direction::DeviceToHost, _, _) => {
-                // no incoming data from host so we can pass it back to the caller for handling
+                // no incoming data from host so we can pass the setup
+                // packet back to the caller for handling
                 return Some(setup_packet);
             }
         }
@@ -361,7 +374,11 @@ where
 
     // - handle receive packet events -----------------------------------------
 
-    fn handle_receive_packet(&mut self, usb: &D, packet_buffer: &[u8]) -> Option<(SetupPacket, &[u8])> {
+    fn handle_receive_packet(
+        &mut self,
+        usb: &D,
+        packet_buffer: &[u8],
+    ) -> Option<(SetupPacket, &[u8])> {
         // execute any receive packet callback we may have registered
         if let Some(callback) = self.cb_receive_packet.take() {
             let new_state = callback.call(usb, self.state);
@@ -496,14 +513,15 @@ where
             }
         }
 
+        #[allow(clippy::match_same_arms)] // TODO lose
         match self.state {
             State::Data(Direction::DeviceToHost, _setup_packet) => {
                 // we sent a packet of IN data
                 // e.g. after sending GetDescriptor data
-                self.set_state(State::Status(Direction::DeviceToHost))
+                self.set_state(State::Status(Direction::DeviceToHost));
             }
             State::Status(Direction::DeviceToHost) => {
-                //warn!("  send_complete() TODO Status(DeviceToHost)");
+                // TODO warn!("  send_complete() TODO Status(DeviceToHost)");
             }
 
             State::Data(Direction::HostToDevice, _setup_packet) => {
@@ -522,7 +540,7 @@ where
                 warn!("  send_complete() TODO Stalled state");
             }
             State::Idle => {
-                //warn!("  send_complete() should not be in Idle state");
+                // TODO warn!("  send_complete() should not be in Idle state");
             }
         }
 

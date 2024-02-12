@@ -1,19 +1,24 @@
-#![allow(dead_code, unused_imports, unused_variables)] // TODO
+//! Rust implementation of the Great Communications Protocol.
+//!
+//! More information:
+//!
+//! * [LibGreat Verb Signatures](https://greatfet.readthedocs.io/en/latest/libgreat_verb_signatures.html)
+//! * [LibGreat Class Registry](https://greatfet.readthedocs.io/en/latest/greatfet_classes.html)
 
-///! Great Communications Protocol
 pub mod class;
 pub mod class_core;
 pub use class::*;
 
-use zerocopy::{
-    AsBytes, BigEndian, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, LittleEndian,
-    Unaligned, U16, U32,
-};
+// - constants ----------------------------------------------------------------
 
 /// Maximum length of a libgreat command or response
 pub const LIBGREAT_MAX_COMMAND_SIZE: usize = 1024;
 
-/// CommandPrelude
+// - types --------------------------------------------------------------------
+
+use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, LittleEndian, Unaligned, U32};
+
+/// Great Communication Protocol command prelude
 #[repr(C)]
 #[derive(Debug, FromBytes, AsBytes, Unaligned)]
 pub struct CommandPrelude {
@@ -49,20 +54,34 @@ where
     }
 }
 
-impl<B> Command<B>
-where
-    B: ByteSliceMut,
-{
-    fn set_class(&mut self, class: u32) {
-        self.prelude.class = class.into();
-    }
+pub type GreatResponse = core::iter::Take<core::array::IntoIter<u8, LIBGREAT_MAX_COMMAND_SIZE>>;
+
+// - traits -------------------------------------------------------------------
+
+use crate::GreatResult;
+
+pub trait GreatDispatch {
+    /// Dispatches a GCP verb.
+    ///
+    /// # Errors
+    ///
+    /// Will return [`GreatError`](crate::error::GreatError) on failure.
+    fn dispatch(
+        &mut self,
+        verb_number: u32,
+        arguments: &[u8],
+        response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE],
+    ) -> GreatResult<GreatResponse>;
 }
 
 // - helpers ------------------------------------------------------------------
 
-pub type GreatResponse = core::iter::Take<core::array::IntoIter<u8, LIBGREAT_MAX_COMMAND_SIZE>>;
-
-pub unsafe fn iter_to_response(
+/// Squashes an arbitrary Iterator type into a [`GreatResponse`].
+///
+/// This is not entirely great but it is one solution to the problem
+/// of how to dispatch on verbs that return arbiratory iterator types
+/// as their response.
+pub fn iter_to_response(
     iter: impl Iterator<Item = u8>,
     mut response: [u8; LIBGREAT_MAX_COMMAND_SIZE],
 ) -> GreatResponse {
@@ -73,31 +92,20 @@ pub unsafe fn iter_to_response(
     }
     response.into_iter().take(length)
 }
-/*
-unsafe fn iter_ref_to_response<'a>(
-    iter: impl Iterator<Item = &'a u8>,
-    _response: &mut [u8; LIBGREAT_MAX_COMMAND_SIZE],
-) -> GreatResponse {
-    let mut response: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
-    let mut length = 0;
-    for (ret, src) in response.iter_mut().zip(iter) {
-        *ret = *src;
-        length += 1;
-    }
-    response.into_iter().take(length)
-}*/
 
 // - tests --------------------------------------------------------------------
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    use crate::firmware::BoardInformation;
-
     use core::array;
     use core::iter;
     use core::slice;
+
+    use zerocopy::U16;
+
+    use crate::firmware::BoardInformation;
+
+    use super::*;
 
     // - fixtures -------------------------------------------------------------
 
@@ -382,17 +390,6 @@ mod tests {
         println!("iter_to_response: {} bytes - {:?}", length, response);
         let response: iter::Take<array::IntoIter<u8, 32>> = response.into_iter().take(length);
         response
-    }
-
-    fn iter_ref_to_response<'a>(iter: impl Iterator<Item = &'a u8>) -> impl Iterator<Item = u8> {
-        let mut response: [u8; 32] = [0; 32];
-        let mut length = 0;
-        for (ret, src) in response.iter_mut().zip(iter) {
-            *ret = *src;
-            length += 1;
-        }
-        println!("iter_to_response: {} bytes - {:?}", length, response);
-        response.into_iter().take(length)
     }
 
     fn get_some_other_iterator() -> impl Iterator<Item = u8> {

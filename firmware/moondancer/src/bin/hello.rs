@@ -32,7 +32,7 @@ fn main() -> ! {
     let mut timer = Timer::new(peripherals.TIMER, pac::clock::sysclk());
     let mut counter = 0;
     let mut direction = true;
-    let mut led_state = 0b110000;
+    let mut led_state = 0b11_0000;
 
     info!("Peripherals initialized, entering main loop.");
 
@@ -41,19 +41,20 @@ fn main() -> ! {
 
         if direction {
             led_state >>= 1;
-            if led_state == 0b000011 {
+            if led_state == 0b00_0011 {
                 direction = false;
                 info!("left: {}", counter);
             }
         } else {
             led_state <<= 1;
-            if led_state == 0b110000 {
+            if led_state == 0b11_0000 {
                 direction = true;
                 debug!("right: {}", counter);
             }
         }
 
-        leds.output().write(|w| unsafe { w.output().bits(led_state) });
+        leds.output()
+            .write(|w| unsafe { w.output().bits(led_state) });
         counter += 1;
     }
 }

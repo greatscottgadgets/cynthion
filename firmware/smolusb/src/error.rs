@@ -1,4 +1,4 @@
-/// [`smolusb`] Error type
+/// [`smolusb`](crate) Error type
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum SmolError {
     FailedConversion,
@@ -18,14 +18,6 @@ impl core::convert::From<core::num::TryFromIntError> for SmolError {
     }
 }
 
-// trait: libgreat::error::Error
-// impl libgreat::error::GreatErrorTrait for SmolError {
-//     type Error = Self;
-//     fn kind(&self) -> Self::Error {
-//         *self
-//     }
-// }
-
 #[cfg(feature = "nightly")]
 // trait: core::error::Error
 impl core::error::Error for SmolError {
@@ -38,5 +30,5 @@ impl core::error::Error for SmolError {
     }
 }
 
-/// Result<T>
+/// [`smolusb`](crate) [`Result`] type.
 pub type SmolResult<T> = core::result::Result<T, SmolError>;

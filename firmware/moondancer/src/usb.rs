@@ -1,11 +1,13 @@
-#![allow(dead_code, unused_variables)] // TODO
-
-use smolusb::descriptor::*;
+use smolusb::descriptor::{
+    ConfigurationDescriptor, ConfigurationDescriptorHeader, DescriptorType, DeviceDescriptor,
+    DeviceQualifierDescriptor, EndpointDescriptor, InterfaceDescriptor, InterfaceDescriptorHeader,
+    LanguageId, StringDescriptor, StringDescriptorZero,
+};
 
 // - constants ----------------------------------------------------------------
 
 pub const DEVICE_VERSION_NUMBER: u16 = 0x0004; // Cynthion r0.4 TODO read from?
-pub const DEVICE_SERIAL_STRING: &'static str = "r0.4"; // TODO read from?
+pub const DEVICE_SERIAL_STRING: &str = "r0.4"; // TODO read from?
 
 // - vendor request -----------------------------------------------------------
 

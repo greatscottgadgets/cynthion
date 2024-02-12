@@ -7,7 +7,11 @@ use log::{debug, error, info};
 use libgreat::GreatResult;
 
 use smolusb::control::Control;
-use smolusb::descriptor::*;
+use smolusb::descriptor::{
+    ConfigurationDescriptor, ConfigurationDescriptorHeader, DescriptorType, DeviceDescriptor,
+    DeviceQualifierDescriptor, EndpointDescriptor, InterfaceDescriptor, InterfaceDescriptorHeader,
+    LanguageId, StringDescriptor, StringDescriptorZero,
+};
 use smolusb::device::{Descriptors, Speed};
 use smolusb::event::UsbEvent;
 use smolusb::traits::{ReadEndpoint, UsbDriverOperations};
@@ -41,7 +45,7 @@ fn dispatch_event(event: InterruptEvent) {
 
 #[allow(non_snake_case)]
 #[no_mangle]
-fn MachineExternal() {
+extern "C" fn MachineExternal() {
     use moondancer::UsbInterface::Target;
 
     let usb0 = unsafe { hal::Usb0::summon() };
@@ -153,6 +157,7 @@ fn main() -> ! {
 
 // - main loop ----------------------------------------------------------------
 
+#[allow(clippy::too_many_lines)] // well that's just, like, your opinion man
 fn main_loop() -> GreatResult<()> {
     let peripherals = pac::Peripherals::take().unwrap();
     let leds = &peripherals.LEDS;
@@ -173,7 +178,7 @@ fn main_loop() -> GreatResult<()> {
     );
 
     // usb0 control endpoint
-    let mut control = Control::<_, { moondancer::EP_MAX_PACKET_SIZE }>::new(
+    let mut control = Control::<_, { smolusb::EP_MAX_PACKET_SIZE }>::new(
         0,
         Descriptors {
             device_speed: DEVICE_SPEED,
@@ -209,10 +214,15 @@ fn main_loop() -> GreatResult<()> {
 
     let mut test_command = TestCommand::Stop;
     let mut test_stats = TestStats::new();
+    #[allow(clippy::cast_possible_truncation)]
     let test_data = {
-        let mut test_data = [0_u8; moondancer::EP_MAX_PACKET_SIZE];
-        for n in 0..moondancer::EP_MAX_PACKET_SIZE {
-            test_data[n] = (n % 256) as u8;
+        let mut test_data = [0_u8; smolusb::EP_MAX_PACKET_SIZE];
+        for (n, value) in test_data
+            .iter_mut()
+            .enumerate()
+            .take(smolusb::EP_MAX_PACKET_SIZE)
+        {
+            *value = (n % usize::from(u8::MAX)) as u8;
         }
         test_data
     };
@@ -223,7 +233,7 @@ fn main_loop() -> GreatResult<()> {
     usb0.ep_out_prime_receive(2);
 
     let mut counter = 0;
-    let mut rx_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] = [0; moondancer::EP_MAX_PACKET_SIZE];
+    let mut rx_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] = [0; smolusb::EP_MAX_PACKET_SIZE];
 
     info!("Peripherals initialized, entering main loop.");
 
@@ -243,18 +253,21 @@ fn main_loop() -> GreatResult<()> {
 
                 // Usb0 received a control event
                 #[cfg(feature = "chonky_events")]
-                Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveControl(0))
-                | Usb(Target, event @ ReceiveSetupPacket(0, _))
-                | Usb(Target, event @ ReceivePacket(0))
-                | Usb(Target, event @ SendComplete(0)) => {
+                Usb(
+                    Target,
+                    event @ (BusReset
+                    | ReceiveControl(0)
+                    | ReceiveSetupPacket(0, _)
+                    | ReceivePacket(0)
+                    | SendComplete(0)),
+                ) => {
                     control.dispatch_event(&usb0, event);
                 }
                 #[cfg(not(feature = "chonky_events"))]
-                Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveControl(0))
-                | Usb(Target, event @ ReceivePacket(0))
-                | Usb(Target, event @ SendComplete(0)) => {
+                Usb(
+                    Target,
+                    event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0)),
+                ) => {
                     control.dispatch_event(&usb0, event);
                 }
 
@@ -263,7 +276,8 @@ fn main_loop() -> GreatResult<()> {
                     let bytes_read = usb0.read(endpoint, &mut rx_buffer);
 
                     if endpoint == 1 {
-                        leds.output().write(|w| unsafe { w.output().bits(0b11_1000) });
+                        leds.output()
+                            .write(|w| unsafe { w.output().bits(0b11_1000) });
                         if counter % 100 == 0 {
                             log::trace!(
                                 "{:?} .. {:?}",
@@ -317,7 +331,8 @@ fn main_loop() -> GreatResult<()> {
 
                 // Usb0 transfer complete
                 Usb(Target, SendComplete(_endpoint)) => {
-                    leds.output().write(|w| unsafe { w.output().bits(0b00_0111) });
+                    leds.output()
+                        .write(|w| unsafe { w.output().bits(0b00_0111) });
                 }
 
                 // Error Message
@@ -356,7 +371,7 @@ fn main_loop() -> GreatResult<()> {
 fn test_in_speed(
     _leds: &pac::LEDS,
     usb0: &hal::Usb0,
-    test_data: &[u8; moondancer::EP_MAX_PACKET_SIZE],
+    test_data: &[u8; smolusb::EP_MAX_PACKET_SIZE],
     test_stats: &mut TestStats,
 ) {
     // Passing in a fixed size slice ref is 4MB/s vs 3.7MB/s
@@ -364,7 +379,7 @@ fn test_in_speed(
     fn test_write_slice(
         usb0: &hal::Usb0,
         endpoint: u8,
-        data: &[u8; moondancer::EP_MAX_PACKET_SIZE],
+        data: &[u8; smolusb::EP_MAX_PACKET_SIZE],
     ) -> bool {
         let mut did_reset = false;
         if usb0.ep_in.have().read().have().bit() {
@@ -372,11 +387,11 @@ fn test_in_speed(
             did_reset = true;
         }
         // 5.033856452242371MB/s.
-        for byte in data.iter() {
+        for byte in data {
             usb0.ep_in.data().write(|w| unsafe { w.data().bits(*byte) });
         }
         // 6.392375785142406MB/s. - no memory access
-        /*for n in 0..moondancer::EP_MAX_PACKET_SIZE {
+        /*for n in 0..smolusb::EP_MAX_PACKET_SIZE {
             usb0.ep_in.data.write(|w| unsafe { w.data().bits((n % 256) as u8) });
         }*/
         usb0.ep_in
@@ -386,7 +401,7 @@ fn test_in_speed(
     }
 
     // wait for fifo endpoint to be idle
-    let (_, t_flush) = moondancer::profile!(
+    let ((), t_flush) = moondancer::profile!(
         let mut timeout = 100;
         while !usb0.ep_in.idle().read().idle().bit() && timeout > 0 {
             timeout -= 1;

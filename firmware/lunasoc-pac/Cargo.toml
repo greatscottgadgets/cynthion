@@ -1,13 +1,13 @@
 [package]
 name = "lunasoc-pac"
 version = "0.1.0"
-authors = ["Antoine van Gelder <antoine@greatscottgadgets.com>"]
+authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license-file = "LICENSE.txt"
 description = "A peripheral access crate for LunaSoC cores"
 categories = ["embedded", "hardware-support", "no-std"]
-keywords = ["luna", "riscv", "register", "peripheral"]
-repository = "https://github.com/greatscottgadgets/libgreat"
-documentation = "https://luna.readthedocs.io"
+keywords = ["cynthion", "luna", "luna-soc", "riscv", "register", "peripheral"]
+repository = "https://github.com/greatscottgadgets/cynthion"
+documentation = "https://docs.rs/lunasoc-pac"
 edition = "2021"
 rust-version = "1.68"
 include = ["src/**/*", "README.md", "device.x", "build.rs"]

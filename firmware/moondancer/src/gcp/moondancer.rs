@@ -1,27 +1,27 @@
-#![allow(dead_code, unused_imports, unused_variables)] // TODO
+//! Implementation for the GCP `moondancer` class.
 
 use log::{debug, error, trace, warn};
 use zerocopy::{FromBytes, LittleEndian, Unaligned, U16, U32};
-
-use smolusb::device::Speed;
-use smolusb::event::UsbEvent;
-use smolusb::setup::{Direction, SetupPacket};
-use smolusb::traits::{
-    ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
-};
-
-use ladybug::{Bit, Channel};
-
-use libgreat::error::{GreatError, GreatResult};
-use libgreat::gcp::{self, iter_to_response, GreatResponse, Verb, LIBGREAT_MAX_COMMAND_SIZE};
 
 use crate::{hal, pac};
 use hal::smolusb;
 use pac::csr::interrupt;
 
+use smolusb::device::Speed;
+use smolusb::event::UsbEvent;
+use smolusb::setup::{Direction, SetupPacket};
+use smolusb::traits::{ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations};
+
+use libgreat::error::{GreatError, GreatResult};
+use libgreat::gcp::{
+    self, iter_to_response, GreatDispatch, GreatResponse, Verb, LIBGREAT_MAX_COMMAND_SIZE,
+};
+
+use ladybug::{Bit, Channel};
+
 // - types --------------------------------------------------------------------
 
-/// QuirkFlags
+/// USB quirk flags
 #[allow(non_snake_case, non_upper_case_globals)]
 pub mod QuirkFlag {
     pub const SetAddressManually: u16 = 0x0001;
@@ -30,7 +30,7 @@ pub mod QuirkFlag {
 struct Packet {
     endpoint_number: u8,
     bytes_read: usize,
-    buffer: [u8; crate::EP_MAX_PACKET_SIZE],
+    buffer: [u8; smolusb::EP_MAX_PACKET_SIZE],
 }
 
 impl Packet {
@@ -38,14 +38,13 @@ impl Packet {
         Self {
             endpoint_number,
             bytes_read,
-            buffer: [0; crate::EP_MAX_PACKET_SIZE],
+            buffer: [0; smolusb::EP_MAX_PACKET_SIZE],
         }
     }
 }
 
 // - Moondancer --------------------------------------------------------------
 
-use crate::event::InterruptEvent;
 use heapless::spsc::Queue;
 use heapless::Vec;
 
@@ -53,8 +52,8 @@ use heapless::Vec;
 pub struct Moondancer {
     usb0: hal::Usb0,
     quirk_flags: u16,
-    ep_in_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
-    ep_out_max_packet_size: [u16; crate::EP_MAX_ENDPOINTS],
+    ep_in_max_packet_size: [u16; smolusb::EP_MAX_ENDPOINTS],
+    ep_out_max_packet_size: [u16; smolusb::EP_MAX_ENDPOINTS],
     irq_queue: Queue<UsbEvent, 64>,
     control_queue: Queue<SetupPacket, 8>,
     packet_buffer: Vec<Packet, 4>,
@@ -62,12 +61,13 @@ pub struct Moondancer {
 }
 
 impl Moondancer {
+    #[must_use]
     pub fn new(usb0: hal::Usb0) -> Self {
         Self {
             usb0,
             quirk_flags: 0,
-            ep_in_max_packet_size: [0; crate::EP_MAX_ENDPOINTS],
-            ep_out_max_packet_size: [0; crate::EP_MAX_ENDPOINTS],
+            ep_in_max_packet_size: [0; smolusb::EP_MAX_ENDPOINTS],
+            ep_out_max_packet_size: [0; smolusb::EP_MAX_ENDPOINTS],
             irq_queue: Queue::new(),
             control_queue: Queue::new(),
             packet_buffer: Vec::new(),
@@ -75,7 +75,6 @@ impl Moondancer {
         }
     }
 
-    #[inline(always)]
     pub fn dispatch_event(&mut self, event: UsbEvent) {
         // filter interrupt events
         let event = match event {
@@ -128,7 +127,7 @@ impl Moondancer {
                 UsbEvent::ReceiveControl(endpoint_number)
             }
 
-            UsbEvent::SendComplete(endpoint_number) => {
+            UsbEvent::SendComplete(_endpoint_number) => {
                 // catch EP_IN SendComplete after SetAddress ack
                 if let Some(address) = self.pending_set_address.take() {
                     self.usb0.set_address(address);
@@ -141,7 +140,8 @@ impl Moondancer {
 
             UsbEvent::ReceivePacket(endpoint_number) => {
                 // drain FIFO
-                let mut rx_buffer: [u8; crate::EP_MAX_PACKET_SIZE] = [0; crate::EP_MAX_PACKET_SIZE];
+                let mut rx_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] =
+                    [0; smolusb::EP_MAX_PACKET_SIZE];
                 let bytes_read = self.usb0.read(endpoint_number, &mut rx_buffer);
 
                 // create Packet
@@ -163,7 +163,7 @@ impl Moondancer {
                     Ok(()) => {
                         // all good
                     }
-                    Err(packet) => {
+                    Err(_packet) => {
                         error!(
                             "MD moondancer::dispatch_event(ReceivePacket({})) packet buffer overflow",
                             endpoint_number
@@ -174,7 +174,16 @@ impl Moondancer {
                 event
             }
 
-            _ => event,
+            UsbEvent::ReceiveControl(_) => {
+                // no-op, just pass it on through
+                event
+            }
+
+            #[cfg(feature = "chonky_events")]
+            UsbEvent::ReceiveBuffer(_, _, _) => {
+                // no-op, just pass it on through
+                event
+            }
         };
 
         // enqueue interrupt event
@@ -182,11 +191,6 @@ impl Moondancer {
             Ok(()) => {}
             Err(_) => {
                 error!("Moondancer - irq queue overflow: {:?}", event);
-                /*loop {
-                    unsafe {
-                        riscv::asm::nop();
-                    }
-                }*/
             }
         }
     }
@@ -195,6 +199,13 @@ impl Moondancer {
 // - usb0 interrupt handlers --------------------------------------------------
 
 impl Moondancer {
+    /// Enable USB events and CPU interrupts for the USB controller.
+    ///
+    /// # Safety
+    ///
+    /// This function operates directly on the CPU's Machine IRQ Mask
+    /// register. It is not interrupt-safe and any pending interrupts
+    /// may be dropped when calling it.
     pub unsafe fn enable_usb_interrupts(&self) {
         interrupt::enable(pac::Interrupt::USB0);
         interrupt::enable(pac::Interrupt::USB0_EP_CONTROL);
@@ -205,6 +216,13 @@ impl Moondancer {
         self.usb0.enable_interrupts();
     }
 
+    /// Disable USB events and CPU interrupts for the USB controller.
+    ///
+    /// # Safety
+    ///
+    /// This function operates directly on the CPU's Machine IRQ Mask
+    /// register. It is not interrupt-safe and any pending interrupts
+    /// may be dropped when calling it.
     pub unsafe fn disable_usb_interrupts(&self) {
         // disable all usb events
         self.usb0.disable_interrupts();
@@ -230,8 +248,7 @@ impl Moondancer {
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let ep0_max_packet_size = args.ep0_max_packet_size.into();
-        //let device_speed = Speed::from_libusb(args.device_speed);
-        let device_speed = Speed::Full;
+        let device_speed = Speed::from_libusb(args.device_speed);
         let quirk_flags = args.quirk_flags.into();
 
         self.ep_in_max_packet_size[0] = ep0_max_packet_size;
@@ -258,18 +275,19 @@ impl Moondancer {
 
     /// Terminate all existing communication and disconnects the USB interface.
     pub fn disconnect(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        // disconnect USB interface
+        // disable interrupts and disconnect USB interface
+        unsafe { self.disable_usb_interrupts() };
         self.usb0.disconnect();
 
         // reset connection state
         self.quirk_flags = 0;
-        self.ep_in_max_packet_size = [0; crate::EP_MAX_ENDPOINTS];
-        self.ep_out_max_packet_size = [0; crate::EP_MAX_ENDPOINTS];
+        self.ep_in_max_packet_size = [0; smolusb::EP_MAX_ENDPOINTS];
+        self.ep_out_max_packet_size = [0; smolusb::EP_MAX_ENDPOINTS];
         self.pending_set_address = None;
 
         // flush queues
-        while let Some(_) = self.irq_queue.dequeue() {}
-        while let Some(_) = self.control_queue.dequeue() {}
+        while self.irq_queue.dequeue().is_some() {}
+        while self.control_queue.dequeue().is_some() {}
 
         // clear quirk flags
         self.quirk_flags = 0;
@@ -293,7 +311,7 @@ impl Moondancer {
 // - verb implementations: status & control -----------------------------------
 
 impl Moondancer {
-    /// Read a control packet from SetupFIFOInterface.
+    /// Returns the earliest control packet in the queue.
     pub fn read_control(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let setup_packet = match self.control_queue.dequeue() {
             Some(setup_packet) => setup_packet,
@@ -361,7 +379,7 @@ impl Moondancer {
         while let Some((endpoint, next)) =
             zerocopy::LayoutVerified::<_, ArgEndpoint>::new_from_prefix(byte_slice)
         {
-            let endpoint_number = (endpoint.address & 0x7f) as u8;
+            let endpoint_number = endpoint.address & 0x7f;
 
             log::debug!(
                 "  moondancer::configure_endpoint(0x{:x}) -> {} -> max_packet_size:{}",
@@ -381,18 +399,18 @@ impl Moondancer {
             }
 
             // ignore endpoint configurations we won't be able to handle
-            if endpoint.max_packet_size.get() as usize > crate::EP_MAX_PACKET_SIZE {
+            if endpoint.max_packet_size.get() as usize > smolusb::EP_MAX_PACKET_SIZE {
                 error!(
                     "  failed to configure endpoint address 0x{:x} with max packet size {} > {}",
                     endpoint.address,
                     endpoint.max_packet_size,
-                    crate::EP_MAX_PACKET_SIZE,
+                    smolusb::EP_MAX_PACKET_SIZE,
                 );
                 return Err(GreatError::InvalidArgument);
             }
 
             // configure endpoint max packet sizes
-            if Direction::from_endpoint_address(endpoint.address) == Direction::HostToDevice {
+            if Direction::from(endpoint.address) == Direction::HostToDevice {
                 self.ep_out_max_packet_size[endpoint_number as usize] =
                     endpoint.max_packet_size.into();
             } else {
@@ -401,7 +419,7 @@ impl Moondancer {
             }
 
             // prime any OUT endpoints
-            if Direction::from_endpoint_address(endpoint.address) == Direction::HostToDevice {
+            if Direction::from(endpoint.address) == Direction::HostToDevice {
                 log::debug!(
                     "  priming HostToDevice (OUT) endpoint address: {}",
                     endpoint.address
@@ -514,8 +532,9 @@ impl Moondancer {
         }
 
         let mut rx_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
+        #[allow(clippy::cast_possible_truncation)] // seriously clippy?
         for (index, byte) in rx_buffer.iter_mut().enumerate() {
-            *byte = (index % u8::MAX as usize) as u8;
+            *byte = (index % usize::from(u8::MAX)) as u8;
         }
 
         Ok(rx_buffer.into_iter().take(payload_length))
@@ -657,7 +676,7 @@ impl Moondancer {
             endpoint_number,
             blocking,
             payload_length,
-            args.payload.iter().count(),
+            args.payload.iter().len(),
             max_packet_size,
             bytes_written,
         );
@@ -731,7 +750,6 @@ impl Moondancer {
     ) -> GreatResult<impl Iterator<Item = u8>> {
         debug!("MD moondancer::test_get_interrupt_events()");
 
-        use crate::UsbInterface::{Aux, Control, Target};
         self.irq_queue.enqueue(UsbEvent::BusReset).ok();
         self.irq_queue.enqueue(UsbEvent::ReceiveControl(1)).ok();
         self.irq_queue.enqueue(UsbEvent::ReceivePacket(2)).ok();
@@ -746,7 +764,7 @@ impl Moondancer {
     ///
     /// bitmask
     pub fn get_nak_status(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        let nak_status = self.usb0.ep_in.nak().read().bits() as u16;
+        let nak_status = (self.usb0.ep_in.nak().read().bits() & 0xffff) as u16;
         Ok(nak_status.to_le_bytes().into_iter())
     }
 }
@@ -920,8 +938,8 @@ pub static VERBS: [Verb; 16] = [
 
 // - dispatch -----------------------------------------------------------------
 
-impl Moondancer {
-    pub fn dispatch(
+impl GreatDispatch for Moondancer {
+    fn dispatch(
         &mut self,
         verb_number: u32,
         arguments: &[u8],
@@ -931,83 +949,83 @@ impl Moondancer {
             0x0 => {
                 // moondancer::connect
                 let iter = self.connect(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x1 => {
                 // moondancer::disconnect
                 let iter = self.disconnect(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x2 => {
                 // moondancer::bus_reset
                 let iter = self.bus_reset(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x3 => {
                 // moondancer::read_control
                 let iter = self.read_control(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x4 => {
                 // moondancer::set_address
                 let iter = self.set_address(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x5 => {
                 // moondancer::configure_endpoints
                 let iter = self.configure_endpoints(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x6 => {
                 // moondancer::stall_endpoint_in
                 let iter = self.stall_endpoint_in(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x7 => {
                 // moondancer::stall_endpoint_out
                 let iter = self.stall_endpoint_out(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x8 => {
                 // moondancer::read_endpoint
                 ladybug::trace(Channel::A, Bit::A_READ_ENDPOINT, || {
                     let iter = self.read_endpoint(arguments)?;
-                    let response = unsafe { iter_to_response(iter, response_buffer) };
+                    let response = iter_to_response(iter, response_buffer);
                     Ok(response)
                 })
             }
             0x9 => {
                 // moondancer::ep_out_prime_receive
                 let iter = self.ep_out_prime_receive(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0xa => {
                 // moondancer::write_endpoint
                 ladybug::trace(Channel::A, Bit::A_WRITE_ENDPOINT, || {
                     let iter = self.write_endpoint(arguments)?;
-                    let response = unsafe { iter_to_response(iter, response_buffer) };
+                    let response = iter_to_response(iter, response_buffer);
                     Ok(response)
                 })
             }
             0xb => {
                 // moondancer::get_interrupt_events
                 let iter = self.get_interrupt_events(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0xc => {
                 // moondancer::get_nak_status
                 let iter = self.get_nak_status(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
 
@@ -1015,19 +1033,19 @@ impl Moondancer {
             0x28 => {
                 // moondancer::test_read_endpoint
                 let iter = self.test_read_endpoint(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x2a => {
                 // moondancer::test_write_endpoint
                 let iter = self.test_write_endpoint(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
             0x2b => {
                 // moondancer::test_get_interrupt_events
                 let iter = self.test_get_interrupt_events(arguments)?;
-                let response = unsafe { iter_to_response(iter, response_buffer) };
+                let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
 

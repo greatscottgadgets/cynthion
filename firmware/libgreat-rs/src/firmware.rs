@@ -1,6 +1,4 @@
-// - BoardInfo ----------------------------------------------------------------
-
-/// BoardInformation
+/// Board information.
 pub struct BoardInformation {
     pub board_id: [u8; 4],
     pub version_string: &'static str,

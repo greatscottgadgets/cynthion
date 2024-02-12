@@ -1,18 +1,20 @@
-#![allow(dead_code, unused_imports, unused_mut, unused_variables)]
 #![no_std]
 #![no_main]
 
 use heapless::mpmc::MpMcQueue as Queue;
-use log::{debug, error, info, warn};
+use log::{debug, error, info};
 
-use libgreat::{GreatError, GreatResult};
+use libgreat::GreatResult;
 
 use smolusb::control::Control;
-use smolusb::descriptor::*;
+use smolusb::descriptor::{
+    ConfigurationDescriptor, ConfigurationDescriptorHeader, DescriptorType, DeviceDescriptor,
+    DeviceQualifierDescriptor, EndpointDescriptor, InterfaceDescriptor, InterfaceDescriptorHeader,
+    LanguageId, StringDescriptor, StringDescriptorZero,
+};
 use smolusb::device::{Descriptors, Speed};
 use smolusb::event::UsbEvent;
-use smolusb::setup::{Direction, Request, RequestType, SetupPacket};
-use smolusb::traits::AsByteSliceIterator;
+use smolusb::setup::{Direction, SetupPacket};
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
 };
@@ -35,7 +37,7 @@ const VENDOR_VALUE_BULK_IN: u16 = 0x0004;
 const ENDPOINT_BULK_OUT: u8 = 0x01;
 const ENDPOINT_BULK_IN: u8 = 0x81;
 
-const MAX_TRANSFER_SIZE: usize = moondancer::EP_MAX_PACKET_SIZE * 4;
+const MAX_TRANSFER_SIZE: usize = smolusb::EP_MAX_PACKET_SIZE * 4;
 
 // - global static state ------------------------------------------------------
 
@@ -56,7 +58,7 @@ fn dispatch_event(event: InterruptEvent) {
 
 #[allow(non_snake_case)]
 #[no_mangle]
-fn MachineExternal() {
+extern "C" fn MachineExternal() {
     use moondancer::UsbInterface::Target;
 
     let usb0 = unsafe { hal::Usb0::summon() };
@@ -104,8 +106,8 @@ fn MachineExternal() {
             #[cfg(feature = "chonky_events")]
             {
                 // #1 empty fifo into a receive buffer
-                let mut packet_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] =
-                    [0; moondancer::EP_MAX_PACKET_SIZE];
+                let mut packet_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] =
+                    [0; smolusb::EP_MAX_PACKET_SIZE];
                 let bytes_read = usb0.read(endpoint, &mut packet_buffer);
 
                 // #2 dispatch receive buffer to the main loop
@@ -239,46 +241,44 @@ fn main_loop() -> GreatResult<()> {
             // Usb0 received a control event
             match event {
                 #[cfg(feature = "chonky_events")]
-                Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveSetupPacket(0, _))
-                | Usb(Target, event @ ReceiveBuffer(0, _, _))
-                | Usb(Target, event @ SendComplete(0)) => {
+                Usb(
+                    Target,
+                    event @ (BusReset
+                    | ReceiveSetupPacket(0, _)
+                    | ReceiveBuffer(0, _, _)
+                    | SendComplete(0)),
+                ) => {
                     let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
                         control.dispatch_event(&usb0, event)
                     });
-                    match result {
+                    if let Some((setup_packet, rx_buffer)) = result {
                         // vendor requests are not handled by control
-                        Some((setup_packet, rx_buffer)) => {
-                            ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
-                                handle_vendor_request(&usb0, setup_packet, rx_buffer);
-                            });
-                        }
-                        // control event was handled
-                        None => (),
+                        ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
+                            handle_vendor_request(&usb0, setup_packet, rx_buffer);
+                        });
                     }
                 }
                 #[cfg(not(feature = "chonky_events"))]
-                Usb(Target, event @ BusReset)
-                | Usb(Target, event @ ReceiveSetupPacket(0, _))
-                | Usb(Target, event @ ReceivePacket(0))
-                | Usb(Target, event @ SendComplete(0)) => {
+                Usb(
+                    Target,
+                    event @ (BusReset
+                    | ReceiveSetupPacket(0, _)
+                    | ReceivePacket(0)
+                    | SendComplete(0)),
+                ) => {
                     let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
                         control.dispatch_event(&usb0, event)
                     });
-                    match result {
+                    if let Some((setup_packet, rx_buffer)) = result {
                         // vendor requests are not handled by control
-                        Some((setup_packet, rx_buffer)) => {
-                            ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
-                                handle_vendor_request(&usb0, setup_packet, rx_buffer);
-                            });
-                        }
-                        // control event was handled
-                        None => (),
+                        ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
+                            handle_vendor_request(&usb0, setup_packet, rx_buffer);
+                        });
                     }
                 }
                 Usb(Target, ReceivePacket(endpoint @ ENDPOINT_BULK_OUT)) => {
-                    let mut rx_buffer: [u8; moondancer::EP_MAX_PACKET_SIZE] =
-                        [0; moondancer::EP_MAX_PACKET_SIZE];
+                    let mut rx_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] =
+                        [0; smolusb::EP_MAX_PACKET_SIZE];
                     let bytes_read = usb0.read(endpoint, &mut rx_buffer);
                     usb0.ep_out_prime_receive(endpoint);
                     debug!("VENDOR_VALUE_BULK_IN received {} bytes", bytes_read);
@@ -296,7 +296,7 @@ fn main_loop() -> GreatResult<()> {
 
 // - vendor request handler ---------------------------------------------------
 
-fn handle_vendor_request<'a, D>(usb: &D, setup_packet: SetupPacket, rx_buffer: &[u8])
+fn handle_vendor_request<D>(usb: &D, setup_packet: SetupPacket, rx_buffer: &[u8])
 where
     D: ReadControl + ReadEndpoint + WriteEndpoint + UsbDriverOperations + UnsafeUsbDriverOperations,
 {
@@ -369,7 +369,8 @@ where
         }
         (VENDOR_REQUEST, VENDOR_VALUE_BULK_IN) => {
             let endpoint_number = ENDPOINT_BULK_IN & 0x7f;
-            let test_data: [u8; MAX_TRANSFER_SIZE] = core::array::from_fn(|x| x as u8);
+            #[allow(clippy::cast_possible_truncation)]
+            let test_data: [u8; MAX_TRANSFER_SIZE] = core::array::from_fn(|x| (x & 0xff) as u8);
             let test_data = test_data.iter().take(payload_length);
 
             // send zlp response because there was no data TODO see above

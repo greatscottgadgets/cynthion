@@ -1,12 +1,12 @@
-///! ladybug implementation for cynthion
+//! ladybug implementation for cynthion
 use crate::pac;
 
-#[allow(unused_variables)]
-pub fn init(gpioa: pac::GPIOA, gpiob: pac::GPIOB) {
+#[allow(clippy::needless_pass_by_value)]
+pub fn init(_gpioa: pac::GPIOA, _gpiob: pac::GPIOB) {
     #[cfg(feature = "ladybug")]
     unsafe {
         use crate::debug::ladybug_impl::*;
-        LADYBUG_CYNTHION = Some(LadybugCynthion::new(gpioa, gpiob));
+        LADYBUG_CYNTHION = Some(LadybugCynthion::new(_gpioa, _gpiob));
         ladybug::set_analyzer(LADYBUG_CYNTHION.as_ref().expect("surprises"));
     }
 }

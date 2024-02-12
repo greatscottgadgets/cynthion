@@ -59,7 +59,7 @@ cynthion = "src"
 
 [tool.setuptools-git-versioning]
 enabled = true
-starting_version = "2023.07.12"
+starting_version = "1.0.0"
 
 [tool.setuptools.package-data]
 "cynthion.shared" = ["*.toml"]

@@ -1,12 +1,12 @@
 //! HAL implementation for LUNA EPTRI devices.
 //!
-//! Reference: https://github.com/hathach/tinyusb/compare/master...ktemkin:tinyusb:luna_riscv
+//! Reference: <https://github.com/hathach/tinyusb/compare/master...ktemkin:tinyusb:luna_riscv>
 
 mod error;
 pub use error::ErrorKind;
 
 use smolusb::device::Speed;
-use smolusb::setup::*;
+use smolusb::setup::Direction;
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriver, UsbDriverOperations,
     WriteEndpoint,
@@ -18,7 +18,7 @@ use pac::interrupt::Interrupt;
 use ladybug::{Bit, Channel};
 use log::{trace, warn};
 
-/// Macro to generate hal wrappers for pac::USBx peripherals
+/// Macro to generate hal wrappers for [`pac::USB0`] peripherals
 ///
 /// For example:
 ///
@@ -41,7 +41,7 @@ macro_rules! impl_usb {
             }
 
             impl $USBX {
-                /// Create a new `Usb` from the [`USB`](pac::USB) peripheral.
+                /// Create a new `Usb` instance.
                 pub fn new(
                     controller: pac::$USBX_CONTROLLER,
                     ep_control: pac::$USBX_EP_CONTROL,
@@ -57,7 +57,7 @@ macro_rules! impl_usb {
                     }
                 }
 
-                /// Release the [`USB`](pac::USB) peripheral and consume self.
+                /// Release all peripherals and consume self.
                 pub fn free(
                     self,
                 ) -> (
@@ -69,7 +69,7 @@ macro_rules! impl_usb {
                     (self.controller, self.ep_control, self.ep_in, self.ep_out)
                 }
 
-                /// Obtain a static `Usb` instance for use in e.g. interrupt handlers
+                /// Obtain a static [`Usb0`] instance for use in e.g. interrupt handlers
                 ///
                 /// # Safety
                 ///
@@ -87,6 +87,7 @@ macro_rules! impl_usb {
             }
 
             impl $USBX {
+                /// Enable all device interrupts.
                 pub fn enable_interrupts(&self) {
                     // clear all event handlers
                     self.clear_pending(Interrupt::$USBX_CONTROLLER);
@@ -101,6 +102,7 @@ macro_rules! impl_usb {
                     self.enable_interrupt(Interrupt::$USBX_EP_OUT);
                 }
 
+                /// Disable all device interrupts.
                 pub fn disable_interrupts(&self) {
                     // clear all event handlers
                     self.clear_pending(Interrupt::$USBX_CONTROLLER);
@@ -115,6 +117,7 @@ macro_rules! impl_usb {
                     self.disable_interrupt(Interrupt::$USBX_EP_OUT);
                 }
 
+                /// Enable the given interrupt for the device.
                 pub fn enable_interrupt(&self, interrupt: Interrupt) {
                     match interrupt {
                         Interrupt::$USBX_CONTROLLER => self
@@ -139,6 +142,7 @@ macro_rules! impl_usb {
                     }
                 }
 
+                /// Disable the given interrupt for the device.
                 pub fn disable_interrupt(&self, interrupt: Interrupt) {
                     match interrupt {
                         Interrupt::$USBX_CONTROLLER => self
@@ -163,6 +167,7 @@ macro_rules! impl_usb {
                     }
                 }
 
+                /// Test if the given interrupt is pending.
                 #[inline(always)]
                 pub fn is_pending(&self, interrupt: Interrupt) -> bool {
                     pac::csr::interrupt::pending(interrupt)
@@ -201,6 +206,7 @@ macro_rules! impl_usb {
                 }
 
                 /// Returns the status of the given interrupt event.
+                #[must_use]
                 #[inline(always)]
                 pub fn status_pending(&self, interrupt: Interrupt) -> u32 {
                     // for reasons that are still to be understood the
@@ -230,6 +236,8 @@ macro_rules! impl_usb {
                     }
                 }
 
+                /// Returns the address of the control endpoint.
+                #[must_use]
                 pub fn ep_control_address(&self) -> u8 {
                     self.ep_control.address().read().address().bits()
                 }
@@ -238,7 +246,7 @@ macro_rules! impl_usb {
             // - trait: UsbDriverOperations -----------------------------------
 
             impl UsbDriverOperations for $USBX {
-                /// Set the interface up for new connections
+                /// Connect the device.
                 fn connect(&mut self, device_speed: Speed) {
                     // set the device speed
                     self.device_speed = device_speed;
@@ -257,8 +265,8 @@ macro_rules! impl_usb {
                             self.controller.low_speed_only.write(|w| w.low_speed_only().bit(true));
                         }*/
                         _ => {
-                            log::warn!("Requested unsupported device speed, ignoring: {:?}", device_speed);
-                            self.device_speed = Speed::Unknown;
+                            log::warn!("Requested unsupported device speed '{:?}'. Ignoring request and setting device to 'Speed::High'.", device_speed);
+                            self.device_speed = Speed::High;
                         }
                     }
 
@@ -277,6 +285,7 @@ macro_rules! impl_usb {
                     self.controller.connect().write(|w| w.connect().bit(true));
                 }
 
+                /// Disconnect the device.
                 fn disconnect(&mut self) {
                     // reset speed
                     self.controller.full_speed_only().write(|w| w.full_speed_only().bit(false));
@@ -299,9 +308,6 @@ macro_rules! impl_usb {
                 }
 
                 /// Perform a bus reset of the device.
-                ///
-                /// This differs from `reset()` by not disabling
-                /// USBx_CONTROLLER bus reset events.
                 fn bus_reset(&self) {
                     // disable interrupt events
                     self.disable_interrupts();
@@ -336,6 +342,7 @@ macro_rules! impl_usb {
                     })
                 }
 
+                /// Set the device address.
                 fn set_address(&self, address: u8) {
                     self.ep_out
                         .address()
@@ -345,7 +352,7 @@ macro_rules! impl_usb {
                         .write(|w| unsafe { w.address().bits(address & 0x7f) });
                 }
 
-                /// Stall the given IN endpoint number
+                /// Stall the given IN endpoint number.
                 fn stall_endpoint_in(&self, endpoint_number: u8) {
                     $LADYBUG_TRACE(Channel::A, Bit::A_USB_STALL_IN, || {
                         self.ep_in.stall().write(|w| w.stall().bit(true));
@@ -353,7 +360,7 @@ macro_rules! impl_usb {
                     });
                 }
 
-                /// Stall the given OUT endpoint number
+                /// Stall the given OUT endpoint number.
                 fn stall_endpoint_out(&self, endpoint_number: u8) {
                     $LADYBUG_TRACE(Channel::A, Bit::A_USB_STALL_OUT, || {
                         self.ep_out.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
@@ -361,12 +368,12 @@ macro_rules! impl_usb {
                     });
                 }
 
-                /// Clear PID toggle bit for the given endpoint address.
+                /// Clear the PID toggle bit for the given endpoint address.
                 ///
                 /// TODO this works most of the time, but not always ...
                 /// TODO pass in endpoint number and direction separately
                 ///
-                /// Also see: https://github.com/greatscottgadgets/luna/issues/166
+                /// Also see: <https://github.com/greatscottgadgets/luna/issues/166>
                 fn clear_feature_endpoint_halt(&self, endpoint_address: u8) {
                     let endpoint_number = endpoint_address & 0xf;
 
@@ -388,6 +395,7 @@ macro_rules! impl_usb {
                 use smolusb::EP_MAX_ENDPOINTS;
 
                 #[cfg(target_has_atomic)]
+                #[allow(clippy::declare_interior_mutable_const)]
                 const ATOMIC_FALSE: core::sync::atomic::AtomicBool = core::sync::atomic::AtomicBool::new(false);
 
                 #[cfg(not(target_has_atomic))]
@@ -410,8 +418,8 @@ macro_rules! impl_usb {
                     }
                     #[cfg(target_has_atomic)]
                     {
-                        let endpoint_number = endpoint_number as usize;
                         use core::sync::atomic::Ordering;
+                        let endpoint_number = endpoint_number as usize;
                         $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].store(true, Ordering::Relaxed);
                     }
                 }
@@ -426,8 +434,8 @@ macro_rules! impl_usb {
                     }
                     #[cfg(target_has_atomic)]
                     {
-                        let endpoint_number = endpoint_number as usize;
                         use core::sync::atomic::Ordering;
+                        let endpoint_number = endpoint_number as usize;
                         $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].store(false, Ordering::Relaxed);
                     }
                 }
@@ -443,8 +451,8 @@ macro_rules! impl_usb {
                     }
                     #[cfg(target_has_atomic)]
                     {
-                        let endpoint_number = endpoint_number as usize;
                         use core::sync::atomic::Ordering;
+                        let endpoint_number = endpoint_number as usize;
                         $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].load(Ordering::Relaxed)
                     }
                 }
@@ -453,6 +461,7 @@ macro_rules! impl_usb {
             // - trait: Read/Write traits -------------------------------------
 
             impl ReadControl for $USBX {
+                /// Read a setup packet from the control endpoint.
                 fn read_control(&self, buffer: &mut [u8]) -> usize {
                     $LADYBUG_TRACE(Channel::B, Bit::B_USB_READ_CONTROL, || {
                         // drain fifo

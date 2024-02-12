@@ -9,7 +9,10 @@ import os
 from amaranth import Fragment, Module
 
 from amaranth.build import *
-from amaranth.vendor.lattice_ecp5 import LatticeECP5Platform
+try:
+    from amaranth.vendor.lattice_ecp5 import LatticeECP5Platform
+except:
+    from amaranth.vendor import LatticeECP5Platform
 from amaranth_boards.resources import *
 
 from luna.gateware.platform.core import LUNAApolloPlatform
