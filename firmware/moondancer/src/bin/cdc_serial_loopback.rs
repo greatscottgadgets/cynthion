@@ -261,7 +261,10 @@ fn main() -> ! {
 
             match event {
                 // Usb0 received a control event
-                Usb(Target, event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0))) => {
+                Usb(
+                    Target,
+                    event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0)),
+                ) => {
                     if let Some((setup_packet, _rx_buffer)) =
                         control_usb0.dispatch_event(&usb0, event)
                     {
@@ -271,7 +274,10 @@ fn main() -> ! {
                 }
 
                 // Usb1 received a control event
-                Usb(Aux, event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0))) => {
+                Usb(
+                    Aux,
+                    event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0)),
+                ) => {
                     if let Some((setup_packet, _rx_buffer)) =
                         control_usb1.dispatch_event(&usb1, event)
                     {

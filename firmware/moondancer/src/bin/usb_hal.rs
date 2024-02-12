@@ -241,7 +241,13 @@ fn main_loop() -> GreatResult<()> {
             // Usb0 received a control event
             match event {
                 #[cfg(feature = "chonky_events")]
-                Usb(Target, event @ (BusReset | ReceiveSetupPacket(0, _) | ReceiveBuffer(0, _, _) | SendComplete(0))) => {
+                Usb(
+                    Target,
+                    event @ (BusReset
+                    | ReceiveSetupPacket(0, _)
+                    | ReceiveBuffer(0, _, _)
+                    | SendComplete(0)),
+                ) => {
                     let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
                         control.dispatch_event(&usb0, event)
                     });
@@ -253,7 +259,13 @@ fn main_loop() -> GreatResult<()> {
                     }
                 }
                 #[cfg(not(feature = "chonky_events"))]
-                Usb(Target, event @ (BusReset | ReceiveSetupPacket(0, _) | ReceivePacket(0) | SendComplete(0))) => {
+                Usb(
+                    Target,
+                    event @ (BusReset
+                    | ReceiveSetupPacket(0, _)
+                    | ReceivePacket(0)
+                    | SendComplete(0)),
+                ) => {
                     let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
                         control.dispatch_event(&usb0, event)
                     });

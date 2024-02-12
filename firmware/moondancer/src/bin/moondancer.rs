@@ -258,7 +258,14 @@ impl<'a> Firmware<'a> {
                     // - usb1 Aux event handlers --
 
                     // Usb1 received a control event
-                    Usb(Aux, event @ (BusReset | ReceiveControl(0) | ReceiveSetupPacket(0, _) | ReceivePacket(0) | SendComplete(0))) => {
+                    Usb(
+                        Aux,
+                        event @ (BusReset
+                        | ReceiveControl(0)
+                        | ReceiveSetupPacket(0, _)
+                        | ReceivePacket(0)
+                        | SendComplete(0)),
+                    ) => {
                         trace!("Usb(Aux, {:?})", event);
 
                         if let Some((setup_packet, rx_buffer)) =

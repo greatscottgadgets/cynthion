@@ -253,11 +253,21 @@ fn main_loop() -> GreatResult<()> {
 
                 // Usb0 received a control event
                 #[cfg(feature = "chonky_events")]
-                Usb(Target, event @ (BusReset | ReceiveControl(0) | ReceiveSetupPacket(0, _) | ReceivePacket(0) | SendComplete(0))) => {
+                Usb(
+                    Target,
+                    event @ (BusReset
+                    | ReceiveControl(0)
+                    | ReceiveSetupPacket(0, _)
+                    | ReceivePacket(0)
+                    | SendComplete(0)),
+                ) => {
                     control.dispatch_event(&usb0, event);
                 }
                 #[cfg(not(feature = "chonky_events"))]
-                Usb(Target, event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0))) => {
+                Usb(
+                    Target,
+                    event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0)),
+                ) => {
                     control.dispatch_event(&usb0, event);
                 }
 

@@ -92,9 +92,7 @@ impl core::convert::From<UsbEvent> for [u8; 2] {
             ReceiveSetupPacket(endpoint_number, _setup_packet) => [event.into(), endpoint_number],
             ReceivePacket(endpoint_number) => [event.into(), endpoint_number],
             #[cfg(feature = "chonky_events")]
-            ReceiveBuffer(endpoint_number, _, _) => {
-                [event.into(), endpoint_number]
-            }
+            ReceiveBuffer(endpoint_number, _, _) => [event.into(), endpoint_number],
             SendComplete(endpoint_number) => [event.into(), endpoint_number],
         }
     }
