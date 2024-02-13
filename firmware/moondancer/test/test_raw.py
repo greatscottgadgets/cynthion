@@ -57,7 +57,7 @@ class TestLibgreatProtocolRaw(unittest.TestCase):
                 timeout=1000
             )
             logging.debug(f"test_raw_command control read transfer received response bytes:{len(response)} {response}")
-            self.assertEqual(response, b"v2023.0.1\0")
+            self.assertEqual(response, b"r1.0\0")
 
 
     def test_raw_command_large_output(self):
