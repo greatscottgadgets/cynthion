@@ -269,10 +269,10 @@ fn main_loop() -> GreatResult<()> {
                     let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
                         control.dispatch_event(&usb0, event)
                     });
-                    if let Some((setup_packet, rx_buffer)) = result {
+                    if let Some(setup_packet) = result {
                         // vendor requests are not handled by control
                         ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
-                            handle_vendor_request(&usb0, setup_packet, rx_buffer);
+                            handle_vendor_request(&usb0, setup_packet, control.data());
                         });
                     }
                 }

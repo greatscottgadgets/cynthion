@@ -35,6 +35,9 @@ impl<'a> Descriptors<'a> {
         self
     }
 
+    /// Writes the descriptor corresponding to the request.
+    ///
+    /// Returns the given [`SetupPacket`] if the descriptor request could not be handled.
     pub fn write<D>(
         &self,
         usb: &D,

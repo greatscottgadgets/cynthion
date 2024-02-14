@@ -33,7 +33,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
             InterruptEvent::Usb(Target, UsbEvent::BusReset)
         })
 
-    // USB0_EP_CONTROL ReceiveControl
+    // USB0_EP_CONTROL ReceiveSetupPacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
         ladybug::trace(Channel::B, Bit::B_IRQ_EP_CONTROL, || {
             let endpoint_number = usb0.ep_control.epno().read().bits() as u8;
@@ -84,7 +84,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
         usb1.bus_reset();
         InterruptEvent::Usb(Aux, UsbEvent::BusReset)
 
-    // USB1_EP_CONTROL ReceiveControl
+    // USB1_EP_CONTROL ReceiveSetupPacket
     } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
         let endpoint_number = usb1.ep_control.epno().read().bits() as u8;
 
@@ -163,13 +163,13 @@ use heapless::mpmc::MpMcQueue as Queue;
 
 #[allow(non_snake_case)]
 pub mod UsbEventExt {
-    //! Alternate implementation of some [`UsbEvent`] values that also
+    //! Alternate implementation of some [`UsbEvent`](smolusb::event::UsbEvent) values that also
     //! contain their associated data.
 
     use crate::UsbInterface;
     use smolusb::setup::SetupPacket;
 
-    /// Received a setup packet on [`USB0_EP_CONTROL`]
+    /// Received a setup packet on [`USB0_EP_CONTROL`](crate::pac::Interrupt::USB0_EP_CONTROL)
     ///
     /// An alternate version of `ReceiveControl` that can be used
     /// when the setup packet is read inside the interrupt handler
@@ -179,7 +179,7 @@ pub mod UsbEventExt {
     #[derive(Clone, Copy)]
     pub struct ReceiveControl(UsbInterface, u8, SetupPacket);
 
-    /// Received a data packet on [`USB0_EP_OUT`]
+    /// Received a data packet on [`USB0_EP_OUT`](crate::pac::Interrupt::USB0_EP_OUT)
     ///
     /// An alternate version of `ReceivePacket` that can be used
     /// when the packet is read inside the interrupt handler
