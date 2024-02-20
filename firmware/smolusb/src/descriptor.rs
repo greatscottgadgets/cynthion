@@ -8,7 +8,6 @@ use core::slice;
 use zerocopy::{AsBytes, FromBytes};
 
 use crate::traits::AsByteSliceIterator;
-use crate::SmolError;
 
 /// USB descriptor type.
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -32,14 +31,12 @@ pub enum DescriptorType {
     DeviceCapability = 16,
     WirelessEndpointCompanion = 17,
     SuperSpeedEndpointCompanion = 48,
+    Unknown = 0xff,
 }
 
-// TODO s/TryFrom/From
-impl TryFrom<u8> for DescriptorType {
-    type Error = SmolError;
-
-    fn try_from(value: u8) -> core::result::Result<Self, Self::Error> {
-        let result = match value {
+impl From<u8> for DescriptorType {
+    fn from(value: u8) -> Self {
+        match value {
             1 => DescriptorType::Device,
             2 => DescriptorType::Configuration,
             3 => DescriptorType::String,
@@ -58,17 +55,14 @@ impl TryFrom<u8> for DescriptorType {
             16 => DescriptorType::DeviceCapability,
             17 => DescriptorType::WirelessEndpointCompanion,
             48 => DescriptorType::SuperSpeedEndpointCompanion,
-            _ => return Err(SmolError::FailedConversion),
-        };
-        Ok(result)
+            _ => DescriptorType::Unknown,
+        }
     }
 }
 
 // - DeviceDescriptor ---------------------------------------------------------
 
 /// USB device descriptor
-///
-/// TODO consider renaming descriptor fields according to LUNA / industry-standard names
 #[derive(AsBytes, FromBytes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct DeviceDescriptor {
@@ -465,25 +459,6 @@ impl<'a> StringDescriptor<'a> {
 }
 
 impl<'a> StringDescriptor<'a> {
-    /// Calculate and update the descriptor length field
-    ///
-    /// TODO for consistency we should consume self and return the
-    /// updated version instead of the length.
-    pub fn set_length(&mut self) -> usize {
-        let length = self.iter().count();
-        //self.head._length = length as u8;
-        if let Ok(length) = u8::try_from(length) {
-            self.head._length = length;
-        } else {
-            log::warn!(
-                "String descriptor is too long. Truncating to {} bytes.",
-                u8::MAX
-            );
-            self.head._length = u8::MAX;
-        }
-        length
-    }
-
     /// Returns an iterator to the descriptor
     #[allow(clippy::cloned_instead_of_copied)]
     #[allow(clippy::iter_without_into_iter)]

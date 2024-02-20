@@ -368,8 +368,8 @@ where
         }
         (RequestType::Standard, Request::GetDescriptor) => {
             let [index, descriptor_type_bits] = setup_packet.value.to_le_bytes();
-            match DescriptorType::try_from(descriptor_type_bits) {
-                Ok(DescriptorType::String) => {
+            match DescriptorType::from(descriptor_type_bits) {
+                DescriptorType::String => {
                     debug!("CDC-SERIAL string_request: {}", index);
 
                     // we can just spoof this too

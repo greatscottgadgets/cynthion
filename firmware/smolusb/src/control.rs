@@ -122,7 +122,15 @@ where
                     }
                     (Direction::HostToDevice, RequestType::Standard, Request::SetConfiguration) => {
                         let configuration: u8 = (setup_packet.value & 0xff) as u8;
-                        // TODO check that this is a valid configuration
+                        // check whether this is a valid configuration
+                        // TODO support multiple configurations
+                        if configuration > 1 {
+                            warn!("Control stall - unknown configuration {}", configuration);
+                            self.configuration = None;
+                            self.next = State::Stall;
+                            usb.stall_endpoint_out(self.endpoint_number);
+                            return None;
+                        }
                         self.configuration = Some(configuration);
                         self.next = State::Complete;
                         self.write_zlp(usb);
@@ -220,7 +228,10 @@ where
                 if endpoint_number == self.endpoint_number =>
             {
                 if !self.read_zlp(usb) {
-                    warn!("TODO GetDescriptor not a zlp");
+                    warn!(
+                        "Control {:?} {:?} expected a ZLP but received data instead.",
+                        event, self.next
+                    );
                 }
                 self.next = State::Idle;
             }

@@ -83,7 +83,6 @@ impl From<UsbEvent> for u8 {
 }
 
 impl core::convert::From<UsbEvent> for [u8; 2] {
-    // TODO lose magic numbers
     fn from(event: UsbEvent) -> Self {
         use UsbEvent::*;
         match event {
