@@ -34,6 +34,8 @@ dependencies = [
     "tabulate",
     "prompt_toolkit",
     "pygreat @ git+https://github.com/antoinevg/libgreat.git@antoinevg/moondancer#subdirectory=host",
+    "apollo_fpga",
+    "libusb1",
 ]
 
 [project.optional-dependencies]

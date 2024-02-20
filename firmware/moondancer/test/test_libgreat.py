@@ -94,7 +94,7 @@ class TestLibgreatEndpoints(unittest.TestCase):
         api = self.board.apis.core
 
         response = api.read_version_string()
-        self.assertEqual(response, "v2023.0.1")
+        self.assertEqual(response, "r1.0")
 
         logging.debug(f"received api response: {len(response)} -> '{response}'")
 

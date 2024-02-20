@@ -23,7 +23,6 @@ impl From<[u8; 8]> for SetupPacket {
     }
 }
 
-// TODO use impl From and same semantics as InterruptEvent conversion
 impl SetupPacket {
     #[must_use]
     pub fn as_bytes(setup_packet: SetupPacket) -> [u8; 8] {
@@ -85,7 +84,7 @@ pub enum RequestType {
     Standard = 0,
     Class = 1,
     Vendor = 2,
-    Reserved = 3,
+    Reserved(u8) = 3,
 }
 
 impl From<u8> for RequestType {
@@ -94,7 +93,7 @@ impl From<u8> for RequestType {
             0 => RequestType::Standard,
             1 => RequestType::Class,
             2 => RequestType::Vendor,
-            3..=u8::MAX => RequestType::Reserved,
+            3..=u8::MAX => RequestType::Reserved(value),
         }
     }
 }

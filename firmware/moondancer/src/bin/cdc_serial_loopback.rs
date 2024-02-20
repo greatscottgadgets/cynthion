@@ -265,9 +265,7 @@ fn main() -> ! {
                     Target,
                     event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0)),
                 ) => {
-                    if let Some((setup_packet, _rx_buffer)) =
-                        control_usb0.dispatch_event(&usb0, event)
-                    {
+                    if let Some(setup_packet) = control_usb0.dispatch_event(&usb0, event) {
                         // vendor requests are not handled by control
                         handle_vendor_request(&usb0, setup_packet);
                     }
@@ -278,9 +276,7 @@ fn main() -> ! {
                     Aux,
                     event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0)),
                 ) => {
-                    if let Some((setup_packet, _rx_buffer)) =
-                        control_usb1.dispatch_event(&usb1, event)
-                    {
+                    if let Some(setup_packet) = control_usb1.dispatch_event(&usb1, event) {
                         // vendor requests are not handled by control
                         handle_vendor_request(&usb1, setup_packet);
                     }
@@ -372,8 +368,8 @@ where
         }
         (RequestType::Standard, Request::GetDescriptor) => {
             let [index, descriptor_type_bits] = setup_packet.value.to_le_bytes();
-            match DescriptorType::try_from(descriptor_type_bits) {
-                Ok(DescriptorType::String) => {
+            match DescriptorType::from(descriptor_type_bits) {
+                DescriptorType::String => {
                     debug!("CDC-SERIAL string_request: {}", index);
 
                     // we can just spoof this too

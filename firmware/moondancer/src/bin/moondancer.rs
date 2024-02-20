@@ -8,7 +8,7 @@ use smolusb::control::Control;
 use smolusb::device::{Descriptors, Speed};
 
 use smolusb::setup::{Direction, RequestType, SetupPacket};
-use smolusb::traits::{UsbDriverOperations, WriteEndpoint};
+use smolusb::traits::{ReadEndpoint, UsbDriverOperations, WriteEndpoint};
 
 use ladybug::{Bit, Channel};
 
@@ -96,6 +96,9 @@ struct Firmware<'a> {
     leds: pac::LEDS,
     usb1: hal::Usb1,
 
+    // usb1 control endpoint
+    usb1_control: Control<'a, hal::Usb1, LIBGREAT_MAX_COMMAND_SIZE>,
+
     // state
     libgreat_response: Option<GreatResponse>,
     libgreat_response_last_error: Option<GreatError>,
@@ -148,6 +151,21 @@ impl<'a> Firmware<'a> {
             peripherals.USB0_EP_OUT,
         );
 
+        let usb1_control = Control::<_, LIBGREAT_MAX_COMMAND_SIZE>::new(
+            0,
+            Descriptors {
+                device_speed: DEVICE_SPEED,
+                device_descriptor: moondancer::usb::DEVICE_DESCRIPTOR,
+                configuration_descriptor: moondancer::usb::CONFIGURATION_DESCRIPTOR_0,
+                other_speed_configuration_descriptor: Some(
+                    moondancer::usb::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0,
+                ),
+                device_qualifier_descriptor: Some(moondancer::usb::DEVICE_QUALIFIER_DESCRIPTOR),
+                string_descriptor_zero: moondancer::usb::STRING_DESCRIPTOR_0,
+                string_descriptors: moondancer::usb::STRING_DESCRIPTORS,
+            },
+        );
+
         // initialize libgreat classes
         let core = libgreat::gcp::class_core::Core::new(classes, moondancer::BOARD_INFORMATION);
         let moondancer = moondancer::gcp::moondancer::Moondancer::new(usb0);
@@ -155,7 +173,7 @@ impl<'a> Firmware<'a> {
         Self {
             leds: peripherals.LEDS,
             usb1,
-            //usb1_control,
+            usb1_control,
             libgreat_response: None,
             libgreat_response_last_error: None,
             core,
@@ -201,21 +219,6 @@ impl<'a> Firmware<'a> {
 impl<'a> Firmware<'a> {
     #[inline(always)]
     fn main_loop(&'a mut self) -> GreatResult<()> {
-        let mut usb1_control = Control::<_, LIBGREAT_MAX_COMMAND_SIZE>::new(
-            0,
-            Descriptors {
-                device_speed: DEVICE_SPEED,
-                device_descriptor: moondancer::usb::DEVICE_DESCRIPTOR,
-                configuration_descriptor: moondancer::usb::CONFIGURATION_DESCRIPTOR_0,
-                other_speed_configuration_descriptor: Some(
-                    moondancer::usb::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0,
-                ),
-                device_qualifier_descriptor: Some(moondancer::usb::DEVICE_QUALIFIER_DESCRIPTOR),
-                string_descriptor_zero: moondancer::usb::STRING_DESCRIPTOR_0,
-                string_descriptors: moondancer::usb::STRING_DESCRIPTORS,
-            },
-        );
-
         let mut max_queue_length: usize = 0;
         let mut queue_length: usize = 0;
         let mut counter: usize = 1;
@@ -267,12 +270,11 @@ impl<'a> Firmware<'a> {
                         | SendComplete(0)),
                     ) => {
                         trace!("Usb(Aux, {:?})", event);
-
-                        if let Some((setup_packet, rx_buffer)) =
-                            usb1_control.dispatch_event(&self.usb1, event)
+                        if let Some(setup_packet) =
+                            self.usb1_control.dispatch_event(&self.usb1, event)
                         {
                             // vendor requests are not handled by control
-                            self.handle_vendor_request(setup_packet, rx_buffer)?;
+                            self.handle_vendor_request(setup_packet)?;
                         }
                     }
 
@@ -295,11 +297,7 @@ impl<'a> Firmware<'a> {
 
 impl<'a> Firmware<'a> {
     /// Handle GCP vendor requests
-    fn handle_vendor_request(
-        &mut self,
-        setup_packet: SetupPacket,
-        rx_buffer: &[u8],
-    ) -> GreatResult<()> {
+    fn handle_vendor_request(&mut self, setup_packet: SetupPacket) -> GreatResult<()> {
         let direction = setup_packet.direction();
         let request_type = setup_packet.request_type();
         let vendor_request = VendorRequest::from(setup_packet.request);
@@ -315,9 +313,9 @@ impl<'a> Firmware<'a> {
                 match (&vendor_value, &direction) {
                     // host is starting a new command sequence
                     (VendorValue::Execute, Direction::HostToDevice) => {
-                        trace!("  GOT COMMAND data:{:?}", rx_buffer);
+                        trace!("  GOT COMMAND data:{:?}", self.usb1_control.data());
                         ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_REQUEST, || {
-                            self.dispatch_libgreat_request(rx_buffer)
+                            self.dispatch_libgreat_request()
                         })?;
                     }
 
@@ -394,7 +392,9 @@ impl<'a> Firmware<'a> {
 // - libgreat command dispatch ------------------------------------------------
 
 impl<'a> Firmware<'a> {
-    fn dispatch_libgreat_request(&mut self, command_buffer: &[u8]) -> GreatResult<()> {
+    fn dispatch_libgreat_request(&mut self) -> GreatResult<()> {
+        let command_buffer = self.usb1_control.data();
+
         // parse command
         let (class_id, verb_number, arguments) = match libgreat::gcp::Command::parse(command_buffer)
         {
@@ -470,17 +470,13 @@ impl<'a> Firmware<'a> {
         // do we have a response ready?
         if let Some(response) = &mut self.libgreat_response {
             // send response
-            let bytes_written = self.usb1.write(0, response);
-
-            // TODO should we block here?
+            self.usb1.write(0, response);
 
             // clear cached response
             self.libgreat_response = None;
 
             // prime to receive host zlp - aka ep_out_prime_receive() TODO should control do this in send_complete?
-            self.usb1.ack(0, Direction::DeviceToHost);
-
-            debug!("dispatch_libgreat_response -> {} bytes", bytes_written);
+            self.usb1.ep_out_prime_receive(0);
         } else if let Some(error) = self.libgreat_response_last_error {
             warn!("dispatch_libgreat_response error result: {:?}", error);
 
@@ -491,7 +487,7 @@ impl<'a> Firmware<'a> {
             self.libgreat_response_last_error = None;
 
             // prime to receive host zlp - TODO should control do this in send_complete?
-            self.usb1.ack(0, Direction::DeviceToHost);
+            self.usb1.ep_out_prime_receive(0);
         } else {
             // TODO figure out what to do if we don't have a response or error
             error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");

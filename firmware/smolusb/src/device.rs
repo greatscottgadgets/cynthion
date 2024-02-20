@@ -35,6 +35,9 @@ impl<'a> Descriptors<'a> {
         self
     }
 
+    /// Writes the descriptor corresponding to the request.
+    ///
+    /// Returns the given [`SetupPacket`] if the descriptor request could not be handled.
     pub fn write<D>(
         &self,
         usb: &D,
@@ -46,17 +49,7 @@ impl<'a> Descriptors<'a> {
     {
         // extract the descriptor type and number from our SETUP request
         let [descriptor_number, descriptor_type_bits] = setup_packet.value.to_le_bytes();
-        let descriptor_type = match DescriptorType::try_from(descriptor_type_bits) {
-            Ok(descriptor_type) => descriptor_type,
-            Err(_e) => {
-                warn!(
-                    "Descriptors::write_descriptor() stall - invalid descriptor type: {} {}",
-                    descriptor_type_bits, descriptor_number
-                );
-                usb.stall_endpoint_in(endpoint_number);
-                return Some(setup_packet);
-            }
-        };
+        let descriptor_type = DescriptorType::from(descriptor_type_bits);
 
         // if the host is requesting less than the maximum amount of data,
         // only respond with the amount requested
