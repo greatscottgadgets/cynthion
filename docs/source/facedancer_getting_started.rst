@@ -86,29 +86,13 @@ Create a new Python file called `rubber-ducky.py` with the following content:
     device = USBKeyboardDevice()
 
     async def type_letters():
-        logging.info("Beginning message typing demo...")
-
-        # Type ls.
-        await asyncio.sleep(5)
-        await device.type_letters('l', 's', '\n')
-
-        # Echo hi.
+        # Wait for device to connect
         await asyncio.sleep(2)
-        await device.type_string("echo hi, user\n")
 
-        # Finally, try to pop calc, just for fun.
-        logging.info("Bonus: trying to pop calc.")
-        await device.type_string('r', modifiers=KeyboardModifiers.MOD_LEFT_META)
-        await asyncio.sleep(0.5)
-        await device.type_string('calc\n')
-
-        logging.info("Typing complete. Idly handling USB requests.")
-
+        # Type a string with the device
+        await device.type_string("echo hello, facedancer\n")
 
     main(device, type_letters())
-
-
-TODO replace platform-specific actions from rubber ducky example with better ones
 
 
 Open a terminal and run:
