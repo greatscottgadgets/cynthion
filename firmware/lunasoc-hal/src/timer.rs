@@ -1,6 +1,6 @@
 /// Timer Events
 ///
-/// Each event is a possible interrupt source, if enabled
+/// Each event is a possible interrupt source, if enabled.
 pub enum Event {
     /// Timer timed out / count down ended
     TimeOut,
@@ -12,9 +12,11 @@ macro_rules! impl_timer {
         $TIMERX:ident: $PACTIMERX:ty,
     )+) => {
         $(
+            /// Timer peripheral
             #[derive(Debug)]
             pub struct $TIMERX {
                 registers: $PACTIMERX,
+                /// System clock speed.
                 pub clk: u32,
             }
 
@@ -38,25 +40,29 @@ macro_rules! impl_timer {
                 pub unsafe fn summon() -> Self {
                     Self {
                         registers: $crate::pac::Peripherals::steal().TIMER,
-                        clk: 0, // TODO
+                        clk: 0,
                     }
                 }
             }
 
             // configuration
             impl $TIMERX {
+                /// Current timer count
                 pub fn counter(&self) -> u32 {
                     self.registers.ctr().read().ctr().bits()
                 }
 
+                /// Disable timer
                 pub fn disable(&self) {
                     self.registers.en().write(|w| w.en().bit(false));
                 }
 
+                /// Enable timer
                 pub fn enable(&self) {
                     self.registers.en().write(|w| w.en().bit(true));
                 }
 
+                /// Set timeout using a [`core::time::Duration`]
                 pub fn set_timeout<T>(&mut self, timeout: T)
                 where
                     T: Into<core::time::Duration>
@@ -73,7 +79,7 @@ macro_rules! impl_timer {
                     self.set_timeout_ticks(ticks.max(1));
                 }
 
-                // TODO private
+                /// Set timeout using system ticks
                 pub fn set_timeout_ticks(&mut self, ticks: u32) {
                     self.registers.reload().write(|w| unsafe {
                         w.reload().bits(ticks)
@@ -83,7 +89,7 @@ macro_rules! impl_timer {
 
             // interrupts
             impl $TIMERX {
-                /// Start listening for `event`
+                /// Start listening for [`Event`]
                 pub fn listen(&mut self, event: Event) {
                     match event {
                         Event::TimeOut => {
@@ -92,7 +98,7 @@ macro_rules! impl_timer {
                     }
                 }
 
-                /// Stop listening for `event`
+                /// Stop listening for [`Event`]
                 pub fn unlisten(&mut self, event: Event) {
                     match event {
                         Event::TimeOut => {
@@ -104,7 +110,6 @@ macro_rules! impl_timer {
                 /// Check if the interrupt flag is pending
                 pub fn is_pending(&self) -> bool {
                     self.registers.ev_pending().read().pending().bit_is_set()
-                    //$crate::pac::csr::interrupt::pending($crate::pac::Interrupt::TIMER)
                 }
 
                 /// Clear the interrupt flag

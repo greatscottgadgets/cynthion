@@ -1,7 +1,9 @@
-/// USB Error type
+//! smolusb Error type
+
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub enum ErrorKind {
-    Timeout,
+    Timeout(usize),
+    Overflow(usize),
 }
 
 impl core::fmt::Display for ErrorKind {
@@ -16,7 +18,8 @@ impl core::error::Error for ErrorKind {
     fn description(&self) -> &str {
         use ErrorKind::*;
         match self {
-            Timeout => "Blocking operation timed-out",
+            Timeout(_) => "Blocking operation timed-out",
+            Overflow(_) => "Read operation overflowed receive buffer",
         }
     }
 }

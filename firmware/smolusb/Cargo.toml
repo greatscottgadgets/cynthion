@@ -14,11 +14,14 @@ include = ["examples/**/*", "src/**/*", "README.md", "memory.x"]
 
 [features]
 default = []
-ladybug = ["ladybug/enable"]
+
+# experimental: pack received data into interrupt events
 chonky_events = []
 
+# use nightly features
+nightly = []
+
 [dependencies]
-heapless = { version = "=0.7.16" } # TODO 0.8.0 is en-route...
-ladybug = { path = "../ladybug" }
+heapless = { version = "=0.7.16" }
 log = "=0.4.17"
 zerocopy = { version = "=0.7.0-alpha.2", default-features = false }

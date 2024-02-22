@@ -8,6 +8,7 @@ pub mod class;
 pub mod control;
 pub mod descriptor;
 pub mod device;
+pub mod error;
 pub mod event;
 pub mod setup;
 pub mod traits;
