@@ -1,9 +1,7 @@
-//! HAL implementation for LUNA EPTRI devices.
-//!
-//! Reference: <https://github.com/hathach/tinyusb/compare/master...ktemkin:tinyusb:luna_riscv>
+//! smolusb hal implementation for luna eptri peripherals
 
-mod error;
-pub use error::ErrorKind;
+/// Re-export smolusb error type
+pub use smolusb::error::ErrorKind as Error;
 
 use smolusb::device::Speed;
 use smolusb::setup::Direction;
@@ -17,7 +15,7 @@ use pac::interrupt::Interrupt;
 
 use log::{trace, warn};
 
-/// Macro to generate hal wrappers for [`pac::USB0`] peripherals
+/// Macro to generate smolusb hal wrappers for [`pac::USB0`] peripherals
 ///
 /// For example:
 ///
@@ -546,7 +544,7 @@ macro_rules! impl_usb {
                 {
                     let max_packet_size = match (self.device_speed, endpoint_number) {
                         (_, 0) => 64,
-                        (Speed::High, _) => smolusb::EP_MAX_PACKET_SIZE, // TODO const generic
+                        (Speed::High, _) => smolusb::EP_MAX_PACKET_SIZE,
                         (Speed::Full, _) => 64,
                         (_, _) => {
                             warn!("{}::write unsupported device speed: {:?}", stringify!($USBX), self.device_speed);
