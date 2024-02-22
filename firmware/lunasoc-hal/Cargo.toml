@@ -29,8 +29,8 @@ bench = false
 [features]
 default = [
     "vexriscv",
-    #"nightly",
 ]
+
 # select softcore
 minerva = [
     "lunasoc-pac/minerva",
@@ -38,13 +38,16 @@ minerva = [
 vexriscv = [
     "lunasoc-pac/vexriscv",
 ]
+
+# use nightly features
 nightly = []
+
+# build smolusb hal driver
 usb = [
     "log",
     "smolusb",
     "riscv",
 ]
-ladybug = ["ladybug/enable"]
 
 
 # - dependencies --------------------------------------------------------------
@@ -53,19 +56,15 @@ ladybug = ["ladybug/enable"]
 embedded-hal = "=1.0.0-alpha.9"
 embedded-hal-0 = { package = "embedded-hal", version = "=0.2.7", features = ["unproven"] }
 embedded-hal-nb = "=1.0.0-alpha.1"
+log = { version = "=0.4.17", optional = true }
 lunasoc-pac = { path = "../lunasoc-pac", default-features = false }
 nb = "=1.1.0"
 smolusb = { path = "../smolusb", optional = true }
-
-# TODO remove debug logging from usb driver and then lose these
-ladybug = { path = "../ladybug" }
-log = { version = "=0.4.17", optional = true }
 riscv = { version = "=0.10.1", optional = true }
 
 # - dev-dependencies ----------------------------------------------------------
 
 [dev-dependencies]
-log = "=0.4.17"
 lunasoc-pac = { path = "../lunasoc-pac", default-features = false, features = ["critical-section", "rt"]}
 panic-halt = "=0.2.0"
 riscv = { version = "=0.10.1", features = ["critical-section-single-hart"] }
