@@ -56,22 +56,22 @@ pub mod usb {
 
     pub mod bManufacturerString {
         use super::TOML;
-        pub static apollo: &'static str = TOML.b_manufacturer_string.apollo;
-        pub static bulk_speed_test: &'static str = TOML.b_manufacturer_string.bulk_speed_test;
-        pub static cynthion: &'static str = TOML.b_manufacturer_string.cynthion;
-        pub static example: &'static str = TOML.b_manufacturer_string.example;
+        pub static apollo: &str = TOML.b_manufacturer_string.apollo;
+        pub static bulk_speed_test: &str = TOML.b_manufacturer_string.bulk_speed_test;
+        pub static cynthion: &str = TOML.b_manufacturer_string.cynthion;
+        pub static example: &str = TOML.b_manufacturer_string.example;
     }
 
     pub mod bProductString {
         use super::TOML;
-        pub static apollo: &'static str = TOML.b_product_string.apollo;
-        pub static bulk_speed_test: &'static str = TOML.b_product_string.bulk_speed_test;
-        pub static cynthion: &'static str = TOML.b_product_string.cynthion;
-        pub static example: &'static str = TOML.b_product_string.example;
-        pub static example_2: &'static str = TOML.b_product_string.example_2;
-        pub static example_3: &'static str = TOML.b_product_string.example_3;
-        pub static example_4: &'static str = TOML.b_product_string.example_4;
-        pub static example_5: &'static str = TOML.b_product_string.example_5;
+        pub static apollo: &str = TOML.b_product_string.apollo;
+        pub static bulk_speed_test: &str = TOML.b_product_string.bulk_speed_test;
+        pub static cynthion: &str = TOML.b_product_string.cynthion;
+        pub static example: &str = TOML.b_product_string.example;
+        pub static example_2: &str = TOML.b_product_string.example_2;
+        pub static example_3: &str = TOML.b_product_string.example_3;
+        pub static example_4: &str = TOML.b_product_string.example_4;
+        pub static example_5: &str = TOML.b_product_string.example_5;
     }
 
     pub mod bInterfaceSubClass {
