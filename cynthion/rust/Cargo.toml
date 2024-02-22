@@ -1,8 +1,7 @@
 [package]
-name = "testpublish_gsg"
+name = "cynthion"
 version = "0.0.2"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
-license-file = "LICENSE.txt"
 license = "BSD-3-Clause"
 description = "Rust library for the Great Scott Gadgets Cynthion USB Test Instrument."
 categories = ["embedded", "hardware-support"]
