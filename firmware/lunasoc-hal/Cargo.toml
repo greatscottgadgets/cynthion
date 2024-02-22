@@ -3,6 +3,7 @@ name = "lunasoc-hal"
 version = "0.0.1"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license-file = "LICENSE.txt"
+license = "BSD-3-Clause"
 description = "Hardware Abstraction Layer implementation for LunaSoC cores"
 categories = ["embedded", "hardware-support", "no-std"]
 keywords = ["cynthion", "luna", "riscv", "luna-soc", "hal", "embedded-hal"]

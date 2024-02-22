@@ -1,10 +1,15 @@
 [package]
-name = "cynthion"
-version = "0.0.1"
+name = "testpublish_gsg"
+version = "0.0.2"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license-file = "LICENSE.txt"
-categories = ["embedded", "hardware-support"]
+license = "BSD-3-Clause"
 description = "Rust library for the Great Scott Gadgets Cynthion USB Test Instrument."
+categories = ["embedded", "hardware-support"]
+keywords = ["cynthion", "luna", "usb"]
+homepage = "https://greatscottgadgets.com/cynthion/"
+repository = "https://github.com/greatscottgadgets/cynthion"
+documentation = "https://cynthion.readthedocs.io"
 edition = "2021"
 rust-version = "1.68"
 

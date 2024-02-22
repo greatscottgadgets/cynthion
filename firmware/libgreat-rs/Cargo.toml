@@ -1,8 +1,9 @@
 [package]
 name = "libgreat"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license-file = "LICENSE.txt"
+license = "BSD-3-Clause"
 categories = ["embedded", "hardware-support", "no-std"]
 keywords = ["cynthion"]
 repository = "https://github.com/greatscottgadgets/cynthion"
