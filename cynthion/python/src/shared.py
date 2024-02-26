@@ -9,7 +9,7 @@ directory.
 """
 
 import glob
-import tomllib
+import tomli
 
 from collections import namedtuple
 from importlib.resources import files
@@ -23,7 +23,7 @@ SHARED_TOML_PATH = Path(files("cynthion").joinpath("shared"))
 def generate_module_values():
     for toml in SHARED_TOML_PATH.glob("*.toml"):
         with toml.open("rb") as f:
-            globals()[toml.stem] = _dict_to_namedtuple(tomllib.load(f))
+            globals()[toml.stem] = _dict_to_namedtuple(tomli.load(f))
 
 
 def _dict_to_namedtuple(data, typename="_"):
