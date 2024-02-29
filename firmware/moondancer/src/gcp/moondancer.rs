@@ -589,10 +589,10 @@ impl Moondancer {
         let mut timeout = 0;
         while self.usb0.ep_in.have().read().have().bit() {
             if timeout == 0 {
-                warn!("  USB0 clear tx");
+                warn!("  moondancer clear tx");
             } else if timeout > 25_000_000 {
                 self.usb0.ep_in.reset().write(|w| w.reset().bit(true));
-                error!("  USB0 clear tx timeout");
+                error!("  moondancer clear tx timeout");
             }
             timeout += 1;
         }

@@ -13,7 +13,7 @@ use smolusb::traits::{
 use crate::pac;
 use pac::interrupt::Interrupt;
 
-use log::{trace, warn};
+use log::{error, trace, warn};
 
 /// Macro to generate smolusb hal wrappers for [`pac::USB0`] peripherals
 ///
@@ -560,11 +560,17 @@ macro_rules! impl_usb {
                 {
                     unsafe { self.set_tx_ack_active(endpoint_number); }
 
-                    // reset output fifo if needed
-                    // FIXME rather return an error
-                    if self.ep_in.have().read().have().bit() {
-                        warn!("  {} clear tx", stringify!($USBX));
-                        self.ep_in.reset().write(|w| w.reset().bit(true));
+                    // check if output FIFO is empty
+                    // FIXME return a GreatError::DeviceOrResourceBusy on timeout
+                    let mut timeout = 0;
+                    while self.ep_in.have().read().have().bit() {
+                        if timeout == 0 {
+                            warn!("  {} clear tx", stringify!($USBX));
+                        } else if timeout > 25_000_000 {
+                            self.ep_in.reset().write(|w| w.reset().bit(true));
+                            error!("  {} clear tx timeout", stringify!($USBX));
+                        }
+                        timeout += 1;
                     }
 
                     let mut bytes_written: usize = 0;
