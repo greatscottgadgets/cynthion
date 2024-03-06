@@ -15,6 +15,9 @@ use pac::interrupt::Interrupt;
 
 use log::{error, trace, warn};
 
+/// Default timeout for USB operations
+pub const DEFAULT_TIMEOUT: usize = 1_000_000;
+
 /// Macro to generate smolusb hal wrappers for [`pac::USB0`] peripherals
 ///
 /// For example:
@@ -317,6 +320,11 @@ macro_rules! impl_usb {
                     self.ep_in.reset().write(|w| w.reset().bit(true));
                     self.ep_out.reset().write(|w| w.reset().bit(true));
 
+                    // clear status for all IN endpoints
+                    for endpoint in 0..(smolusb::EP_MAX_ENDPOINTS as u8) {
+                        unsafe { self.clear_tx_ack_active(endpoint); }
+                    }
+
                     // re-enable interrupt events
                     self.enable_interrupts();
 
@@ -566,7 +574,7 @@ macro_rules! impl_usb {
                     while self.ep_in.have().read().have().bit() {
                         if timeout == 0 {
                             warn!("  {} clear tx", stringify!($USBX));
-                        } else if timeout > 25_000_000 {
+                        } else if timeout > DEFAULT_TIMEOUT {
                             self.ep_in.reset().write(|w| w.reset().bit(true));
                             error!("  {} clear tx timeout", stringify!($USBX));
                         }
@@ -589,7 +597,7 @@ macro_rules! impl_usb {
                             let mut timeout = 0;
                             while self.ep_in.have().read().have().bit() {
                                 timeout += 1;
-                                if timeout > 5_000_000 {
+                                if timeout > DEFAULT_TIMEOUT {
                                     log::error!(
                                         "{}::write timed out after {} bytes",
                                         stringify!($USBX),

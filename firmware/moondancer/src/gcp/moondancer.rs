@@ -260,10 +260,13 @@ impl Moondancer {
         unsafe { self.enable_usb_interrupts() };
 
         // wait for things to settle and get connection speed
+        // FIXME this is _not_ reliable
         unsafe {
-            riscv::asm::delay(5_000_000);
+            riscv::asm::delay(10_000_000);
         }
         let speed: Speed = self.usb0.controller.speed().read().speed().bits().into();
+
+        log::info!("moondancer::connect {:?}-speed device connected to host.", speed);
 
         log::debug!(
             "MD moondancer::connect(ep0_max_packet_size:{}, device_speed:{:?}, quirk_flags:{}) -> {:?}",
@@ -584,15 +587,23 @@ impl Moondancer {
         let iter = args.payload.iter();
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
 
+        unsafe {
+            self.usb0.set_tx_ack_active(endpoint_number);
+        }
+
         // check if output FIFO is empty
         // FIXME return a GreatError::DeviceOrResourceBusy on timeout
         let mut timeout = 0;
         while self.usb0.ep_in.have().read().have().bit() {
             if timeout == 0 {
-                warn!("  moondancer clear tx");
-            } else if timeout > 25_000_000 {
+                warn!("  moondancer clear tx ep{}", endpoint_number);
+            } else if timeout > hal::usb::DEFAULT_TIMEOUT {
                 self.usb0.ep_in.reset().write(|w| w.reset().bit(true));
-                error!("  moondancer clear tx timeout");
+                unsafe {
+                    self.usb0.clear_tx_ack_active(endpoint_number);
+                }
+                error!("  moondancer clear tx timeout ep{}", endpoint_number);
+                return Err(GreatError::StreamIoctlTimeout);
             }
             timeout += 1;
         }
@@ -622,7 +633,7 @@ impl Moondancer {
                 //while self.ep_in.have.read().have().bit() {
                 while unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
                     timeout += 1;
-                    if timeout > 25_000_000 {
+                    if timeout > hal::usb::DEFAULT_TIMEOUT {
                         unsafe {
                             self.usb0.clear_tx_ack_active(endpoint_number);
                         }
@@ -630,7 +641,7 @@ impl Moondancer {
                             "moondancer::write_endpoint timed out after {} bytes",
                             bytes_written
                         );
-                        // TODO return an error
+                        return Err(GreatError::StreamIoctlTimeout);
                     }
                 }
             }
@@ -658,7 +669,7 @@ impl Moondancer {
         let mut timeout = 0;
         while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
             timeout += 1;
-            if timeout > 25_000_000 {
+            if timeout > hal::usb::DEFAULT_TIMEOUT {
                 unsafe {
                     self.usb0.clear_tx_ack_active(endpoint_number);
                 }
@@ -764,7 +775,15 @@ impl Moondancer {
     ///
     /// bitmask
     pub fn get_nak_status(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        let nak_status = (self.usb0.ep_in.nak().read().bits() & 0xffff) as u16;
+        let mut nak_status = (self.usb0.ep_in.nak().read().bits() & 0xffff) as u16;
+
+        for endpoint in 0..(smolusb::EP_MAX_ENDPOINTS as u8) {
+            // clear nak status for any active endpoints
+            if unsafe { self.usb0.is_tx_ack_active(endpoint) } {
+                nak_status &= !(1 << endpoint);
+            }
+        }
+
         Ok(nak_status.to_le_bytes().into_iter())
     }
 }
