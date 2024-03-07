@@ -9,7 +9,8 @@ import os
 from amaranth.build import *
 from amaranth_boards.resources import *
 
-from cynthion.gateware.platform.core import CynthionPlatform
+from .core import CynthionPlatform
+from .adv import control_phy_hook
 
 __all__ = ["CynthionPlatformRev1D4"]
 
@@ -22,8 +23,8 @@ class CynthionPlatformRev1D4(CynthionPlatform):
     package     = "BG256"
     speed       = os.getenv("ECP5_SPEED_GRADE", "8")
 
-    # By default, assume we'll be connecting via our target PHY.
-    default_usb_connection = "target_phy"
+    # By default, assume we'll be connecting via our control PHY.
+    default_usb_connection = "control_phy"
 
     #
     # Preferred DRAM bus I/O (de)-skewing constants.
@@ -178,3 +179,7 @@ class CynthionPlatformRev1D4(CynthionPlatform):
         Connector("mezzanine", 0,
             "- - B8 A9 B10 A10 B11 D14 C14 F14 E14 G13 G12 - - - - C16 C15 B16 B15 A14 B13 A13 D13 A12 B12 A11 - -"),
     ]
+
+    usb_device_hooks = {
+        "control_phy_0": control_phy_hook
+    }

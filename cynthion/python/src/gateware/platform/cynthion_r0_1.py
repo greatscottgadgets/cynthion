@@ -8,7 +8,7 @@ import os
 
 from amaranth.build import Resource, Subsignal, Pins, PinsN, Attrs, Clock, DiffPairs, Connector
 
-from cynthion.gateware.platform.core import CynthionPlatform
+from .core import CynthionPlatform
 
 __all__ = ["CynthionPlatformRev0D1"]
 
