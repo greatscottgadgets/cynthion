@@ -10,8 +10,6 @@ use smolusb::device::{Descriptors, Speed};
 use smolusb::setup::{Direction, RequestType, SetupPacket};
 use smolusb::traits::{ReadEndpoint, UsbDriverOperations, WriteEndpoint};
 
-use ladybug::{Bit, Channel};
-
 use libgreat::gcp::{GreatDispatch, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
 use libgreat::{GreatError, GreatResult};
 
@@ -316,25 +314,19 @@ impl<'a> Firmware<'a> {
                     // host is starting a new command sequence
                     (VendorValue::Execute, Direction::HostToDevice) => {
                         trace!("  GOT COMMAND data:{:?}", self.usb1_control.data());
-                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_REQUEST, || {
-                            self.dispatch_libgreat_request()
-                        })?;
+                        self.dispatch_libgreat_request()?;
                     }
 
                     // host is ready to receive a response
                     (VendorValue::Execute, Direction::DeviceToHost) => {
                         trace!("  GOT RESPONSE REQUEST");
-                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_RESPONSE, || {
-                            self.dispatch_libgreat_response(setup_packet)
-                        })?;
+                        self.dispatch_libgreat_response(setup_packet)?;
                     }
 
                     // host would like to abort the current command sequence
                     (VendorValue::Cancel, Direction::DeviceToHost) => {
                         debug!("  GOT ABORT");
-                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_ABORT, || {
-                            self.dispatch_libgreat_abort(setup_packet)
-                        })?;
+                        self.dispatch_libgreat_abort(setup_packet)?;
                     }
 
                     _ => {
@@ -490,7 +482,6 @@ impl<'a> Firmware<'a> {
 
             // clear cached error
             self.libgreat_response_last_error = None;
-
         } else {
             // TODO figure out what to do if we don't have a response or error
             error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");
@@ -516,6 +507,6 @@ impl<'a> Firmware<'a> {
         self.libgreat_response = None;
         self.libgreat_response_last_error = None;
 
-        Ok(())}
-
+        Ok(())
+    }
 }

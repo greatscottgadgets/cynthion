@@ -266,7 +266,10 @@ impl Moondancer {
         }
         let speed: Speed = self.usb0.controller.speed().read().speed().bits().into();
 
-        log::info!("moondancer::connect {:?}-speed device connected to host.", speed);
+        log::info!(
+            "moondancer::connect {:?}-speed device connected to host.",
+            speed
+        );
 
         log::debug!(
             "MD moondancer::connect(ep0_max_packet_size:{}, device_speed:{:?}, quirk_flags:{}) -> {:?}",
@@ -630,7 +633,8 @@ impl Moondancer {
                 // or do we eke out the smallest bit of performance if we
                 // just wait for the FIFO to empty?
                 let mut timeout = 0;
-                //while self.ep_in.have.read().have().bit() {
+                //while !self.usb0.ep_in.idle().read().idle().bit() {
+                //while self.usb0.ep_in.have().read().have().bit() {
                 while unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
                     timeout += 1;
                     if timeout > hal::usb::DEFAULT_TIMEOUT {
@@ -775,13 +779,14 @@ impl Moondancer {
     ///
     /// bitmask
     pub fn get_nak_status(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        let mut nak_status = (self.usb0.ep_in.nak().read().bits() & 0xffff) as u16;
+        let nak_status = (self.usb0.ep_in.nak().read().bits() & 0xffff) as u16;
 
-        for endpoint in 0..(smolusb::EP_MAX_ENDPOINTS as u8) {
-            // clear nak status for any active endpoints
-            if unsafe { self.usb0.is_tx_ack_active(endpoint) } {
-                nak_status &= !(1 << endpoint);
-            }
+        if (nak_status & (1 << 0)) > 0 {
+            ladybug::trace(Channel::A, Bit::A_ENDPOINT_NAKKED, || {});
+        }
+
+        if (nak_status & (1 << 1)) > 0 {
+            ladybug::trace(Channel::A, Bit::A_ENDPOINT_NAKKED, || {});
         }
 
         Ok(nak_status.to_le_bytes().into_iter())
@@ -1037,15 +1042,19 @@ impl GreatDispatch for Moondancer {
             }
             0xb => {
                 // moondancer::get_interrupt_events
-                let iter = self.get_interrupt_events(arguments)?;
-                let response = iter_to_response(iter, response_buffer);
-                Ok(response)
+                ladybug::trace(Channel::A, Bit::A_GET_EVENTS, || {
+                    let iter = self.get_interrupt_events(arguments)?;
+                    let response = iter_to_response(iter, response_buffer);
+                    Ok(response)
+                })
             }
             0xc => {
                 // moondancer::get_nak_status
-                let iter = self.get_nak_status(arguments)?;
-                let response = iter_to_response(iter, response_buffer);
-                Ok(response)
+                ladybug::trace(Channel::A, Bit::A_GET_NAK_STATUS, || {
+                    let iter = self.get_nak_status(arguments)?;
+                    let response = iter_to_response(iter, response_buffer);
+                    Ok(response)
+                })
             }
 
             // test APIs

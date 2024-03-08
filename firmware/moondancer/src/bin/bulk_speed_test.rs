@@ -19,8 +19,6 @@ use smolusb::traits::{ReadEndpoint, UsbDriverOperations};
 use moondancer::event::InterruptEvent;
 use moondancer::{hal, pac};
 
-use ladybug::{Bit, Channel};
-
 // - constants ----------------------------------------------------------------
 
 // TODO add support for other speeds
@@ -54,75 +52,67 @@ extern "C" fn MachineExternal() {
 
     // USB0 BusReset
     if usb0.is_pending(pac::Interrupt::USB0) {
-        ladybug::trace(Channel::B, Bit::B_IRQ_BUS_RESET, || {
-            usb0.clear_pending(pac::Interrupt::USB0);
-            usb0.bus_reset();
-            dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
-        });
+        usb0.clear_pending(pac::Interrupt::USB0);
+        usb0.bus_reset();
+        dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
 
     // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
-        ladybug::trace(Channel::B, Bit::B_IRQ_EP_CONTROL, || {
-            let endpoint = usb0.ep_control.epno().read().bits() as u8;
+        let endpoint = usb0.ep_control.epno().read().bits() as u8;
 
-            #[cfg(not(feature = "chonky_events"))]
-            {
-                dispatch_event(InterruptEvent::Usb(
-                    Target,
-                    UsbEvent::ReceiveControl(endpoint),
-                ));
-            }
+        #[cfg(not(feature = "chonky_events"))]
+        {
+            dispatch_event(InterruptEvent::Usb(
+                Target,
+                UsbEvent::ReceiveControl(endpoint),
+            ));
+        }
 
-            #[cfg(feature = "chonky_events")]
-            {
-                use smolusb::setup::SetupPacket;
-                use smolusb::traits::ReadControl;
-                let mut buffer = [0_u8; 8];
-                let _bytes_read = usb0.read_control(&mut buffer);
-                let setup_packet = SetupPacket::from(buffer);
-                dispatch_event(InterruptEvent::Usb(
-                    Target,
-                    UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
-                ));
-            }
+        #[cfg(feature = "chonky_events")]
+        {
+            use smolusb::setup::SetupPacket;
+            use smolusb::traits::ReadControl;
+            let mut buffer = [0_u8; 8];
+            let _bytes_read = usb0.read_control(&mut buffer);
+            let setup_packet = SetupPacket::from(buffer);
+            dispatch_event(InterruptEvent::Usb(
+                Target,
+                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
+            ));
+        }
 
-            usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-        });
+        usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
 
     // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
-        ladybug::trace(Channel::B, Bit::B_IRQ_EP_IN, || {
-            let endpoint = usb0.ep_in.epno().read().bits() as u8;
-            usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
+        let endpoint = usb0.ep_in.epno().read().bits() as u8;
+        usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
 
-            dispatch_event(InterruptEvent::Usb(
-                Target,
-                UsbEvent::SendComplete(endpoint),
-            ));
-        });
+        dispatch_event(InterruptEvent::Usb(
+            Target,
+            UsbEvent::SendComplete(endpoint),
+        ));
 
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
-        ladybug::trace(Channel::B, Bit::B_IRQ_EP_OUT, || {
-            let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
+        let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
 
-            // discard packets from Bulk OUT transfer endpoint
-            /*if endpoint == 1 {
-                /*while usb0.ep_out.have.read().have().bit() {
-                    let _b = usb0.ep_out.data.read().data().bits();
-                }*/
-                //usb0.ep_out.reset().write(|w| w.reset().bit(true));
-                usb0.ep_out_prime_receive(1);
-                usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
-                return;
+        // discard packets from Bulk OUT transfer endpoint
+        /*if endpoint == 1 {
+            /*while usb0.ep_out.have.read().have().bit() {
+                let _b = usb0.ep_out.data.read().data().bits();
             }*/
-
-            dispatch_event(InterruptEvent::Usb(
-                Target,
-                UsbEvent::ReceivePacket(endpoint),
-            ));
+            //usb0.ep_out.reset().write(|w| w.reset().bit(true));
+            usb0.ep_out_prime_receive(1);
             usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
-        });
+            return;
+        }*/
+
+        dispatch_event(InterruptEvent::Usb(
+            Target,
+            UsbEvent::ReceivePacket(endpoint),
+        ));
+        usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
 
     // - Unknown Interrupt --
     } else {
@@ -165,9 +155,6 @@ fn main_loop() -> GreatResult<()> {
     // initialize logging
     moondancer::log::init(hal::Serial::new(peripherals.UART));
     info!("Logging initialized");
-
-    // initialize ladybug
-    moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
     // usb0: Target
     let mut usb0 = hal::Usb0::new(
