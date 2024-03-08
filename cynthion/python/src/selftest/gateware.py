@@ -12,7 +12,7 @@ from luna.gateware.utils.cdc          import synchronize
 from luna.gateware.architecture.car   import LunaECP5DomainGenerator
 from luna.gateware.interface.jtag     import JTAGRegisterInterface
 from luna.gateware.interface.ulpi     import ULPIRegisterWindow
-from luna.gateware.interface.psram    import HyperRAMInterface
+from luna.gateware.interface.psram    import HyperRAMPHY, HyperRAMInterface
 
 from .registers import *
 
@@ -65,8 +65,9 @@ class SelftestDevice(Elaboratable):
         # HyperRAM test connections.
         #
         ram_bus = platform.request('ram')
-        psram = HyperRAMInterface(bus=ram_bus, **platform.ram_timings)
-        m.submodules += psram
+        psram_phy = HyperRAMPHY(bus=ram_bus)
+        psram = HyperRAMInterface(phy=psram_phy.phy)
+        m.submodules += [psram_phy, psram]
 
         psram_address_changed = Signal()
         psram_address = registers.add_register(REGISTER_RAM_REG_ADDR, write_strobe=psram_address_changed)
