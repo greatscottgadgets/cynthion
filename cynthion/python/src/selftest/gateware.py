@@ -72,7 +72,11 @@ class SelftestDevice(Elaboratable):
         psram_address_changed = Signal()
         psram_address = registers.add_register(REGISTER_RAM_REG_ADDR, write_strobe=psram_address_changed)
 
-        registers.add_sfr(REGISTER_RAM_VALUE, read=psram.read_data)
+        # Store last read word from HyperRAM.
+        psram_read_data = Signal.like(psram.read_data)
+        with m.If(psram.read_ready):
+            m.d.sync += psram_read_data.eq(psram.read_data)
+        registers.add_sfr(REGISTER_RAM_VALUE, read=psram_read_data)
 
         # Hook up our PSRAM.
         m.d.comb += [
