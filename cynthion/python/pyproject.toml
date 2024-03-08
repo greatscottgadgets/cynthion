@@ -34,6 +34,7 @@ dependencies = [
     "tabulate",
     "prompt_toolkit",
     "pygreat @ git+https://github.com/antoinevg/libgreat.git@antoinevg/moondancer#subdirectory=host",
+    "apollo_fpga @ git+https://github.com/greatscottgadgets/apollo.git",  # temporarily pull from git until apollo release
     "apollo_fpga",
     "libusb1",
     "tomli",
