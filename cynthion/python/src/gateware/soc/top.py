@@ -112,7 +112,7 @@ class MoondancerSoc(Elaboratable):
         # create our USB devices, connect device controllers and add eptri endpoint handlers
 
         # target_phy
-        ulpi0 = platform.request(platform.default_usb_connection)
+        ulpi0 = platform.request("target_phy")
         usb0_device = USBDevice(bus=ulpi0)
         usb0_device.add_endpoint(self.usb0_ep_control)
         usb0_device.add_endpoint(self.usb0_ep_in)
