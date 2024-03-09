@@ -95,6 +95,12 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
 
         # Handle vendor requests
         with m.If(setup.type == USBRequestType.VENDOR):
+
+            m.d.comb += interface.claim.eq(
+                (setup.request == USBAnalyzerVendorRequests.GET_STATE) |
+                (setup.request == USBAnalyzerVendorRequests.SET_STATE) |
+                (setup.request == USBAnalyzerVendorRequests.GET_SPEEDS))
+
             with m.FSM(domain="usb"):
 
                 # IDLE -- not handling any active request
@@ -112,9 +118,6 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                                 m.next = 'SET_STATE'
                             with m.Case(USBAnalyzerVendorRequests.GET_SPEEDS):
                                 m.next = 'GET_SPEEDS'
-                            with m.Case():
-                                m.next = 'UNHANDLED'
-
 
                 # GET_STATE -- Fetch the device's state
                 with m.State('GET_STATE'):
@@ -131,15 +134,6 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                         USBAnalyzerSupportedSpeeds.USB_SPEED_FULL | \
                         USBAnalyzerSupportedSpeeds.USB_SPEED_HIGH
                     self.handle_simple_data_request(m, transmitter, supported_speeds, length=1)
-
-                # UNHANDLED -- we've received a request we're not prepared to handle
-                with m.State('UNHANDLED'):
-
-                    # When we next have an opportunity to stall, do so,
-                    # and then return to idle.
-                    with m.If(interface.data_requested | interface.status_requested):
-                        m.d.comb += handshake_generator.stall.eq(1)
-                        m.next = 'IDLE'
 
         return m
 
