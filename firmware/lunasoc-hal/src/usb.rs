@@ -497,8 +497,11 @@ macro_rules! impl_usb {
                 /// Prepare OUT endpoint to receive a single packet.
                 #[inline(always)]
                 fn ep_out_prime_receive(&self, endpoint_number: u8) {
-                    // 0. clear receive buffer
-                    self.ep_out.reset().write(|w| w.reset().bit(true));
+                    // 0. clear receive fifo in case the previous transaction wasn't handled
+                    if self.ep_out.have().read().have().bit() {
+                        warn!("  {} priming out endpoint with unread data", stringify!($USBX));
+                        self.ep_out.reset().write(|w| w.reset().bit(true));
+                    }
 
                     // 1. select endpoint
                     self.ep_out
