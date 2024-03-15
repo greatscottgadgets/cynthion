@@ -27,10 +27,10 @@ use moondancer::{hal, pac};
 const DEVICE_SPEED: Speed = Speed::Full;
 
 const VENDOR_REQUEST: u8 = 0x65;
-const VENDOR_VALUE_CONTROL_OUT: u16 = 0x0001;
-const VENDOR_VALUE_CONTROL_IN: u16 = 0x0002;
-const VENDOR_VALUE_BULK_OUT: u16 = 0x0003;
-const VENDOR_VALUE_BULK_IN: u16 = 0x0004;
+const VENDOR_CONTROL_OUT: u16 = 0x0001;
+const VENDOR_CONTROL_IN: u16 = 0x0002;
+const VENDOR_BULK_OUT: u16 = 0x0003;
+const VENDOR_BULK_IN: u16 = 0x0004;
 
 const ENDPOINT_BULK_OUT: u8 = 0x01;
 const ENDPOINT_BULK_IN: u8 = 0x81;
@@ -257,8 +257,7 @@ fn main_loop() -> GreatResult<()> {
                     let mut rx_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] =
                         [0; smolusb::EP_MAX_PACKET_SIZE];
                     let bytes_read = usb0.read(endpoint, &mut rx_buffer);
-                    usb0.ep_out_prime_receive(endpoint);
-                    debug!("VENDOR_VALUE_BULK_IN received {} bytes", bytes_read);
+                    debug!("VENDOR_BULK_OUT received {} bytes", bytes_read);
                 }
                 Usb(Target, SendComplete(_endpoint)) => {
                     log::debug!("USB0 Event: {:?}", event);
@@ -294,25 +293,25 @@ where
     );
 
     match (vendor_request, vendor_value) {
-        (VENDOR_REQUEST, VENDOR_VALUE_CONTROL_OUT) => {
+        (VENDOR_REQUEST, VENDOR_CONTROL_OUT) => {
             // TODO would it be better if the caller sent the zlp at this point rather than control?
             // there's currently a subtle bug where zlp is automatic if control transfer had data
             // but caller has to send zlp themselves if there was no data.
             // really, either control has to always zlp or the caller has to always zlp
             if rx_buffer.len() == payload_length {
                 debug!(
-                    "VENDOR_VALUE_CONTROL_OUT received {} bytes",
+                    "VENDOR_CONTROL_OUT received {} bytes",
                     rx_buffer.len()
                 );
             } else {
                 error!(
-                    "VENDOR_VALUE_CONTROL_OUT expected {} bytes but only received {} bytes.",
+                    "VENDOR_CONTROL_OUT expected {} bytes but only received {} bytes.",
                     payload_length,
                     rx_buffer.len()
                 );
             }
         }
-        (VENDOR_REQUEST, VENDOR_VALUE_CONTROL_IN) => {
+        (VENDOR_REQUEST, VENDOR_CONTROL_IN) => {
             let test_data: [u8; MAX_TRANSFER_SIZE] = core::array::from_fn(|x| x as u8);
             let test_data = test_data.iter().take(payload_length);
 
@@ -323,15 +322,15 @@ where
             usb.ack(0, Direction::DeviceToHost);
 
             if bytes_written == payload_length {
-                debug!("VENDOR_VALUE_CONTROL_IN wrote {} bytes", bytes_written);
+                debug!("VENDOR_CONTROL_IN wrote {} bytes", bytes_written);
             } else {
                 error!(
-                    "VENDOR_VALUE_CONTROL_IN payload length is {} bytes but only wrote {} bytes",
+                    "VENDOR_CONTROL_IN payload length is {} bytes but only wrote {} bytes",
                     payload_length, bytes_written
                 );
             }
         }
-        (VENDOR_REQUEST, VENDOR_VALUE_BULK_OUT) => {
+        (VENDOR_REQUEST, VENDOR_BULK_OUT) => {
             // prime bulk endpoint to receive data
             usb.ep_out_prime_receive(ENDPOINT_BULK_OUT);
 
@@ -339,12 +338,12 @@ where
             usb.ack(0, Direction::HostToDevice);
 
             debug!(
-                "VENDOR_VALUE_BULK_OUT expecting {} bytes ({})",
+                "VENDOR_BULK_OUT expecting {} bytes ({})",
                 payload_length,
                 rx_buffer.len()
             );
         }
-        (VENDOR_REQUEST, VENDOR_VALUE_BULK_IN) => {
+        (VENDOR_REQUEST, VENDOR_BULK_IN) => {
             let endpoint_number = ENDPOINT_BULK_IN & 0x7f;
             #[allow(clippy::cast_possible_truncation)]
             let test_data: [u8; MAX_TRANSFER_SIZE] = core::array::from_fn(|x| (x & 0xff) as u8);
@@ -361,7 +360,7 @@ where
             while unsafe { usb.is_tx_ack_active(0) } {
                 timeout += 1;
                 if timeout > 5_000_000 {
-                    error!("VENDOR_VALUE_BULK_IN timed out sending control ack");
+                    error!("VENDOR_BULK_IN timed out sending control ack");
                     return;
                 }
             }
@@ -373,10 +372,10 @@ where
             //usb.ack(endpoint_number, Direction::DeviceToHost);
 
             if bytes_written == payload_length {
-                debug!("VENDOR_VALUE_BULK_IN wrote {} bytes", bytes_written);
+                debug!("VENDOR_BULK_IN wrote {} bytes", bytes_written);
             } else {
                 error!(
-                    "VENDOR_VALUE_BULK_IN payload length is {} bytes but only wrote {} bytes",
+                    "VENDOR_BULK_IN payload length is {} bytes but only wrote {} bytes",
                     payload_length, bytes_written
                 );
             }
