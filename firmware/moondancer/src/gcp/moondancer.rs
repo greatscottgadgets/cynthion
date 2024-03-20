@@ -123,7 +123,6 @@ impl Moondancer {
                         }
                     }
                 }
-                //InterruptEvent::Usb(interface, UsbEvent::ReceiveControl(endpoint_number))
                 UsbEvent::ReceiveControl(endpoint_number)
             }
 
@@ -159,17 +158,26 @@ impl Moondancer {
                 }
 
                 // append to packet buffer
-                match self.packet_buffer.push(packet) {
-                    Ok(()) => {
-                        // all good
+                ladybug::trace(Channel::A, Bit::A_PACKET_PUSH, || {
+                    if endpoint_number == 0 {
+                        ladybug::trace(Channel::B, Bit::B_EP_IS_0, || {});
+                    } else if endpoint_number == 1 {
+                        ladybug::trace(Channel::B, Bit::B_EP_IS_1, || {});
                     }
-                    Err(_packet) => {
-                        error!(
-                            "MD moondancer::dispatch_event(ReceivePacket({})) packet buffer overflow",
-                            endpoint_number
-                        );
+
+                    //log::info!("push {}", endpoint_number);
+
+                    match self.packet_buffer.push(packet) {
+                        Ok(()) => {
+                        }
+                        Err(_packet) => {
+                            error!(
+                                "MD moondancer::dispatch_event(ReceivePacket({})) packet buffer overflow",
+                                endpoint_number
+                            );
+                        }
                     }
-                }
+                });
 
                 event
             }
@@ -490,21 +498,31 @@ impl Moondancer {
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let endpoint_number = args.endpoint_number;
 
-        let packet = match self
-            .packet_buffer
-            .iter()
-            .position(|packet| packet.endpoint_number == endpoint_number)
-        {
-            Some(index) => self.packet_buffer.remove(index),
-            None => {
-                error!(
-                    "MD moondancer::read_endpoint({}) has no packet buffered for endpoint",
-                    endpoint_number
-                );
-                // TODO actually handle this case in moondancer.py
-                Packet::new(endpoint_number, 0)
+        //log::info!("pop {}", endpoint_number);
+        let packet = ladybug::trace(Channel::A, Bit::A_PACKET_POP, || {
+            match self
+                .packet_buffer
+                .iter()
+                .position(|packet| packet.endpoint_number == endpoint_number)
+            {
+                Some(index) => {
+                    if endpoint_number == 0 {
+                        ladybug::trace(Channel::B, Bit::B_EP_IS_0, || {});
+                    } else if endpoint_number == 1 {
+                        ladybug::trace(Channel::B, Bit::B_EP_IS_1, || {});
+                    }
+                    self.packet_buffer.remove(index)
+                },
+                None => {
+                    error!(
+                        "MD moondancer::read_endpoint({}) has no packet buffered for endpoint",
+                        endpoint_number
+                    );
+                    // TODO actually handle this case in moondancer.py
+                    Packet::new(endpoint_number, 0)
+                }
             }
-        };
+        });
 
         log::debug!(
             "MD moondancer::read_endpoint({}) -> bytes_read:{}",
@@ -557,6 +575,12 @@ impl Moondancer {
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
+        if args.endpoint_number == 0 {
+            ladybug::trace(Channel::B, Bit::B_EP_IS_0, || {});
+        } else if args.endpoint_number == 1 {
+            ladybug::trace(Channel::B, Bit::B_EP_IS_1, || {});
+        }
+
         self.usb0.ep_out_prime_receive(args.endpoint_number);
 
         debug!(
@@ -590,6 +614,14 @@ impl Moondancer {
         let iter = args.payload.iter();
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
 
+
+        if endpoint_number == 0 {
+            ladybug::trace(Channel::B, Bit::B_EP_IS_0, || {});
+        } else if endpoint_number == 1 {
+            ladybug::trace(Channel::B, Bit::B_EP_IS_1, || {});
+        }
+
+        // TODO clean up tx_ack_active semantics!!!
         unsafe {
             self.usb0.set_tx_ack_active(endpoint_number);
         }
@@ -620,7 +652,9 @@ impl Moondancer {
                 .write(|w| unsafe { w.data().bits(*byte) });
             bytes_written += 1;
 
+            // send data if we've written max_packet_size
             if bytes_written % max_packet_size == 0 {
+                // TODO clean up tx_ack_active semantics!!!
                 unsafe {
                     self.usb0.set_tx_ack_active(endpoint_number);
                 }
@@ -780,15 +814,6 @@ impl Moondancer {
     /// bitmask
     pub fn get_nak_status(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         let nak_status = (self.usb0.ep_in.nak().read().bits() & 0xffff) as u16;
-
-        if (nak_status & (1 << 0)) > 0 {
-            ladybug::trace(Channel::A, Bit::A_ENDPOINT_NAKKED, || {});
-        }
-
-        if (nak_status & (1 << 1)) > 0 {
-            ladybug::trace(Channel::A, Bit::A_ENDPOINT_NAKKED, || {});
-        }
-
         Ok(nak_status.to_le_bytes().into_iter())
     }
 }
@@ -990,9 +1015,11 @@ impl GreatDispatch for Moondancer {
             }
             0x3 => {
                 // moondancer::read_control
-                let iter = self.read_control(arguments)?;
-                let response = iter_to_response(iter, response_buffer);
-                Ok(response)
+                ladybug::trace(Channel::A, Bit::A_READ_CONTROL, || {
+                    let iter = self.read_control(arguments)?;
+                    let response = iter_to_response(iter, response_buffer);
+                    Ok(response)
+                })
             }
             0x4 => {
                 // moondancer::set_address
@@ -1028,9 +1055,11 @@ impl GreatDispatch for Moondancer {
             }
             0x9 => {
                 // moondancer::ep_out_prime_receive
-                let iter = self.ep_out_prime_receive(arguments)?;
-                let response = iter_to_response(iter, response_buffer);
-                Ok(response)
+                ladybug::trace(Channel::A, Bit::A_PRIME_RECEIVE, || {
+                    let iter = self.ep_out_prime_receive(arguments)?;
+                    let response = iter_to_response(iter, response_buffer);
+                    Ok(response)
+                })
             }
             0xa => {
                 // moondancer::write_endpoint
@@ -1050,11 +1079,9 @@ impl GreatDispatch for Moondancer {
             }
             0xc => {
                 // moondancer::get_nak_status
-                ladybug::trace(Channel::A, Bit::A_GET_NAK_STATUS, || {
-                    let iter = self.get_nak_status(arguments)?;
-                    let response = iter_to_response(iter, response_buffer);
-                    Ok(response)
-                })
+                let iter = self.get_nak_status(arguments)?;
+                let response = iter_to_response(iter, response_buffer);
+                Ok(response)
             }
 
             // test APIs
