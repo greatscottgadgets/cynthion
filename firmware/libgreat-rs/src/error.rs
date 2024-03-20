@@ -25,6 +25,7 @@ pub enum GreatError {
     InvalidRequestDescriptor = 51,         // EBADR           - Invalid request descriptor
     InvalidRequestCode = 54,               // EBADRQC         - Invalid request code
     NoData = 61,                           // ENODATA         - No data
+    StreamIoctlTimeout = 62,               // ETIME           - Stream ioctl timeout
     ProtocolError = 71,                    // EPROTO          - Protocol error
     BadMessage = 77,                       // EBADMSG         - Bad message
     FunctionNotImplemented = 88,           // ENOSYS          - Function not implemented

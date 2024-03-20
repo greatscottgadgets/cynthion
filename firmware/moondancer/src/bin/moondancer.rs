@@ -10,8 +10,6 @@ use smolusb::device::{Descriptors, Speed};
 use smolusb::setup::{Direction, RequestType, SetupPacket};
 use smolusb::traits::{ReadEndpoint, UsbDriverOperations, WriteEndpoint};
 
-use ladybug::{Bit, Channel};
-
 use libgreat::gcp::{GreatDispatch, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
 use libgreat::{GreatError, GreatResult};
 
@@ -81,9 +79,11 @@ fn main() -> ! {
     // enter main loop
     match firmware.main_loop() {
         Ok(()) => {
+            log::error!("Firmware exited unexpectedly in main loop");
             panic!("Firmware exited unexpectedly in main loop")
         }
         Err(e) => {
+            log::error!("Firmware panicked in main loop: {}", e);
             panic!("Firmware panicked in main loop: {}", e)
         }
     }
@@ -314,25 +314,19 @@ impl<'a> Firmware<'a> {
                     // host is starting a new command sequence
                     (VendorValue::Execute, Direction::HostToDevice) => {
                         trace!("  GOT COMMAND data:{:?}", self.usb1_control.data());
-                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_REQUEST, || {
-                            self.dispatch_libgreat_request()
-                        })?;
+                        self.dispatch_libgreat_request()?;
                     }
 
                     // host is ready to receive a response
                     (VendorValue::Execute, Direction::DeviceToHost) => {
                         trace!("  GOT RESPONSE REQUEST");
-                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_RESPONSE, || {
-                            self.dispatch_libgreat_response(setup_packet)
-                        })?;
+                        self.dispatch_libgreat_response(setup_packet)?;
                     }
 
                     // host would like to abort the current command sequence
                     (VendorValue::Cancel, Direction::DeviceToHost) => {
                         debug!("  GOT ABORT");
-                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_ABORT, || {
-                            self.dispatch_libgreat_abort(setup_packet)
-                        })?;
+                        self.dispatch_libgreat_abort(setup_packet)?;
                     }
 
                     _ => {
@@ -401,7 +395,7 @@ impl<'a> Firmware<'a> {
             Some(command) => (command.class_id(), command.verb_number(), command.arguments),
             None => {
                 error!("dispatch_libgreat_request failed to parse libgreat command");
-                return Err(GreatError::BadMessage);
+                return Ok(());
             }
         };
 
@@ -480,14 +474,14 @@ impl<'a> Firmware<'a> {
         } else if let Some(error) = self.libgreat_response_last_error {
             warn!("dispatch_libgreat_response error result: {:?}", error);
 
+            // prime to receive host zlp - TODO should control do this in send_complete?
+            self.usb1.ep_out_prime_receive(0);
+
             // write error
             self.usb1.write(0, (error as u32).to_le_bytes().into_iter());
 
             // clear cached error
             self.libgreat_response_last_error = None;
-
-            // prime to receive host zlp - TODO should control do this in send_complete?
-            self.usb1.ep_out_prime_receive(0);
         } else {
             // TODO figure out what to do if we don't have a response or error
             error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");
@@ -499,6 +493,15 @@ impl<'a> Firmware<'a> {
 
     fn dispatch_libgreat_abort(&mut self, _setup_packet: SetupPacket) -> GreatResult<()> {
         error!("dispatch_libgreat_response abort");
+
+        // send an arbitrary error code if we're aborting mid-response
+        if let Some(_response) = &self.libgreat_response {
+            // prime to receive host zlp - TODO should control do this in send_complete?
+            self.usb1.ep_out_prime_receive(0);
+
+            // TODO send last error code?
+            self.usb1.write(0, 0_u32.to_le_bytes().into_iter());
+        }
 
         // cancel any queued response
         self.libgreat_response = None;
