@@ -77,16 +77,10 @@ fn main() -> ! {
     }
 
     // enter main loop
-    match firmware.main_loop() {
-        Ok(()) => {
-            log::error!("Firmware exited unexpectedly in main loop");
-            panic!("Firmware exited unexpectedly in main loop")
-        }
-        Err(e) => {
-            log::error!("Firmware panicked in main loop: {}", e);
-            panic!("Firmware panicked in main loop: {}", e)
-        }
-    }
+    let e = firmware.main_loop();
+
+    // panic!
+    panic!("Firmware exited unexpectedly in main loop: {:?}", e)
 }
 
 // - Firmware -----------------------------------------------------------------
@@ -255,7 +249,7 @@ impl<'a> Firmware<'a> {
                 match interrupt_event {
                     // - misc event handlers --
                     ErrorMessage(message) => {
-                        error!("MachineExternal Error - {}", message);
+                        error!("MachineExternal Error: {}", message);
                     }
 
                     // - usb1 Aux event handlers --
@@ -351,7 +345,7 @@ impl<'a> Firmware<'a> {
                     Direction::DeviceToHost => self.usb1.stall_endpoint_in(0),
                 }
             }
-            (RequestType::Vendor, vendor_request) => {
+            (RequestType::Vendor, _vendor_request) => {
                 // TODO this is from one of the legacy boards which we
                 // need to support to get `greatfet info` to finish
                 // enumerating through the supported devices.
@@ -362,10 +356,7 @@ impl<'a> Firmware<'a> {
                 // to be stalled if this is not a legacy device.
                 self.usb1.stall_endpoint_in(0);
 
-                warn!(
-                    "handle_vendor_request Legacy libgreat vendor request '{:?}'",
-                    vendor_request
-                );
+                warn!("handle_vendor_request Legacy libgreat vendor request");
             }
             _ => {
                 error!(
@@ -398,11 +389,6 @@ impl<'a> Firmware<'a> {
                 return Ok(());
             }
         };
-
-        debug!(
-            "dispatch_libgreat_request {:?}.0x{:x}",
-            class_id, verb_number
-        );
 
         // dispatch command
         let response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
@@ -442,8 +428,8 @@ impl<'a> Firmware<'a> {
             }
             Err(e) => {
                 error!(
-                    "dispatch_libgreat_request error: failed to dispatch command {}",
-                    e
+                    "dispatch_libgreat_request error: failed to dispatch command {:?} 0x{:X} {}",
+                    class_id, verb_number, e
                 );
                 self.libgreat_response = None;
                 self.libgreat_response_last_error = Some(e);

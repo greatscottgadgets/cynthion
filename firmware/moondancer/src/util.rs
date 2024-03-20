@@ -13,6 +13,7 @@ use pac::csr::interrupt;
 
 #[must_use]
 #[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::too_many_lines)]
 pub fn get_usb_interrupt_event() -> InterruptEvent {
     use crate::UsbInterface::{Aux, Control, Target};
 
@@ -35,8 +36,14 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
 
     // USB0_EP_CONTROL ReceiveSetupPacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
-        ladybug::trace(Channel::A, Bit::B_IRQ_EP_CONTROL, || {
+        ladybug::trace(Channel::B, Bit::B_IRQ_EP_CONTROL, || {
             let endpoint_number = usb0.ep_control.epno().read().bits() as u8;
+
+            if endpoint_number == 0 {
+                ladybug::trace(Channel::B, Bit::B_EP_IS_0, || {});
+            } else if endpoint_number == 1 {
+                ladybug::trace(Channel::B, Bit::B_EP_IS_1, || {});
+            }
 
             // read setup packet in interrupt handler for lowest latency
             let mut setup_packet_buffer = [0_u8; 8];
@@ -55,8 +62,14 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
 
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
-        ladybug::trace(Channel::A, Bit::B_IRQ_EP_OUT, || {
+        ladybug::trace(Channel::B, Bit::B_IRQ_EP_OUT, || {
             let endpoint_number = usb0.ep_out.data_ep().read().bits() as u8;
+
+            if endpoint_number == 0 {
+                ladybug::trace(Channel::B, Bit::B_EP_IS_0, || {});
+            } else if endpoint_number == 1 {
+                ladybug::trace(Channel::B, Bit::B_EP_IS_1, || {});
+            }
 
             usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
             InterruptEvent::Usb(Target, UsbEvent::ReceivePacket(endpoint_number))
@@ -64,8 +77,15 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
 
     // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
-        ladybug::trace(Channel::A, Bit::B_IRQ_EP_IN, || {
+        ladybug::trace(Channel::B, Bit::B_IRQ_EP_IN, || {
             let endpoint_number = usb0.ep_in.epno().read().bits() as u8;
+
+            if endpoint_number == 0 {
+                ladybug::trace(Channel::B, Bit::B_EP_IS_0, || {});
+            } else if endpoint_number == 1 {
+                ladybug::trace(Channel::B, Bit::B_EP_IS_1, || {});
+            }
+
             usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
 
             unsafe {

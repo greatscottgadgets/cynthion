@@ -299,10 +299,7 @@ where
             // but caller has to send zlp themselves if there was no data.
             // really, either control has to always zlp or the caller has to always zlp
             if rx_buffer.len() == payload_length {
-                debug!(
-                    "VENDOR_CONTROL_OUT received {} bytes",
-                    rx_buffer.len()
-                );
+                debug!("VENDOR_CONTROL_OUT received {} bytes", rx_buffer.len());
             } else {
                 error!(
                     "VENDOR_CONTROL_OUT expected {} bytes but only received {} bytes.",

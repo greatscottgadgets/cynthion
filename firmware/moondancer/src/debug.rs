@@ -2,10 +2,11 @@
 use crate::pac;
 
 #[allow(clippy::needless_pass_by_value)]
+#[allow(clippy::missing_panics_doc)]
 pub fn init(_gpioa: pac::GPIOA, _gpiob: pac::GPIOB) {
     #[cfg(feature = "ladybug")]
     unsafe {
-        use crate::debug::ladybug_impl::*;
+        use crate::debug::ladybug_impl::{LADYBUG_CYNTHION, LadybugCynthion};
         LADYBUG_CYNTHION = Some(LadybugCynthion::new(_gpioa, _gpiob));
         ladybug::set_analyzer(LADYBUG_CYNTHION.as_ref().expect("surprises"));
     }
@@ -28,6 +29,7 @@ mod ladybug_impl {
     }
 
     impl LadybugCynthion {
+        #[allow(clippy::similar_names)]
         pub fn new(gpioa: pac::GPIOA, gpiob: pac::GPIOB) -> Self {
             // configure gpioa & gpiob pins as outputs
             gpioa
