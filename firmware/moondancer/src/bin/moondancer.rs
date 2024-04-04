@@ -10,8 +10,6 @@ use smolusb::device::{Descriptors, Speed};
 use smolusb::setup::{Direction, RequestType, SetupPacket};
 use smolusb::traits::{ReadEndpoint, UsbDriverOperations, WriteEndpoint};
 
-use ladybug::{Bit, Channel};
-
 use libgreat::gcp::{GreatDispatch, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
 use libgreat::{GreatError, GreatResult};
 
@@ -79,14 +77,10 @@ fn main() -> ! {
     }
 
     // enter main loop
-    match firmware.main_loop() {
-        Ok(()) => {
-            panic!("Firmware exited unexpectedly in main loop")
-        }
-        Err(e) => {
-            panic!("Firmware panicked in main loop: {}", e)
-        }
-    }
+    let e = firmware.main_loop();
+
+    // panic!
+    panic!("Firmware exited unexpectedly in main loop: {:?}", e)
 }
 
 // - Firmware -----------------------------------------------------------------
@@ -255,7 +249,7 @@ impl<'a> Firmware<'a> {
                 match interrupt_event {
                     // - misc event handlers --
                     ErrorMessage(message) => {
-                        error!("MachineExternal Error - {}", message);
+                        error!("MachineExternal Error: {}", message);
                     }
 
                     // - usb1 Aux event handlers --
@@ -314,25 +308,19 @@ impl<'a> Firmware<'a> {
                     // host is starting a new command sequence
                     (VendorValue::Execute, Direction::HostToDevice) => {
                         trace!("  GOT COMMAND data:{:?}", self.usb1_control.data());
-                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_REQUEST, || {
-                            self.dispatch_libgreat_request()
-                        })?;
+                        self.dispatch_libgreat_request()?;
                     }
 
                     // host is ready to receive a response
                     (VendorValue::Execute, Direction::DeviceToHost) => {
                         trace!("  GOT RESPONSE REQUEST");
-                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_RESPONSE, || {
-                            self.dispatch_libgreat_response(setup_packet)
-                        })?;
+                        self.dispatch_libgreat_response(setup_packet)?;
                     }
 
                     // host would like to abort the current command sequence
                     (VendorValue::Cancel, Direction::DeviceToHost) => {
                         debug!("  GOT ABORT");
-                        ladybug::trace(Channel::A, Bit::A_GCP_DISPATCH_ABORT, || {
-                            self.dispatch_libgreat_abort(setup_packet)
-                        })?;
+                        self.dispatch_libgreat_abort(setup_packet)?;
                     }
 
                     _ => {
@@ -357,7 +345,7 @@ impl<'a> Firmware<'a> {
                     Direction::DeviceToHost => self.usb1.stall_endpoint_in(0),
                 }
             }
-            (RequestType::Vendor, vendor_request) => {
+            (RequestType::Vendor, _vendor_request) => {
                 // TODO this is from one of the legacy boards which we
                 // need to support to get `greatfet info` to finish
                 // enumerating through the supported devices.
@@ -368,10 +356,7 @@ impl<'a> Firmware<'a> {
                 // to be stalled if this is not a legacy device.
                 self.usb1.stall_endpoint_in(0);
 
-                warn!(
-                    "handle_vendor_request Legacy libgreat vendor request '{:?}'",
-                    vendor_request
-                );
+                warn!("handle_vendor_request Legacy libgreat vendor request");
             }
             _ => {
                 error!(
@@ -401,14 +386,9 @@ impl<'a> Firmware<'a> {
             Some(command) => (command.class_id(), command.verb_number(), command.arguments),
             None => {
                 error!("dispatch_libgreat_request failed to parse libgreat command");
-                return Err(GreatError::BadMessage);
+                return Ok(());
             }
         };
-
-        debug!(
-            "dispatch_libgreat_request {:?}.0x{:x}",
-            class_id, verb_number
-        );
 
         // dispatch command
         let response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE] = [0; LIBGREAT_MAX_COMMAND_SIZE];
@@ -448,8 +428,8 @@ impl<'a> Firmware<'a> {
             }
             Err(e) => {
                 error!(
-                    "dispatch_libgreat_request error: failed to dispatch command {}",
-                    e
+                    "dispatch_libgreat_request error: failed to dispatch command {:?} 0x{:X} {}",
+                    class_id, verb_number, e
                 );
                 self.libgreat_response = None;
                 self.libgreat_response_last_error = Some(e);
@@ -480,14 +460,14 @@ impl<'a> Firmware<'a> {
         } else if let Some(error) = self.libgreat_response_last_error {
             warn!("dispatch_libgreat_response error result: {:?}", error);
 
+            // prime to receive host zlp - TODO should control do this in send_complete?
+            self.usb1.ep_out_prime_receive(0);
+
             // write error
             self.usb1.write(0, (error as u32).to_le_bytes().into_iter());
 
             // clear cached error
             self.libgreat_response_last_error = None;
-
-            // prime to receive host zlp - TODO should control do this in send_complete?
-            self.usb1.ep_out_prime_receive(0);
         } else {
             // TODO figure out what to do if we don't have a response or error
             error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");
@@ -499,6 +479,15 @@ impl<'a> Firmware<'a> {
 
     fn dispatch_libgreat_abort(&mut self, _setup_packet: SetupPacket) -> GreatResult<()> {
         error!("dispatch_libgreat_response abort");
+
+        // send an arbitrary error code if we're aborting mid-response
+        if let Some(_response) = &self.libgreat_response {
+            // prime to receive host zlp - TODO should control do this in send_complete?
+            self.usb1.ep_out_prime_receive(0);
+
+            // TODO send last error code?
+            self.usb1.write(0, 0_u32.to_le_bytes().into_iter());
+        }
 
         // cancel any queued response
         self.libgreat_response = None;

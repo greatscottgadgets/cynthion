@@ -22,17 +22,15 @@ use smolusb::traits::{
 use moondancer::event::InterruptEvent;
 use moondancer::{hal, pac};
 
-use ladybug::{Bit, Channel};
-
 // - configuration ------------------------------------------------------------
 
 const DEVICE_SPEED: Speed = Speed::Full;
 
 const VENDOR_REQUEST: u8 = 0x65;
-const VENDOR_VALUE_CONTROL_OUT: u16 = 0x0001;
-const VENDOR_VALUE_CONTROL_IN: u16 = 0x0002;
-const VENDOR_VALUE_BULK_OUT: u16 = 0x0003;
-const VENDOR_VALUE_BULK_IN: u16 = 0x0004;
+const VENDOR_CONTROL_OUT: u16 = 0x0001;
+const VENDOR_CONTROL_IN: u16 = 0x0002;
+const VENDOR_BULK_OUT: u16 = 0x0003;
+const VENDOR_BULK_IN: u16 = 0x0004;
 
 const ENDPOINT_BULK_OUT: u8 = 0x01;
 const ENDPOINT_BULK_IN: u8 = 0x81;
@@ -67,80 +65,72 @@ extern "C" fn MachineExternal() {
 
     // USB0 BusReset
     if usb0.is_pending(pac::Interrupt::USB0) {
-        ladybug::trace(Channel::B, Bit::B_IRQ_BUS_RESET, || {
-            // handle bus reset in interrupt handler for lowest latency
-            usb0.bus_reset();
-            dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
+        // handle bus reset in interrupt handler for lowest latency
+        usb0.bus_reset();
+        dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
 
-            usb0.clear_pending(pac::Interrupt::USB0);
-        });
+        usb0.clear_pending(pac::Interrupt::USB0);
 
     // USB0_EP_CONTROL ReceiveControl
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
-        ladybug::trace(Channel::B, Bit::B_IRQ_EP_CONTROL, || {
-            let endpoint = usb0.ep_control.epno().read().bits() as u8;
-            let mut buffer = [0_u8; 8];
-            let _bytes_read = usb0.read_control(&mut buffer);
-            let setup_packet = SetupPacket::from(buffer);
-            dispatch_event(InterruptEvent::Usb(
-                Target,
-                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
-            ));
+        let endpoint = usb0.ep_control.epno().read().bits() as u8;
+        let mut buffer = [0_u8; 8];
+        let _bytes_read = usb0.read_control(&mut buffer);
+        let setup_packet = SetupPacket::from(buffer);
+        dispatch_event(InterruptEvent::Usb(
+            Target,
+            UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
+        ));
 
-            usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-        });
+        usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
 
     // USB0_EP_OUT ReceivePacket
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
-        ladybug::trace(Channel::B, Bit::B_IRQ_EP_OUT, || {
-            let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
+        let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
 
-            #[cfg(not(feature = "chonky_events"))]
-            {
-                dispatch_event(InterruptEvent::Usb(
-                    Target,
-                    UsbEvent::ReceivePacket(endpoint),
-                ));
-            }
+        #[cfg(not(feature = "chonky_events"))]
+        {
+            dispatch_event(InterruptEvent::Usb(
+                Target,
+                UsbEvent::ReceivePacket(endpoint),
+            ));
+        }
 
-            #[cfg(feature = "chonky_events")]
-            {
-                // #1 empty fifo into a receive buffer
-                let mut packet_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] =
-                    [0; smolusb::EP_MAX_PACKET_SIZE];
-                let bytes_read = usb0.read(endpoint, &mut packet_buffer);
+        #[cfg(feature = "chonky_events")]
+        {
+            // #1 empty fifo into a receive buffer
+            let mut packet_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] =
+                [0; smolusb::EP_MAX_PACKET_SIZE];
+            let bytes_read = usb0.read(endpoint, &mut packet_buffer);
 
-                // #2 dispatch receive buffer to the main loop
-                dispatch_event(InterruptEvent::Usb(
-                    Target,
-                    UsbEvent::ReceiveBuffer(endpoint, bytes_read, packet_buffer),
-                ));
+            // #2 dispatch receive buffer to the main loop
+            dispatch_event(InterruptEvent::Usb(
+                Target,
+                UsbEvent::ReceiveBuffer(endpoint, bytes_read, packet_buffer),
+            ));
 
-                // #3 tell eptri we're ready to receive another packet
-                //usb0.ep_out_prime_receive(endpoint);
-            }
+            // #3 tell eptri we're ready to receive another packet
+            //usb0.ep_out_prime_receive(endpoint);
+        }
 
-            // #4 tell the cpu we're ready for another rx interrupt
-            usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
-        });
+        // #4 tell the cpu we're ready for another rx interrupt
+        usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
 
     // USB0_EP_IN SendComplete
     } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
-        ladybug::trace(Channel::B, Bit::B_IRQ_EP_IN, || {
-            let endpoint = usb0.ep_in.epno().read().bits() as u8;
+        let endpoint = usb0.ep_in.epno().read().bits() as u8;
 
-            // TODO something a little safer would be nice
-            unsafe {
-                usb0.clear_tx_ack_active(endpoint);
-            }
+        // TODO something a little safer would be nice
+        unsafe {
+            usb0.clear_tx_ack_active(endpoint);
+        }
 
-            dispatch_event(InterruptEvent::Usb(
-                Target,
-                UsbEvent::SendComplete(endpoint),
-            ));
+        dispatch_event(InterruptEvent::Usb(
+            Target,
+            UsbEvent::SendComplete(endpoint),
+        ));
 
-            usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
-        });
+        usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
 
     // - Unknown Interrupt --
     } else {
@@ -181,9 +171,6 @@ fn main_loop() -> GreatResult<()> {
     // initialize logging
     moondancer::log::init(hal::Serial::new(peripherals.UART));
     info!("Logging initialized");
-
-    // initialize ladybug
-    moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
     // usb0: Target
     let mut usb0 = hal::Usb0::new(
@@ -248,14 +235,9 @@ fn main_loop() -> GreatResult<()> {
                     | ReceiveBuffer(0, _, _)
                     | SendComplete(0)),
                 ) => {
-                    let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
-                        control.dispatch_event(&usb0, event)
-                    });
-                    if let Some((setup_packet, rx_buffer)) = result {
+                    if let Some((setup_packet, rx_buffer)) = control.dispatch_event(&usb0, event) {
                         // vendor requests are not handled by control
-                        ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
-                            handle_vendor_request(&usb0, setup_packet, rx_buffer);
-                        });
+                        handle_vendor_request(&usb0, setup_packet, rx_buffer);
                     }
                 }
                 #[cfg(not(feature = "chonky_events"))]
@@ -266,22 +248,16 @@ fn main_loop() -> GreatResult<()> {
                     | ReceivePacket(0)
                     | SendComplete(0)),
                 ) => {
-                    let result = ladybug::trace(Channel::A, Bit::A_HANDLE_EVENT, || {
-                        control.dispatch_event(&usb0, event)
-                    });
-                    if let Some(setup_packet) = result {
+                    if let Some(setup_packet) = control.dispatch_event(&usb0, event) {
                         // vendor requests are not handled by control
-                        ladybug::trace(Channel::A, Bit::A_HANDLE_VENDOR, || {
-                            handle_vendor_request(&usb0, setup_packet, control.data());
-                        });
+                        handle_vendor_request(&usb0, setup_packet, control.data());
                     }
                 }
                 Usb(Target, ReceivePacket(endpoint @ ENDPOINT_BULK_OUT)) => {
                     let mut rx_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] =
                         [0; smolusb::EP_MAX_PACKET_SIZE];
                     let bytes_read = usb0.read(endpoint, &mut rx_buffer);
-                    usb0.ep_out_prime_receive(endpoint);
-                    debug!("VENDOR_VALUE_BULK_IN received {} bytes", bytes_read);
+                    debug!("VENDOR_BULK_OUT received {} bytes", bytes_read);
                 }
                 Usb(Target, SendComplete(_endpoint)) => {
                     log::debug!("USB0 Event: {:?}", event);
@@ -317,25 +293,22 @@ where
     );
 
     match (vendor_request, vendor_value) {
-        (VENDOR_REQUEST, VENDOR_VALUE_CONTROL_OUT) => {
+        (VENDOR_REQUEST, VENDOR_CONTROL_OUT) => {
             // TODO would it be better if the caller sent the zlp at this point rather than control?
             // there's currently a subtle bug where zlp is automatic if control transfer had data
             // but caller has to send zlp themselves if there was no data.
             // really, either control has to always zlp or the caller has to always zlp
             if rx_buffer.len() == payload_length {
-                debug!(
-                    "VENDOR_VALUE_CONTROL_OUT received {} bytes",
-                    rx_buffer.len()
-                );
+                debug!("VENDOR_CONTROL_OUT received {} bytes", rx_buffer.len());
             } else {
                 error!(
-                    "VENDOR_VALUE_CONTROL_OUT expected {} bytes but only received {} bytes.",
+                    "VENDOR_CONTROL_OUT expected {} bytes but only received {} bytes.",
                     payload_length,
                     rx_buffer.len()
                 );
             }
         }
-        (VENDOR_REQUEST, VENDOR_VALUE_CONTROL_IN) => {
+        (VENDOR_REQUEST, VENDOR_CONTROL_IN) => {
             let test_data: [u8; MAX_TRANSFER_SIZE] = core::array::from_fn(|x| x as u8);
             let test_data = test_data.iter().take(payload_length);
 
@@ -346,15 +319,15 @@ where
             usb.ack(0, Direction::DeviceToHost);
 
             if bytes_written == payload_length {
-                debug!("VENDOR_VALUE_CONTROL_IN wrote {} bytes", bytes_written);
+                debug!("VENDOR_CONTROL_IN wrote {} bytes", bytes_written);
             } else {
                 error!(
-                    "VENDOR_VALUE_CONTROL_IN payload length is {} bytes but only wrote {} bytes",
+                    "VENDOR_CONTROL_IN payload length is {} bytes but only wrote {} bytes",
                     payload_length, bytes_written
                 );
             }
         }
-        (VENDOR_REQUEST, VENDOR_VALUE_BULK_OUT) => {
+        (VENDOR_REQUEST, VENDOR_BULK_OUT) => {
             // prime bulk endpoint to receive data
             usb.ep_out_prime_receive(ENDPOINT_BULK_OUT);
 
@@ -362,12 +335,12 @@ where
             usb.ack(0, Direction::HostToDevice);
 
             debug!(
-                "VENDOR_VALUE_BULK_OUT expecting {} bytes ({})",
+                "VENDOR_BULK_OUT expecting {} bytes ({})",
                 payload_length,
                 rx_buffer.len()
             );
         }
-        (VENDOR_REQUEST, VENDOR_VALUE_BULK_IN) => {
+        (VENDOR_REQUEST, VENDOR_BULK_IN) => {
             let endpoint_number = ENDPOINT_BULK_IN & 0x7f;
             #[allow(clippy::cast_possible_truncation)]
             let test_data: [u8; MAX_TRANSFER_SIZE] = core::array::from_fn(|x| (x & 0xff) as u8);
@@ -384,7 +357,7 @@ where
             while unsafe { usb.is_tx_ack_active(0) } {
                 timeout += 1;
                 if timeout > 5_000_000 {
-                    error!("VENDOR_VALUE_BULK_IN timed out sending control ack");
+                    error!("VENDOR_BULK_IN timed out sending control ack");
                     return;
                 }
             }
@@ -396,10 +369,10 @@ where
             //usb.ack(endpoint_number, Direction::DeviceToHost);
 
             if bytes_written == payload_length {
-                debug!("VENDOR_VALUE_BULK_IN wrote {} bytes", bytes_written);
+                debug!("VENDOR_BULK_IN wrote {} bytes", bytes_written);
             } else {
                 error!(
-                    "VENDOR_VALUE_BULK_IN payload length is {} bytes but only wrote {} bytes",
+                    "VENDOR_BULK_IN payload length is {} bytes but only wrote {} bytes",
                     payload_length, bytes_written
                 );
             }
