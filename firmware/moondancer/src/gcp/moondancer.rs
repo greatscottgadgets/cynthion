@@ -158,23 +158,15 @@ impl Moondancer {
                 }
 
                 // append to packet buffer
-                ladybug::trace(Channel::A, Bit::A_PACKET_PUSH, || {
-                    if endpoint_number == 0 {
-                        ladybug::trace(Channel::B, Bit::B_EP_IS_0, || {});
-                    } else if endpoint_number == 1 {
-                        ladybug::trace(Channel::B, Bit::B_EP_IS_1, || {});
+                match self.packet_buffer.push(packet) {
+                    Ok(()) => {}
+                    Err(_packet) => {
+                        error!(
+                            "MD moondancer::dispatch_event(ReceivePacket({})) packet buffer overflow",
+                            endpoint_number
+                        );
                     }
-
-                    match self.packet_buffer.push(packet) {
-                        Ok(()) => {}
-                        Err(_packet) => {
-                            error!(
-                                "MD moondancer::dispatch_event(ReceivePacket({})) packet buffer overflow",
-                                endpoint_number
-                            );
-                        }
-                    }
-                });
+                }
 
                 event
             }
@@ -491,30 +483,24 @@ impl Moondancer {
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
         let endpoint_number = args.endpoint_number;
 
-        let packet = ladybug::trace(Channel::A, Bit::A_PACKET_POP, || {
-            match self
-                .packet_buffer
-                .iter()
-                .position(|packet| packet.endpoint_number == endpoint_number)
-            {
-                Some(index) => {
-                    if endpoint_number == 0 {
-                        ladybug::trace(Channel::B, Bit::B_EP_IS_0, || {});
-                    } else if endpoint_number == 1 {
-                        ladybug::trace(Channel::B, Bit::B_EP_IS_1, || {});
-                    }
-                    self.packet_buffer.remove(index)
-                }
-                None => {
-                    error!(
-                        "MD moondancer::read_endpoint({}) has no packet buffered for endpoint",
-                        endpoint_number
-                    );
-                    // TODO actually handle this case in moondancer.py
-                    Packet::new(endpoint_number, 0)
-                }
+        let packet = match self
+            .packet_buffer
+            .iter()
+            .position(|packet| packet.endpoint_number == endpoint_number)
+        {
+            Some(index) => {
+                self.packet_buffer.remove(index)
             }
-        });
+            None => {
+                error!(
+                    "MD moondancer::read_endpoint({}) has no packet buffered for endpoint",
+                    endpoint_number
+                );
+                // TODO actually handle this case in moondancer.py
+                Packet::new(endpoint_number, 0)
+            }
+        };
+
 
         log::debug!(
             "MD moondancer::read_endpoint({}) -> bytes_read:{}",
@@ -567,12 +553,6 @@ impl Moondancer {
         }
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
-        if args.endpoint_number == 0 {
-            ladybug::trace(Channel::B, Bit::B_EP_IS_0, || {});
-        } else if args.endpoint_number == 1 {
-            ladybug::trace(Channel::B, Bit::B_EP_IS_1, || {});
-        }
-
         self.usb0.ep_out_prime_receive(args.endpoint_number);
 
         debug!(
@@ -606,12 +586,6 @@ impl Moondancer {
         let payload_length = args.payload.len();
         let iter = args.payload.iter();
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
-
-        if endpoint_number == 0 {
-            ladybug::trace(Channel::B, Bit::B_EP_IS_0, || {});
-        } else if endpoint_number == 1 {
-            ladybug::trace(Channel::B, Bit::B_EP_IS_1, || {});
-        }
 
         // TODO clean up tx_ack_active semantics!!!
         unsafe {
