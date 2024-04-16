@@ -6,7 +6,7 @@ use crate::pac;
 pub fn init(_gpioa: pac::GPIOA, _gpiob: pac::GPIOB) {
     #[cfg(feature = "ladybug")]
     unsafe {
-        use crate::debug::ladybug_impl::{LADYBUG_CYNTHION, LadybugCynthion};
+        use crate::debug::ladybug_impl::{LadybugCynthion, LADYBUG_CYNTHION};
         LADYBUG_CYNTHION = Some(LadybugCynthion::new(_gpioa, _gpiob));
         ladybug::set_analyzer(LADYBUG_CYNTHION.as_ref().expect("surprises"));
     }

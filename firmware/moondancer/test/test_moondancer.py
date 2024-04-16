@@ -44,7 +44,7 @@ class TestMoondancer(unittest.TestCase):
         self.assertEqual(len(response), 4)
 
         # test known values for each item
-        response = list(map(InterruptEvent.parse, response))
+        response = list(map(InterruptEvent, response))
         self.assertEqual(response[0], InterruptEvent.USB_BUS_RESET)
         self.assertEqual(response[0].endpoint_number, 0)
         self.assertEqual(response[1], InterruptEvent.USB_RECEIVE_CONTROL)
