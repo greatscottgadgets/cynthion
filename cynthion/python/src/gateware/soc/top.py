@@ -7,21 +7,35 @@ from luna_soc.gateware.csr                       import GpioPeripheral, LedPerip
 from luna_soc.gateware.csr.usb2.device           import USBDeviceController
 from luna_soc.gateware.csr.usb2.interfaces.eptri import SetupFIFOInterface, InFIFOInterface, OutFIFOInterface
 
-from amaranth                                    import Elaboratable, Module, Cat
+from amaranth                                    import Cat, DomainRenamer, Elaboratable, Module, ResetSignal
+from amaranth.build                              import Attrs, Pins, Resource, Subsignal
 from amaranth.hdl.rec                            import Record
 
 import logging
 import os
 import sys
 
-CLOCK_FREQUENCIES_MHZ = {
-    # Vexriscv synthesis is topping out at around 72 MHz
-    "sync": 60
-}
-
 # - MoondancerSoc ---------------------------------------------------------------
 
 class MoondancerSoc(Elaboratable):
+    ADDITIONAL_RESOURCES = [
+        # PMOD B: UART
+        Resource("uart", 1,
+            Subsignal("rx",  Pins("1", conn=("pmod", 1), dir="i")),
+            Subsignal("tx",  Pins("2", conn=("pmod", 1), dir="oe")),
+            Attrs(IO_TYPE="LVCMOS33")
+        ),
+
+        # PMOD B: JTAG
+        Resource("jtag", 0,
+            Subsignal("tms",  Pins("7",  conn=("pmod", 1), dir="i")),
+            Subsignal("tdi",  Pins("8",  conn=("pmod", 1), dir="i")),
+            Subsignal("tdo",  Pins("9",  conn=("pmod", 1), dir="o")),
+            Subsignal("tck",  Pins("10", conn=("pmod", 1), dir="i")),
+            Attrs(IO_TYPE="LVCMOS33")
+        ),
+    ]
+
     def __init__(self, clock_frequency):
 
         # Create a stand-in for our UART.
@@ -32,7 +46,7 @@ class MoondancerSoc(Elaboratable):
 
         # Create our SoC...
         self.soc = LunaSoC(
-            cpu=VexRiscv(reset_addr=0x00000000, variant="cynthion"),
+            cpu=VexRiscv(reset_addr=0x00000000, variant="cynthion+jtag"),
             clock_frequency=clock_frequency,
             internal_sram_size=65536,
         )
@@ -80,27 +94,16 @@ class MoondancerSoc(Elaboratable):
 
     def elaborate(self, platform):
         m = Module()
-        m.submodules.soc = self.soc
+
+        # add additional resource
+        platform.add_resources(self.ADDITIONAL_RESOURCES)
 
         # generate our domain clocks/resets
-        m.submodules.car = platform.clock_domain_generator(clock_frequencies=CLOCK_FREQUENCIES_MHZ)
+        m.submodules.car = platform.clock_domain_generator()
 
-        # connect up our UART
-        uart_io = platform.request("uart", 0)
-        m.d.comb += [
-            uart_io.tx.o.eq(self.uart_pins.tx),
-            self.uart_pins.rx.eq(uart_io.rx)
-        ]
-        if hasattr(uart_io.tx, 'oe'):
-            m.d.comb += uart_io.tx.oe.eq(~self.soc.uart._phy.tx.rdy),
-
-        # connect the GpioPeripheral to the pmod ports
-        pmoda_io = platform.request("user_pmod", 0)
-        pmodb_io = platform.request("user_pmod", 1)
-        m.d.comb += [
-            self.gpioa.pins.connect(pmoda_io),
-            self.gpiob.pins.connect(pmodb_io)
-        ]
+        # add SoC to design and clock it off the 60 MHz "usb" domain
+        # because VexriscV synthesis tops out at ~77 MHz
+        m.submodules.soc = DomainRenamer({"sync": "usb"})(self.soc)
 
         # wire up the cpu external reset signal
         try:
@@ -108,6 +111,53 @@ class MoondancerSoc(Elaboratable):
             m.d.comb += self.soc.cpu.ext_reset.eq(user1_io.i)
         except:
             logging.warn("Platform does not support a user button for cpu reset")
+
+        # connect GPIO0 to Cynthion's PMOD A port
+        pmoda_io = platform.request("user_pmod", 0)
+        #pmodb_io = platform.request("user_pmod", 1)
+        m.d.comb += [
+            self.gpioa.pins.connect(pmoda_io),
+            #self.gpiob.pins.connect(pmodb_io)
+        ]
+
+        # connect UART0 to Cynthion's SAMD11 uart
+        # uart0_io = platform.request("uart", 0)
+        # m.d.comb += [
+        #     uart0_io.tx.o.eq(self.uart_pins.tx),
+        #     self.uart_pins.rx.eq(uart0_io.rx)
+        # ]
+        # if hasattr(uart0_io.tx, 'oe'):
+        #     m.d.comb += uart0_io.tx.oe.eq(~self.soc.uart._phy.tx.rdy),
+
+        # connect UART1 to Cynthion's PMOD B port
+        uart1_io = platform.request("uart", 1)
+        m.d.comb += [
+            uart1_io.tx.o.eq(self.uart_pins.tx),
+            self.uart_pins.rx.eq(uart1_io.rx)
+        ]
+        if hasattr(uart1_io.tx, 'oe'):
+            m.d.comb += uart1_io.tx.oe.eq(~self.soc.uart._phy.tx.rdy),
+
+        # connect JTAG0 to Cynthion's PMOD B port
+        jtag0_io = platform.request("jtag", 0)
+        m.d.comb += [
+            self.soc.cpu.jtag_tms  .eq(jtag0_io.tms.i),
+
+            # wtf?
+            self.soc.cpu.jtag_tdi  .eq(jtag0_io.tdi.i),
+
+            jtag0_io.tdo.o         .eq(self.soc.cpu.jtag_tdo),
+            self.soc.cpu.jtag_tck  .eq(jtag0_io.tck.i),
+            self.soc.cpu.dbg_reset .eq(ResetSignal("usb")),
+        ]
+
+        # disable platform usb device hooks as a workaround to take
+        # care of the fact that USBDevice is under firmware control
+        platform.usb_device_hooks = {}
+
+        # add ApolloAdvertiser so we can claim the Control port
+        from apollo_fpga.gateware import ApolloAdvertiser
+        m.submodules.apollo_adv = ApolloAdvertiser()
 
         # create our USB devices, connect device controllers and add eptri endpoint handlers
 
@@ -147,6 +197,8 @@ class MoondancerSoc(Elaboratable):
         return m
 
 
+
+
 # - main ----------------------------------------------------------------------
 
 import luna
@@ -172,7 +224,7 @@ if __name__ == "__main__":
         sys.exit(1)
 
     # configure clock frequency
-    clock_frequency = int(CLOCK_FREQUENCIES_MHZ["sync"] * 1e6)
+    clock_frequency = int(platform.DEFAULT_CLOCK_FREQUENCIES_MHZ["usb"] * 1e6)
 
     logging.info(f"Building for {platform} with clock frequency: {clock_frequency}")
 
