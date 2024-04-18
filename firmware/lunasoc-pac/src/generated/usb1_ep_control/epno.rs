@@ -1,9 +1,9 @@
 #[doc = "Register `epno` reader"]
 pub type R = crate::R<EPNO_SPEC>;
-#[doc = "Field `epno` reader - The number of the endpoint associated with the current SETUP packet."]
+#[doc = "Field `epno` reader - The endpoint number associated with the most recently captured SETUP packet."]
 pub type EPNO_R = crate::FieldReader;
 impl R {
-    #[doc = "Bits 0:3 - The number of the endpoint associated with the current SETUP packet."]
+    #[doc = "Bits 0:3 - The endpoint number associated with the most recently captured SETUP packet."]
     #[inline(always)]
     pub fn epno(&self) -> EPNO_R {
         EPNO_R::new((self.bits & 0x0f) as u8)
