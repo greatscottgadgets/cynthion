@@ -1,19 +1,33 @@
-from luna                                        import configure_default_logging, top_level_cli
-from luna.gateware.usb.usb2.device               import USBDevice
-
-from luna_soc.gateware.cpu.vexriscv              import VexRiscv
-from luna_soc.gateware.soc                       import LunaSoC
-from luna_soc.gateware.csr                       import GpioPeripheral, LedPeripheral
-from luna_soc.gateware.csr.usb2.device           import USBDeviceController
-from luna_soc.gateware.csr.usb2.interfaces.eptri import SetupFIFOInterface, InFIFOInterface, OutFIFOInterface
-
-from amaranth                                    import Cat, DomainRenamer, Elaboratable, Module, ResetSignal
-from amaranth.build                              import Attrs, Pins, Resource, Subsignal
-from amaranth.hdl.rec                            import Record
+#
+# This file is part of Cynthion.
+#
+# Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
 
 import logging
 import os
 import sys
+
+from amaranth                 import Cat, DomainRenamer, Elaboratable, Module, ResetSignal, Signal, Record
+from amaranth.build           import Attrs, Pins, Resource, Subsignal
+from amaranth.hdl.rec         import Record
+from amaranth_stdio.serial    import AsyncSerial
+
+from lambdasoc.periph         import Peripheral
+from lambdasoc.periph.serial  import AsyncSerialPeripheral
+
+from luna                            import configure_default_logging, top_level_cli
+from luna.gateware.platform          import NullPin
+from luna.gateware.usb.usb2.device   import USBDevice
+
+from luna_soc.gateware.cpu.vexriscv  import VexRiscv
+from luna_soc.gateware.soc           import LunaSoC
+from luna_soc.gateware.csr           import GpioPeripheral, LedPeripheral
+from luna_soc.gateware.csr           import USBDeviceController
+from luna_soc.gateware.csr           import SetupFIFOInterface, InFIFOInterface, OutFIFOInterface
+
+from .advertiser import ApolloAdvertiserPeripheral
+
 
 # - MoondancerSoc ---------------------------------------------------------------
 
@@ -22,7 +36,7 @@ class MoondancerSoc(Elaboratable):
         # PMOD B: UART
         Resource("uart", 1,
             Subsignal("rx",  Pins("1", conn=("pmod", 1), dir="i")),
-            Subsignal("tx",  Pins("2", conn=("pmod", 1), dir="oe")),
+            Subsignal("tx",  Pins("2", conn=("pmod", 1), dir="o")),
             Attrs(IO_TYPE="LVCMOS33")
         ),
 
@@ -36,13 +50,7 @@ class MoondancerSoc(Elaboratable):
         ),
     ]
 
-    def __init__(self, clock_frequency):
-
-        # Create a stand-in for our UART.
-        self.uart_pins = Record([
-            ('rx', [('i', 1)]),
-            ('tx', [('o', 1)])
-        ])
+    def __init__(self, clock_frequency, uart_baud_rate=115200):
 
         # Create our SoC...
         self.soc = LunaSoC(
@@ -51,8 +59,21 @@ class MoondancerSoc(Elaboratable):
             internal_sram_size=65536,
         )
 
+        # ... add some stand-ins for our uart pins ...
+        self.uart0_pins = Record([
+            ('rx', [('i', 1)]),
+            ('tx', [('o', 1)])
+        ])
+        self.uart1_pins = Record([
+            ('rx', [('i', 1)]),
+            ('tx', [('o', 1)])
+        ])
+
         # ... add bios and core peripherals ...
-        self.soc.add_bios_and_peripherals(uart_pins=self.uart_pins)
+        self.soc.add_bios_and_peripherals(
+            uart_pins=self.uart0_pins,
+            uart_baud_rate=uart_baud_rate,
+        )
 
         # ... add our LED peripheral, for simple output ...
         self.leds = LedPeripheral()
@@ -92,6 +113,19 @@ class MoondancerSoc(Elaboratable):
         self.soc.add_peripheral(self.usb2_ep_in, as_submodule=False)
         self.soc.add_peripheral(self.usb2_ep_out, as_submodule=False)
 
+        # ... add a second uart peripheral ...
+        self.uart1 = AsyncSerialPeripheral(core=AsyncSerial(
+            data_bits = 8,
+            divisor   = int(clock_frequency // uart_baud_rate),
+            pins      = self.uart1_pins,
+        ))
+        self.soc.add_peripheral(self.uart1, addr=0xf0006000)
+
+        # ... add an ApolloAdvertiser peripheral ...
+        self.advertiser = ApolloAdvertiserPeripheral(clk_freq_hz=clock_frequency)
+        self.soc.add_peripheral(self.advertiser, addr=0xf0007000)
+
+
     def elaborate(self, platform):
         m = Module()
 
@@ -112,52 +146,43 @@ class MoondancerSoc(Elaboratable):
         except:
             logging.warn("Platform does not support a user button for cpu reset")
 
-        # connect GPIO0 to Cynthion's PMOD A port
+        # connect GPIOA to Cynthion's PMOD A port
         pmoda_io = platform.request("user_pmod", 0)
-        #pmodb_io = platform.request("user_pmod", 1)
         m.d.comb += [
             self.gpioa.pins.connect(pmoda_io),
-            #self.gpiob.pins.connect(pmodb_io)
         ]
 
         # connect UART0 to Cynthion's SAMD11 uart
-        # uart0_io = platform.request("uart", 0)
-        # m.d.comb += [
-        #     uart0_io.tx.o.eq(self.uart_pins.tx),
-        #     self.uart_pins.rx.eq(uart0_io.rx)
-        # ]
-        # if hasattr(uart0_io.tx, 'oe'):
-        #     m.d.comb += uart0_io.tx.oe.eq(~self.soc.uart._phy.tx.rdy),
+        uart0_io = platform.request("uart", 0)
+        m.d.comb += [
+            uart0_io.tx.o.eq(self.uart0_pins.tx),
+            self.uart0_pins.rx.eq(uart0_io.rx)
+        ]
+        if hasattr(uart0_io.tx, 'oe'):
+            m.d.comb += uart0_io.tx.oe.eq(~self.soc.uart._phy.tx.rdy),
 
         # connect UART1 to Cynthion's PMOD B port
         uart1_io = platform.request("uart", 1)
         m.d.comb += [
-            uart1_io.tx.o.eq(self.uart_pins.tx),
-            self.uart_pins.rx.eq(uart1_io.rx)
+            uart1_io.tx.o.eq(self.uart1_pins.tx),
+            self.uart1_pins.rx.eq(uart1_io.rx)
         ]
-        if hasattr(uart1_io.tx, 'oe'):
-            m.d.comb += uart1_io.tx.oe.eq(~self.soc.uart._phy.tx.rdy),
 
         # connect JTAG0 to Cynthion's PMOD B port
         jtag0_io = platform.request("jtag", 0)
         m.d.comb += [
             self.soc.cpu.jtag_tms  .eq(jtag0_io.tms.i),
-
-            # wtf?
             self.soc.cpu.jtag_tdi  .eq(jtag0_io.tdi.i),
-
             jtag0_io.tdo.o         .eq(self.soc.cpu.jtag_tdo),
             self.soc.cpu.jtag_tck  .eq(jtag0_io.tck.i),
             self.soc.cpu.dbg_reset .eq(ResetSignal("usb")),
         ]
 
-        # disable platform usb device hooks as a workaround to take
-        # care of the fact that USBDevice is under firmware control
+        # workaround: disable platform usb device hooks to take care
+        # of the fact that USBDevice is under firmware control
+        #
+        # TODO 2024/04/17 remove this once the platform files are updated
         platform.usb_device_hooks = {}
-
-        # add ApolloAdvertiser so we can claim the Control port
-        from apollo_fpga.gateware import ApolloAdvertiser
-        m.submodules.apollo_adv = ApolloAdvertiser()
 
         # create our USB devices, connect device controllers and add eptri endpoint handlers
 
@@ -246,7 +271,7 @@ if __name__ == "__main__":
     # build soc
     logging.info("Building soc")
     overrides = {
-        "debug_verilog": True,
+        "debug_verilog": False,
         "verbose": False,
     }
     products = platform.build(design, do_program=False, build_dir=build_dir, **overrides)
