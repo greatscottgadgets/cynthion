@@ -11,8 +11,8 @@ pub mod timer;
 pub mod usb;
 
 // export peripherals
-pub use serial::Serial;
-pub use timer::Timer;
+pub use serial::{Serial0, Serial1};
+pub use timer::Timer0;
 #[cfg(feature = "usb")]
 pub use usb::{Usb0, Usb1, Usb2};
 

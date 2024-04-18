@@ -1,5 +1,5 @@
 #[macro_export]
-macro_rules! gpio {
+macro_rules! impl_gpio {
     ($(
         $GPIOX:ident: $PACGPIOX:ty,
     )+) => {
@@ -15,16 +15,17 @@ macro_rules! gpio {
                 }
             }
 
-            impl $crate::hal::digital::v2::OutputPin for $GPIOX {
+            //impl $crate::hal::digital::v2::OutputPin for $GPIOX {
+            impl embedded_hal_0::digital::v2::OutputPin for $GPIOX {
                 type Error = core::convert::Infallible;
 
                 fn set_low(&mut self) -> Result<(), Self::Error> {
                     let reg = unsafe { &*<$PACGPIOX>::ptr() };
                     let mask: u32 = !(1 << self.index);
-                    riscv::interrupt::free(|_cs| {
-                        let val: u32 = reg.output.read().bits() & mask;
+                    riscv::interrupt::free(|| {
+                        let val: u32 = reg.idr().read().bits() & mask;
                         unsafe {
-                            reg.output.write(|w| w.bits(val));
+                            reg.odr().write(|w| w.bits(val));
                         }
                     });
                     Ok(())
@@ -32,33 +33,38 @@ macro_rules! gpio {
                 fn set_high(&mut self) -> Result<(), Self::Error> {
                     let reg = unsafe { &*<$PACGPIOX>::ptr() };
                     let mask: u32 = 1 << self.index;
-                    riscv::interrupt::free(|_cs| {
-                        let val: u32 = reg.output.read().bits() | mask;
+                    riscv::interrupt::free(|| {
+                        let val: u32 = reg.idr().read().bits() | mask;
                         unsafe {
-                            reg.output.write(|w| w.bits(val));
+                            reg.odr().write(|w| w.bits(val));
                         }
                     });
                     Ok(())
                 }
             }
 
-            impl $crate::hal::digital::v2::StatefulOutputPin for $GPIOX {
+            //impl $crate::hal::digital::v2::StatefulOutputPin for $GPIOX {
+            impl embedded_hal_0::digital::v2::StatefulOutputPin for $GPIOX {
                 fn is_set_low(&self) -> Result<bool, Self::Error> {
                     let reg = unsafe { &*<$PACGPIOX>::ptr() };
                     let mask: u32 = 1 << self.index;
-                    let val: u32 = reg.output.read().bits() & mask;
+                    let val: u32 = reg.idr().read().bits() & mask;
                     Ok(val == 0)
                 }
                 fn is_set_high(&self) -> Result<bool, Self::Error> {
                     let reg = unsafe { &*<$PACGPIOX>::ptr() };
                     let mask: u32 = 1 << self.index;
-                    let val: u32 = reg.output.read().bits() & mask;
+                    let val: u32 = reg.idr().read().bits() & mask;
                     Ok(val != 0)
                 }
             }
 
             /// Opt-in to the software implementation.
-            impl $crate::hal::digital::v2::toggleable::Default for $GPIOX {}
+            //use embedded_hal_0::digital::v2::toggleable as _;
+            //impl $crate::hal_0::digital::v2::toggleable::Default for $GPIOX {}
+            impl embedded_hal_0::digital::v2::toggleable::Default for $GPIOX {}
         )+
     }
 }
+
+crate::impl_gpio! { GpioA: crate::pac::GPIOA, }
