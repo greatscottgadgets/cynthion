@@ -44,26 +44,26 @@ fn dispatch_event(event: InterruptEvent) {
 #[allow(non_snake_case)]
 #[no_mangle]
 extern "C" fn MachineExternal() {
-    use moondancer::UsbInterface::Target;
+    use moondancer::UsbInterface::Control;
 
-    let usb0 = unsafe { hal::Usb0::summon() };
+    let usb2 = unsafe { hal::Usb2::summon() };
 
-    // - usb0 interrupts - "target_phy" --
+    // - usb2 interrupts - "control_phy" --
 
-    // USB0 BusReset
-    if usb0.is_pending(pac::Interrupt::USB0) {
-        usb0.clear_pending(pac::Interrupt::USB0);
-        usb0.bus_reset();
-        dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
+    // USB2 BusReset
+    if usb2.is_pending(pac::Interrupt::USB2) {
+        usb2.clear_pending(pac::Interrupt::USB2);
+        usb2.bus_reset();
+        dispatch_event(InterruptEvent::Usb(Control, UsbEvent::BusReset));
 
-    // USB0_EP_CONTROL ReceiveControl
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
-        let endpoint = usb0.ep_control.epno().read().bits() as u8;
+    // USB2_EP_CONTROL ReceiveControl
+    } else if usb2.is_pending(pac::Interrupt::USB2_EP_CONTROL) {
+        let endpoint = usb2.ep_control.epno().read().bits() as u8;
 
         #[cfg(not(feature = "chonky_events"))]
         {
             dispatch_event(InterruptEvent::Usb(
-                Target,
+                Control,
                 UsbEvent::ReceiveControl(endpoint),
             ));
         }
@@ -73,46 +73,46 @@ extern "C" fn MachineExternal() {
             use smolusb::setup::SetupPacket;
             use smolusb::traits::ReadControl;
             let mut buffer = [0_u8; 8];
-            let _bytes_read = usb0.read_control(&mut buffer);
+            let _bytes_read = usb2.read_control(&mut buffer);
             let setup_packet = SetupPacket::from(buffer);
             dispatch_event(InterruptEvent::Usb(
-                Target,
+                Control,
                 UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
             ));
         }
 
-        usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
+        usb2.clear_pending(pac::Interrupt::USB2_EP_CONTROL);
 
-    // USB0_EP_IN SendComplete
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
-        let endpoint = usb0.ep_in.epno().read().bits() as u8;
-        usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
+    // USB2_EP_IN SendComplete
+    } else if usb2.is_pending(pac::Interrupt::USB2_EP_IN) {
+        let endpoint = usb2.ep_in.epno().read().bits() as u8;
+        usb2.clear_pending(pac::Interrupt::USB2_EP_IN);
 
         dispatch_event(InterruptEvent::Usb(
-            Target,
+            Control,
             UsbEvent::SendComplete(endpoint),
         ));
 
-    // USB0_EP_OUT ReceivePacket
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
-        let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
+    // USB2_EP_OUT ReceivePacket
+    } else if usb2.is_pending(pac::Interrupt::USB2_EP_OUT) {
+        let endpoint = usb2.ep_out.data_ep().read().bits() as u8;
 
         // discard packets from Bulk OUT transfer endpoint
         /*if endpoint == 1 {
-            /*while usb0.ep_out.have.read().have().bit() {
-                let _b = usb0.ep_out.data.read().data().bits();
+            /*while usb2.ep_out.have.read().have().bit() {
+                let _b = usb2.ep_out.data.read().data().bits();
             }*/
-            //usb0.ep_out.reset().write(|w| w.reset().bit(true));
-            usb0.ep_out_prime_receive(1);
-            usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
+            //usb2.ep_out.reset().write(|w| w.reset().bit(true));
+            usb2.ep_out_prime_receive(1);
+            usb2.clear_pending(pac::Interrupt::USB2_EP_OUT);
             return;
         }*/
 
         dispatch_event(InterruptEvent::Usb(
-            Target,
+            Control,
             UsbEvent::ReceivePacket(endpoint),
         ));
-        usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
+        usb2.clear_pending(pac::Interrupt::USB2_EP_OUT);
 
     // - Unknown Interrupt --
     } else {
@@ -153,18 +153,22 @@ fn main_loop() -> GreatResult<()> {
     let leds = &peripherals.LEDS;
 
     // initialize logging
-    moondancer::log::init(hal::Serial::new(peripherals.UART));
+    moondancer::log::init();
     info!("Logging initialized");
 
-    // usb0: Target
-    let mut usb0 = hal::Usb0::new(
-        peripherals.USB0,
-        peripherals.USB0_EP_CONTROL,
-        peripherals.USB0_EP_IN,
-        peripherals.USB0_EP_OUT,
+    // enable ApolloAdvertiser to disconnect the Cynthion USB2 control port from Apollo
+    let advertiser = peripherals.ADVERTISER;
+    advertiser.enable().write(|w| w.enable().bit(false));
+
+    // usb2: Control
+    let mut usb2 = hal::Usb2::new(
+        peripherals.USB2,
+        peripherals.USB2_EP_CONTROL,
+        peripherals.USB2_EP_IN,
+        peripherals.USB2_EP_OUT,
     );
 
-    // usb0 control endpoint
+    // usb2 control endpoint
     let mut control = Control::<_, { smolusb::EP_MAX_PACKET_SIZE }>::new(
         0,
         Descriptors {
@@ -180,8 +184,8 @@ fn main_loop() -> GreatResult<()> {
     );
 
     // connect device
-    usb0.connect(DEVICE_SPEED);
-    info!("Connected USB0 device.");
+    usb2.connect(DEVICE_SPEED);
+    info!("Connected USB2 device.");
 
     // enable interrupts
     unsafe {
@@ -191,12 +195,12 @@ fn main_loop() -> GreatResult<()> {
         // set mie register: machine external interrupts enable
         riscv::register::mie::set_mext();
 
-        // write csr: enable usb0 interrupts and events
-        pac::csr::interrupt::enable(pac::Interrupt::USB0);
-        pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_CONTROL);
-        pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_IN);
-        pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_OUT);
-        usb0.enable_interrupts();
+        // write csr: enable usb2 interrupts and events
+        pac::csr::interrupt::enable(pac::Interrupt::USB2);
+        pac::csr::interrupt::enable(pac::Interrupt::USB2_EP_CONTROL);
+        pac::csr::interrupt::enable(pac::Interrupt::USB2_EP_IN);
+        pac::csr::interrupt::enable(pac::Interrupt::USB2_EP_OUT);
+        usb2.enable_interrupts();
     }
 
     let mut test_command = TestCommand::Stop;
@@ -215,9 +219,9 @@ fn main_loop() -> GreatResult<()> {
     };
 
     // prime the usb OUT endpoints we'll be using
-    usb0.ep_out_prime_receive(0);
-    usb0.ep_out_prime_receive(1);
-    usb0.ep_out_prime_receive(2);
+    usb2.ep_out_prime_receive(0);
+    usb2.ep_out_prime_receive(1);
+    usb2.ep_out_prime_receive(2);
 
     let mut counter = 0;
     let mut rx_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] = [0; smolusb::EP_MAX_PACKET_SIZE];
@@ -228,7 +232,7 @@ fn main_loop() -> GreatResult<()> {
         let mut queue_length = 0;
 
         while let Some(event) = EVENT_QUEUE.dequeue() {
-            use moondancer::{event::InterruptEvent::*, UsbInterface::Target};
+            use moondancer::{event::InterruptEvent::*, UsbInterface::Control};
             use smolusb::event::UsbEvent::*;
 
             leds.output().write(|w| unsafe { w.output().bits(0) });
@@ -236,31 +240,31 @@ fn main_loop() -> GreatResult<()> {
             //log::info!("{:?}", event);
 
             match event {
-                // - usb0 event handlers --
+                // - usb2 event handlers --
 
-                // Usb0 received a control event
+                // Usb2 received a control event
                 #[cfg(feature = "chonky_events")]
                 Usb(
-                    Target,
+                    Control,
                     event @ (BusReset
                     | ReceiveControl(0)
                     | ReceiveSetupPacket(0, _)
                     | ReceivePacket(0)
                     | SendComplete(0)),
                 ) => {
-                    control.dispatch_event(&usb0, event);
+                    control.dispatch_event(&usb2, event);
                 }
                 #[cfg(not(feature = "chonky_events"))]
                 Usb(
-                    Target,
+                    Control,
                     event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0)),
                 ) => {
-                    control.dispatch_event(&usb0, event);
+                    control.dispatch_event(&usb2, event);
                 }
 
-                // Usb0 received packet
-                Usb(Target, ReceivePacket(endpoint)) => {
-                    let bytes_read = usb0.read(endpoint, &mut rx_buffer);
+                // Usb2 received packet
+                Usb(Control, ReceivePacket(endpoint)) => {
+                    let bytes_read = usb2.read(endpoint, &mut rx_buffer);
 
                     if endpoint == 1 {
                         leds.output()
@@ -313,11 +317,11 @@ fn main_loop() -> GreatResult<()> {
                         error!("received data on unknown endpoint: {}", endpoint);
                     }
 
-                    usb0.ep_out_prime_receive(endpoint);
+                    usb2.ep_out_prime_receive(endpoint);
                 }
 
-                // Usb0 transfer complete
-                Usb(Target, SendComplete(_endpoint)) => {
+                // Usb2 transfer complete
+                Usb(Control, SendComplete(_endpoint)) => {
                     leds.output()
                         .write(|w| unsafe { w.output().bits(0b00_0111) });
                 }
@@ -338,7 +342,7 @@ fn main_loop() -> GreatResult<()> {
 
         // perform tests
         match test_command {
-            TestCommand::In => test_in_speed(leds, &usb0, &test_data, &mut test_stats),
+            TestCommand::In => test_in_speed(leds, &usb2, &test_data, &mut test_stats),
             TestCommand::Out => (),
             _ => (),
         }
@@ -357,31 +361,31 @@ fn main_loop() -> GreatResult<()> {
 #[inline(always)]
 fn test_in_speed(
     _leds: &pac::LEDS,
-    usb0: &hal::Usb0,
+    usb2: &hal::Usb2,
     test_data: &[u8; smolusb::EP_MAX_PACKET_SIZE],
     test_stats: &mut TestStats,
 ) {
     // Passing in a fixed size slice ref is 4MB/s vs 3.7MB/s
     #[inline(always)]
     fn test_write_slice(
-        usb0: &hal::Usb0,
+        usb2: &hal::Usb2,
         endpoint: u8,
         data: &[u8; smolusb::EP_MAX_PACKET_SIZE],
     ) -> bool {
         let mut did_reset = false;
-        if usb0.ep_in.have().read().have().bit() {
-            usb0.ep_in.reset().write(|w| w.reset().bit(true));
+        if usb2.ep_in.have().read().have().bit() {
+            usb2.ep_in.reset().write(|w| w.reset().bit(true));
             did_reset = true;
         }
         // 5.033856452242371MB/s.
         for byte in data {
-            usb0.ep_in.data().write(|w| unsafe { w.data().bits(*byte) });
+            usb2.ep_in.data().write(|w| unsafe { w.data().bits(*byte) });
         }
         // 6.392375785142406MB/s. - no memory access
         /*for n in 0..smolusb::EP_MAX_PACKET_SIZE {
-            usb0.ep_in.data.write(|w| unsafe { w.data().bits((n % 256) as u8) });
+            usb2.ep_in.data.write(|w| unsafe { w.data().bits((n % 256) as u8) });
         }*/
-        usb0.ep_in
+        usb2.ep_in
             .epno()
             .write(|w| unsafe { w.epno().bits(endpoint & 0xf) });
         did_reset
@@ -390,16 +394,16 @@ fn test_in_speed(
     // wait for fifo endpoint to be idle
     let ((), t_flush) = moondancer::profile!(
         let mut timeout = 100;
-        while !usb0.ep_in.idle().read().idle().bit() && timeout > 0 {
+        while !usb2.ep_in.idle().read().idle().bit() && timeout > 0 {
             timeout -= 1;
         }
     );
 
     // write data to endpoint fifo
     let (did_reset, t_write) = moondancer::profile!(
-        //usb0.write(0x1, test_data.into_iter().copied()); false // 6780 / 5653 ~3.99MB/s
-        //usb0.write_ref(0x1, test_data.iter()); false // 5663 / 5652 - ~4.02MB/s
-        test_write_slice(usb0, 0x1, test_data) // 56533 / 5652 - ~4.04MB/s
+        //usb2.write(0x1, test_data.into_iter().copied()); false // 6780 / 5653 ~3.99MB/s
+        //usb2.write_ref(0x1, test_data.iter()); false // 5663 / 5652 - ~4.02MB/s
+        test_write_slice(usb2, 0x1, test_data) // 56533 / 5652 - ~4.04MB/s
     );
     test_stats.write_count += 1;
 

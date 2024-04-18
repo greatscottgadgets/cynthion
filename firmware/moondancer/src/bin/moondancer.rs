@@ -117,8 +117,13 @@ impl<'a> Firmware<'a> {
         ];
         let classes = libgreat::gcp::Classes(&CLASSES);
 
+        // enable ApolloAdvertiser to disconnect the Cynthion USB2 control port from Apollo
+        let advertiser = peripherals.ADVERTISER;
+        advertiser.enable().write(|w| w.enable().bit(true));
+
         // initialize logging
-        moondancer::log::init(hal::Serial::new(peripherals.UART));
+        moondancer::log::set_port(moondancer::log::Port::Uart1);
+        moondancer::log::init();
         info!(
             "{} {}",
             cynthion::shared::usb::bManufacturerString::cynthion,

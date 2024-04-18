@@ -48,3 +48,17 @@ Terminal 2:
 Terminal 3:
 
     cargo run --release
+
+
+## Cynthion USB2 Control Port
+
+By default the Cynthion USB2 Control port is managed by Apollo.
+
+If you would like to take over control from apollo and use USB2 in your own firmware you can disable the ApolloAdvertiser peripheral using something like:
+
+    let peripherals = pac::Peripherals::take().unwrap();
+
+    let advertiser = peripherals.ADVERTISER;
+    advertiser.enable().write(|w| w.enable().bit(true));
+
+Note that you will no longer be able to receive UART0 data via Apollo in this case and will need to use UART1 instead.

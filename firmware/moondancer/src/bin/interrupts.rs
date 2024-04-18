@@ -14,7 +14,7 @@ extern "C" fn MachineExternal() {
     static mut TOGGLE: bool = true;
 
     if pac::csr::interrupt::pending(pac::Interrupt::TIMER) {
-        let timer = unsafe { hal::Timer::summon() };
+        let timer = unsafe { hal::Timer0::summon() };
         timer.clear_pending();
 
         //writeln!(serial, "MachineExternal - timer interrupt").unwrap();
@@ -39,12 +39,13 @@ extern "C" fn MachineExternal() {
 #[entry]
 fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
-    let serial = hal::Serial::new(peripherals.UART);
-    moondancer::log::init(serial);
+
+    // initialize logging
+    moondancer::log::init();
 
     // configure and enable timer
     let one_second = pac::clock::sysclk();
-    let mut timer = hal::Timer::new(peripherals.TIMER, one_second);
+    let mut timer = hal::Timer0::new(peripherals.TIMER, one_second);
     timer.set_timeout_ticks(one_second / 2);
     timer.enable();
 

@@ -4,8 +4,6 @@
 use moondancer::pac;
 
 use hal::hal::delay::DelayUs;
-use hal::Serial;
-use hal::Timer;
 use moondancer::hal;
 
 use log::{error, info};
@@ -40,8 +38,7 @@ fn main() -> ! {
     let leds = &peripherals.LEDS;
 
     // initialize logging
-    let serial = Serial::new(peripherals.UART);
-    moondancer::log::init(serial);
+    moondancer::log::init();
 
     // configure gpioa pins 7-4:output, 3-0:input
     let gpioa = &peripherals.GPIOA;
@@ -53,7 +50,7 @@ fn main() -> ! {
     gpioa.ev_enable().write(|w| w.enable().bit(true));
 
     // configure and enable timer
-    let mut timer = Timer::new(peripherals.TIMER, pac::clock::sysclk());
+    let mut timer = hal::Timer0::new(peripherals.TIMER, pac::clock::sysclk());
 
     // enable interrupts
     unsafe {

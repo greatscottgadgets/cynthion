@@ -162,8 +162,7 @@ fn main() -> ! {
     leds.output().write(|w| unsafe { w.output().bits(0x0) });
 
     // initialize logging
-    let serial = hal::Serial::new(peripherals.UART);
-    moondancer::log::init(serial);
+    moondancer::log::init();
     info!("logging initialized");
 
     // usb0: Target
