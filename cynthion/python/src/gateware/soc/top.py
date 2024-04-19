@@ -13,18 +13,18 @@ from amaranth.build           import Attrs, Pins, Resource, Subsignal
 from amaranth.hdl.rec         import Record
 from amaranth_stdio.serial    import AsyncSerial
 
-from lambdasoc.periph         import Peripheral
-from lambdasoc.periph.serial  import AsyncSerialPeripheral
+from luna_soc.gateware.vendor.lambdasoc.periph         import Peripheral
+from luna_soc.gateware.vendor.lambdasoc.periph.serial  import AsyncSerialPeripheral
 
 from luna                            import configure_default_logging, top_level_cli
 from luna.gateware.platform          import NullPin
 from luna.gateware.usb.usb2.device   import USBDevice
 
 from luna_soc.gateware.cpu.vexriscv  import VexRiscv
-from luna_soc.gateware.soc           import LunaSoC
 from luna_soc.gateware.csr           import GpioPeripheral, LedPeripheral
 from luna_soc.gateware.csr           import USBDeviceController
 from luna_soc.gateware.csr           import SetupFIFOInterface, InFIFOInterface, OutFIFOInterface
+from luna_soc.gateware.lunasoc       import LunaSoC
 
 from .advertiser import ApolloAdvertiserPeripheral
 
@@ -51,10 +51,12 @@ class MoondancerSoc(Elaboratable):
     ]
 
     def __init__(self, clock_frequency, uart_baud_rate=115200):
-
         # Create our SoC...
         self.soc = LunaSoC(
-            cpu=VexRiscv(reset_addr=0x00000000, variant="cynthion+jtag"),
+            cpu=VexRiscv(
+                variant="cynthion+jtag",
+                reset_addr=0x00000000,
+            ),
             clock_frequency=clock_frequency,
             internal_sram_size=65536,
         )
@@ -69,8 +71,8 @@ class MoondancerSoc(Elaboratable):
             ('tx', [('o', 1)])
         ])
 
-        # ... add bios and core peripherals ...
-        self.soc.add_bios_and_peripherals(
+        # ... add core peripherals: memory, timer, uart
+        self.soc.add_core_peripherals(
             uart_pins=self.uart0_pins,
             uart_baud_rate=uart_baud_rate,
         )
@@ -223,7 +225,6 @@ class MoondancerSoc(Elaboratable):
 
 
 
-
 # - main ----------------------------------------------------------------------
 
 import luna
@@ -255,18 +256,6 @@ if __name__ == "__main__":
 
     # create design
     design = MoondancerSoc(clock_frequency=clock_frequency)
-
-    # TODO fix litex build
-    thirdparty = os.path.join(build_dir, "lambdasoc.soc.cpu/bios/3rdparty/litex")
-    if not os.path.exists(thirdparty):
-        logging.info("Fixing build, creating output directory: {}".format(thirdparty))
-        os.makedirs(thirdparty)
-
-    # build litex bios
-    logging.info("Building bios")
-    design.soc.build(name="soc",
-                     build_dir=build_dir,
-                     do_init=True)
 
     # build soc
     logging.info("Building soc")
