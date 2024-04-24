@@ -16,12 +16,6 @@ Cynthion Documentation
 
 .. toctree::
   :maxdepth: 2
-  :caption: User Documentation
-
-  facedancer_examples
-
-.. toctree::
-  :maxdepth: 2
   :caption: Cynthion Hardware
 
   cynthion_hardware
@@ -31,5 +25,18 @@ Cynthion Documentation
   :caption: Support
 
   getting_help
-  cynthion_project_mentions
   cynthion_safety_information
+  cynthion_project_mentions
+
+.. toctree::
+  :maxdepth: 2
+  :caption: User Documentation
+
+  facedancer_examples
+
+.. toctree::
+  :maxdepth: 2
+  :caption: Developer Documentation
+
+  cynthion_development
+  cynthion_bringup_guide

@@ -3,13 +3,13 @@ Getting Started with Cynthion
 ================================================
 
 
-Environment
------------
+Prerequisites
+-------------
 
 To use Cynthion you will need to ensure the following software is installed:
 
- * `Python <https://wiki.python.org/moin/BeginnersGuide/Download>`__ v3.TODO or higher
- * `Rust <https://doc.rust-lang.org/book/ch01-01-installation.html>`__ v1.TODO or higher
+ * `Python <https://wiki.python.org/moin/BeginnersGuide/Download>`__ v3.8, or later.
+ * `Rust <https://doc.rust-lang.org/book/ch01-01-installation.html>`__ v1.TODO, or later.
 
 
 Cynthion Host Software Installation
