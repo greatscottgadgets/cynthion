@@ -4,8 +4,6 @@
 use moondancer::pac;
 
 use hal::hal::delay::DelayUs;
-use hal::Serial;
-use hal::Timer;
 use moondancer::hal;
 
 use log::{debug, info};
@@ -26,10 +24,9 @@ fn main() -> ! {
     let leds = &peripherals.LEDS;
 
     // initialize logging
-    let serial = Serial::new(peripherals.UART);
-    moondancer::log::init(serial);
+    moondancer::log::init();
 
-    let mut timer = Timer::new(peripherals.TIMER, pac::clock::sysclk());
+    let mut timer = hal::Timer0::new(peripherals.TIMER, pac::clock::sysclk());
     let mut counter = 0;
     let mut direction = true;
     let mut led_state = 0b11_0000;

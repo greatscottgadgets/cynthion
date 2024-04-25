@@ -488,9 +488,7 @@ impl Moondancer {
             .iter()
             .position(|packet| packet.endpoint_number == endpoint_number)
         {
-            Some(index) => {
-                self.packet_buffer.remove(index)
-            }
+            Some(index) => self.packet_buffer.remove(index),
             None => {
                 error!(
                     "MD moondancer::read_endpoint({}) has no packet buffered for endpoint",
@@ -500,7 +498,6 @@ impl Moondancer {
                 Packet::new(endpoint_number, 0)
             }
         };
-
 
         log::debug!(
             "MD moondancer::read_endpoint({}) -> bytes_read:{}",

@@ -14,4 +14,5 @@ PROVIDE(USB2 = DefaultHandler);
 PROVIDE(USB2_EP_CONTROL = DefaultHandler);
 PROVIDE(USB2_EP_IN = DefaultHandler);
 PROVIDE(USB2_EP_OUT = DefaultHandler);
+PROVIDE(UART1 = DefaultHandler);
 

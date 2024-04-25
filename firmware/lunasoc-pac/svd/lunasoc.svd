@@ -663,7 +663,7 @@
               <description>
             A FIFO that returns the bytes from the most recently captured SETUP packet.
             Reading a byte from this register advances the FIFO. The first eight bytes read
-            from this conain the core SETUP packet.
+            from this contain the core SETUP packet.
         </description>
               <bitRange>[7:0]</bitRange>
             </field>
@@ -696,7 +696,7 @@
           <fields>
             <field>
               <name>epno</name>
-              <description>The number of the endpoint associated with the current SETUP packet.</description>
+              <description>The endpoint number associated with the most recently captured SETUP packet.</description>
               <bitRange>[3:0]</bitRange>
             </field>
           </fields>
@@ -1428,7 +1428,7 @@
               <description>
             A FIFO that returns the bytes from the most recently captured SETUP packet.
             Reading a byte from this register advances the FIFO. The first eight bytes read
-            from this conain the core SETUP packet.
+            from this contain the core SETUP packet.
         </description>
               <bitRange>[7:0]</bitRange>
             </field>
@@ -1461,7 +1461,7 @@
           <fields>
             <field>
               <name>epno</name>
-              <description>The number of the endpoint associated with the current SETUP packet.</description>
+              <description>The endpoint number associated with the most recently captured SETUP packet.</description>
               <bitRange>[3:0]</bitRange>
             </field>
           </fields>
@@ -2193,7 +2193,7 @@
               <description>
             A FIFO that returns the bytes from the most recently captured SETUP packet.
             Reading a byte from this register advances the FIFO. The first eight bytes read
-            from this conain the core SETUP packet.
+            from this contain the core SETUP packet.
         </description>
               <bitRange>[7:0]</bitRange>
             </field>
@@ -2226,7 +2226,7 @@
           <fields>
             <field>
               <name>epno</name>
-              <description>The number of the endpoint associated with the current SETUP packet.</description>
+              <description>The endpoint number associated with the most recently captured SETUP packet.</description>
               <bitRange>[3:0]</bitRange>
             </field>
           </fields>
@@ -2795,6 +2795,186 @@
             <field>
               <name>enable</name>
               <description>usb2_ep_out enable register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>UART1</name>
+      <groupName>UART1</groupName>
+      <baseAddress>0xf0006000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x40</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>uart1</name>
+        <value>16</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>divisor</name>
+          <description>uart1 divisor register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>divisor</name>
+              <description>uart1 divisor register field</description>
+              <bitRange>[9:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx_data</name>
+          <description>uart1 rx_data register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>rx_data</name>
+              <description>uart1 rx_data register field</description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx_rdy</name>
+          <description>uart1 rx_rdy register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>rx_rdy</name>
+              <description>uart1 rx_rdy register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx_err</name>
+          <description>uart1 rx_err register</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>rx_err</name>
+              <description>uart1 rx_err register field</description>
+              <bitRange>[2:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>tx_data</name>
+          <description>uart1 tx_data register</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>write-only</access>
+          <fields>
+            <field>
+              <name>tx_data</name>
+              <description>uart1 tx_data register field</description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>tx_rdy</name>
+          <description>uart1 tx_rdy register</description>
+          <addressOffset>0x0014</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>tx_rdy</name>
+              <description>uart1 tx_rdy register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_status</name>
+          <description>uart1 ev_status register</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>status</name>
+              <description>uart1 status register field</description>
+              <bitRange>[2:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>uart1 ev_pending register</description>
+          <addressOffset>0x0024</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pending</name>
+              <description>uart1 pending register field</description>
+              <bitRange>[2:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>uart1 ev_enable register</description>
+          <addressOffset>0x0028</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>uart1 enable register field</description>
+              <bitRange>[2:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>ADVERTISER</name>
+      <groupName>ADVERTISER</groupName>
+      <baseAddress>0xf0007000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x08</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>enable</name>
+          <description>advertiser enable register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>
+            Set this bit to '1' to start ApolloAdvertiser and disconnect the Cynthion USB control port from Apollo.
+        </description>
               <bitRange>[0:0]</bitRange>
             </field>
           </fields>

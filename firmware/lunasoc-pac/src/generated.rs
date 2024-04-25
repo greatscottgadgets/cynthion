@@ -24,6 +24,7 @@ extern "C" {
     fn USB2_EP_CONTROL();
     fn USB2_EP_IN();
     fn USB2_EP_OUT();
+    fn UART1();
 }
 #[doc(hidden)]
 #[repr(C)]
@@ -34,7 +35,7 @@ pub union Vector {
 #[cfg(feature = "rt")]
 #[doc(hidden)]
 #[no_mangle]
-pub static __EXTERNAL_INTERRUPTS: [Vector; 16] = [
+pub static __EXTERNAL_INTERRUPTS: [Vector; 17] = [
     Vector { _handler: TIMER },
     Vector { _handler: UART },
     Vector { _handler: GPIOA },
@@ -69,6 +70,7 @@ pub static __EXTERNAL_INTERRUPTS: [Vector; 16] = [
     Vector {
         _handler: USB2_EP_OUT,
     },
+    Vector { _handler: UART1 },
 ];
 #[doc(hidden)]
 pub mod interrupt;
@@ -855,6 +857,98 @@ impl core::fmt::Debug for USB2_EP_OUT {
 }
 #[doc = "USB2_EP_OUT"]
 pub mod usb2_ep_out;
+#[doc = "UART1"]
+pub struct UART1 {
+    _marker: PhantomData<*const ()>,
+}
+unsafe impl Send for UART1 {}
+impl UART1 {
+    #[doc = r"Pointer to the register block"]
+    pub const PTR: *const uart1::RegisterBlock = 0xf000_6000 as *const _;
+    #[doc = r"Return the pointer to the register block"]
+    #[inline(always)]
+    pub const fn ptr() -> *const uart1::RegisterBlock {
+        Self::PTR
+    }
+    #[doc = r" Steal an instance of this peripheral"]
+    #[doc = r""]
+    #[doc = r" # Safety"]
+    #[doc = r""]
+    #[doc = r" Ensure that the new instance of the peripheral cannot be used in a way"]
+    #[doc = r" that may race with any existing instances, for example by only"]
+    #[doc = r" accessing read-only or write-only registers, or by consuming the"]
+    #[doc = r" original peripheral and using critical sections to coordinate"]
+    #[doc = r" access between multiple new instances."]
+    #[doc = r""]
+    #[doc = r" Additionally, other software such as HALs may rely on only one"]
+    #[doc = r" peripheral instance existing to ensure memory safety; ensure"]
+    #[doc = r" no stolen instances are passed to such software."]
+    pub unsafe fn steal() -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
+}
+impl Deref for UART1 {
+    type Target = uart1::RegisterBlock;
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*Self::PTR }
+    }
+}
+impl core::fmt::Debug for UART1 {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("UART1").finish()
+    }
+}
+#[doc = "UART1"]
+pub mod uart1;
+#[doc = "ADVERTISER"]
+pub struct ADVERTISER {
+    _marker: PhantomData<*const ()>,
+}
+unsafe impl Send for ADVERTISER {}
+impl ADVERTISER {
+    #[doc = r"Pointer to the register block"]
+    pub const PTR: *const advertiser::RegisterBlock = 0xf000_7000 as *const _;
+    #[doc = r"Return the pointer to the register block"]
+    #[inline(always)]
+    pub const fn ptr() -> *const advertiser::RegisterBlock {
+        Self::PTR
+    }
+    #[doc = r" Steal an instance of this peripheral"]
+    #[doc = r""]
+    #[doc = r" # Safety"]
+    #[doc = r""]
+    #[doc = r" Ensure that the new instance of the peripheral cannot be used in a way"]
+    #[doc = r" that may race with any existing instances, for example by only"]
+    #[doc = r" accessing read-only or write-only registers, or by consuming the"]
+    #[doc = r" original peripheral and using critical sections to coordinate"]
+    #[doc = r" access between multiple new instances."]
+    #[doc = r""]
+    #[doc = r" Additionally, other software such as HALs may rely on only one"]
+    #[doc = r" peripheral instance existing to ensure memory safety; ensure"]
+    #[doc = r" no stolen instances are passed to such software."]
+    pub unsafe fn steal() -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
+}
+impl Deref for ADVERTISER {
+    type Target = advertiser::RegisterBlock;
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*Self::PTR }
+    }
+}
+impl core::fmt::Debug for ADVERTISER {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("ADVERTISER").finish()
+    }
+}
+#[doc = "ADVERTISER"]
+pub mod advertiser;
 #[no_mangle]
 static mut DEVICE_PERIPHERALS: bool = false;
 #[doc = r" All the peripherals."]
@@ -894,6 +988,10 @@ pub struct Peripherals {
     pub USB2_EP_IN: USB2_EP_IN,
     #[doc = "USB2_EP_OUT"]
     pub USB2_EP_OUT: USB2_EP_OUT,
+    #[doc = "UART1"]
+    pub UART1: UART1,
+    #[doc = "ADVERTISER"]
+    pub ADVERTISER: ADVERTISER,
 }
 impl Peripherals {
     #[doc = r" Returns all the peripherals *once*."]
@@ -965,6 +1063,12 @@ impl Peripherals {
                 _marker: PhantomData,
             },
             USB2_EP_OUT: USB2_EP_OUT {
+                _marker: PhantomData,
+            },
+            UART1: UART1 {
+                _marker: PhantomData,
+            },
+            ADVERTISER: ADVERTISER {
                 _marker: PhantomData,
             },
         }

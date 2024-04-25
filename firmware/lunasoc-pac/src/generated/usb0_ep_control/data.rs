@@ -1,9 +1,9 @@
 #[doc = "Register `data` reader"]
 pub type R = crate::R<DATA_SPEC>;
-#[doc = "Field `data` reader - A FIFO that returns the bytes from the most recently captured SETUP packet. Reading a byte from this register advances the FIFO. The first eight bytes read from this conain the core SETUP packet."]
+#[doc = "Field `data` reader - A FIFO that returns the bytes from the most recently captured SETUP packet. Reading a byte from this register advances the FIFO. The first eight bytes read from this contain the core SETUP packet."]
 pub type DATA_R = crate::FieldReader;
 impl R {
-    #[doc = "Bits 0:7 - A FIFO that returns the bytes from the most recently captured SETUP packet. Reading a byte from this register advances the FIFO. The first eight bytes read from this conain the core SETUP packet."]
+    #[doc = "Bits 0:7 - A FIFO that returns the bytes from the most recently captured SETUP packet. Reading a byte from this register advances the FIFO. The first eight bytes read from this contain the core SETUP packet."]
     #[inline(always)]
     pub fn data(&self) -> DATA_R {
         DATA_R::new((self.bits & 0xff) as u8)

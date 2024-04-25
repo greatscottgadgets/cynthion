@@ -169,7 +169,7 @@ fn main_loop() -> GreatResult<()> {
     let peripherals = pac::Peripherals::take().unwrap();
 
     // initialize logging
-    moondancer::log::init(hal::Serial::new(peripherals.UART));
+    moondancer::log::init();
     info!("Logging initialized");
 
     // usb0: Target

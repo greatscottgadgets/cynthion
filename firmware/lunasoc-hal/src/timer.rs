@@ -144,4 +144,4 @@ macro_rules! impl_timer {
     }
 }
 
-crate::impl_timer! { Timer: crate::pac::TIMER, }
+crate::impl_timer! { Timer0: crate::pac::TIMER, }

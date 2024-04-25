@@ -1,8 +1,7 @@
-//! A simple logger for the `log` crate which can log to any object
-//! implementing `Write`
+//! A simple logger for Cynthion's serial ports.
 
-use core::cell::RefCell;
-use core::fmt::Write;
+use core::fmt::Write as _;
+use hal::hal::serial::Write as _;
 
 use log::{Level, LevelFilter, Metadata, Record};
 
@@ -10,22 +9,19 @@ use crate::hal;
 
 // - initialization -----------------------------------------------------------
 
-static LOGGER: WriteLogger<hal::Serial> = WriteLogger {
-    writer: RefCell::new(None),
-    level: Level::Trace,
-};
+static mut LOGGER: CynthionLogger = CynthionLogger::new(Port::Uart0, Level::Trace);
 
-/// Initialized the log using the given serial peripheral.
+/// Initializes logging using the given serial port
 ///
 /// # Panics
 ///
 /// This function will panic if the logger cannot be initialized.
-pub fn init(writer: hal::Serial) {
-    LOGGER.writer.replace(Some(writer));
+pub fn init() {
+    let logger = unsafe { &mut LOGGER };
 
     #[cfg(target_has_atomic)]
     {
-        match log::set_logger(&LOGGER).map(|()| log::set_max_level(LevelFilter::Trace)) {
+        match log::set_logger(logger).map(|()| log::set_max_level(LevelFilter::Trace)) {
             Ok(()) => (),
             Err(_e) => {
                 panic!("Failed to set logger");
@@ -35,7 +31,7 @@ pub fn init(writer: hal::Serial) {
 
     #[cfg(not(target_has_atomic))]
     {
-        match unsafe { log::set_logger_racy(&LOGGER) }
+        match unsafe { log::set_logger_racy(logger) }
             .map(|()| log::set_max_level(LevelFilter::Trace))
         {
             Ok(()) => (),
@@ -46,66 +42,76 @@ pub fn init(writer: hal::Serial) {
     }
 }
 
+/// Override the default Uart (Uart0) to use for the logger
+pub fn set_port(port: Port) {
+    let logger = unsafe { &mut LOGGER };
+    logger.set_port(port);
+}
+
 // - implementation -----------------------------------------------------------
 
+pub enum Port {
+    Uart0,
+    Uart1,
+}
+
 /// Logger for objects implementing [`Write`] and [`Send`].
-pub struct WriteLogger<W>
-where
-    W: Write + Send,
-{
-    pub writer: RefCell<Option<W>>,
+pub struct CynthionLogger {
+    pub port: Port,
     pub level: Level,
 }
 
-impl<W> log::Log for WriteLogger<W>
-where
-    W: Write + Send,
-{
+impl CynthionLogger {
+    #[must_use]
+    pub const fn new(port: Port, level: Level) -> Self {
+        Self { port, level }
+    }
+
+    pub fn set_port(&mut self, port: Port) {
+        self.port = port;
+    }
+
+    pub fn set_level(&mut self, level: Level) {
+        self.level = level;
+    }
+}
+
+impl log::Log for CynthionLogger {
     fn enabled(&self, metadata: &Metadata) -> bool {
         metadata.level() <= self.level
     }
 
     /// Write the given record to the log
-    ///
-    /// # Panics
-    ///
-    /// This function will panic if the logger has not been initialized.
     fn log(&self, record: &Record) {
         if !self.enabled(record.metadata()) {
             return;
         }
 
-        #[cfg(target_has_atomic)]
-        {
-            match self.writer.borrow_mut().as_mut() {
-                Some(writer) => {
-                    writeln!(writer, "{}\t{}", record.level(), record.args()).unwrap_or(());
-                }
-                None => {
-                    panic!("Logger has not been initialized");
-                }
+        match self.port {
+            Port::Uart0 => {
+                let mut writer = unsafe { hal::Serial0::summon() };
+                writeln!(writer, "{}\t{}", record.level(), record.args()).unwrap_or(());
             }
-        }
-
-        #[cfg(not(target_has_atomic))]
-        {
-            riscv::interrupt::free(|| match self.writer.borrow_mut().as_mut() {
-                Some(writer) => {
-                    writeln!(writer, "{}\t{}", record.level(), record.args()).unwrap_or(());
-                }
-                None => {
-                    panic!("Logger has not been initialized");
-                }
-            });
+            Port::Uart1 => {
+                let mut writer = unsafe { hal::Serial1::summon() };
+                writeln!(writer, "{}\t{}", record.level(), record.args()).unwrap_or(());
+            }
         }
     }
 
-    fn flush(&self) {}
+    fn flush(&self) {
+        match self.port {
+            Port::Uart0 => {
+                let mut writer = unsafe { hal::Serial0::summon() };
+                writer.flush().ok();
+            }
+            Port::Uart1 => {
+                let mut writer = unsafe { hal::Serial1::summon() };
+                writer.flush().ok();
+            }
+        }
+    }
 }
-
-// TODO add support for critical-section crate
-// TODO implement a riscv::interrupt::Mutex
-unsafe impl<W: Write + Send> Sync for WriteLogger<W> {}
 
 // - format! ------------------------------------------------------------------
 
