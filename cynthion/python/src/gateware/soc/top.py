@@ -9,7 +9,7 @@ import os
 import sys
 
 from amaranth                 import Cat, DomainRenamer, Elaboratable, Module, ResetSignal, Signal, Record
-from amaranth.build           import Attrs, Pins, Resource, Subsignal
+from amaranth.build           import Attrs, Pins, PinsN, Resource, Subsignal
 from amaranth.hdl.rec         import Record
 from amaranth_stdio.serial    import AsyncSerial
 
@@ -21,10 +21,13 @@ from luna.gateware.platform          import NullPin
 from luna.gateware.usb.usb2.device   import USBDevice
 
 from luna_soc.gateware.cpu.vexriscv  import VexRiscv
+from luna_soc.gateware.lunasoc       import LunaSoC
+
 from luna_soc.gateware.csr           import GpioPeripheral, LedPeripheral
 from luna_soc.gateware.csr           import USBDeviceController
 from luna_soc.gateware.csr           import SetupFIFOInterface, InFIFOInterface, OutFIFOInterface
-from luna_soc.gateware.lunasoc       import LunaSoC
+
+from luna_soc.gateware.wishbone      import ECP5ConfigurationFlashInterface, WishboneSPIFlashReader
 
 from .advertiser import ApolloAdvertiserPeripheral
 
@@ -55,10 +58,9 @@ class MoondancerSoc(Elaboratable):
         self.soc = LunaSoC(
             cpu=VexRiscv(
                 variant="cynthion+jtag",
-                reset_addr=0x00000000,
+                reset_addr=0x10000000, # spi flash address
             ),
             clock_frequency=clock_frequency,
-            internal_sram_size=65536,
         )
 
         # ... add some stand-ins for our uart pins ...
@@ -71,11 +73,18 @@ class MoondancerSoc(Elaboratable):
             ('tx', [('o', 1)])
         ])
 
-        # ... add core peripherals: memory, timer, uart
+        # ... add core peripherals: memory, timer, uart ...
         self.soc.add_core_peripherals(
             uart_pins=self.uart0_pins,
             uart_baud_rate=uart_baud_rate,
+            internal_sram_size=65536,
+            internal_sram_addr=0x40000000,
         )
+
+        # ... add a qspi flash reader peripheral ...
+        self.spi_bus = ECP5ConfigurationFlashInterface(bus=platform.request("qspi_flash"))
+        self.spi_reader = WishboneSPIFlashReader(pads=self.spi_bus, size=0x400000, name="spiflash", domain="usb")
+        self.soc.add_peripheral(self.spi_reader, addr=0x10000000)
 
         # ... add our LED peripheral, for simple output ...
         self.leds = LedPeripheral()
@@ -132,7 +141,7 @@ class MoondancerSoc(Elaboratable):
         m = Module()
 
         # add additional resource
-        platform.add_resources(self.ADDITIONAL_RESOURCES)
+        # platform.add_resources(self.ADDITIONAL_RESOURCES)
 
         # generate our domain clocks/resets
         m.submodules.car = platform.clock_domain_generator()
@@ -147,6 +156,9 @@ class MoondancerSoc(Elaboratable):
             m.d.comb += self.soc.cpu.ext_reset.eq(user1_io.i)
         except:
             logging.warn("Platform does not support a user button for cpu reset")
+
+        # add the spi bus
+        m.submodules.spi_bus = self.spi_bus
 
         # connect GPIOA to Cynthion's PMOD A port
         pmoda_io = platform.request("user_pmod", 0)
@@ -177,7 +189,7 @@ class MoondancerSoc(Elaboratable):
             self.soc.cpu.jtag_tdi  .eq(jtag0_io.tdi.i),
             jtag0_io.tdo.o         .eq(self.soc.cpu.jtag_tdo),
             self.soc.cpu.jtag_tck  .eq(jtag0_io.tck.i),
-            self.soc.cpu.dbg_reset .eq(ResetSignal("usb")),
+            self.soc.cpu.dbg_reset .eq(self.soc.cpu.ext_reset),
         ]
 
         # workaround: disable platform usb device hooks to take care
@@ -248,6 +260,9 @@ if __name__ == "__main__":
     if platform is None:
         logging.error("Failed to identify a supported platform")
         sys.exit(1)
+
+    # add additional platform resource
+    platform.add_resources(MoondancerSoc.ADDITIONAL_RESOURCES)
 
     # configure clock frequency
     clock_frequency = int(platform.DEFAULT_CLOCK_FREQUENCIES_MHZ["usb"] * 1e6)
