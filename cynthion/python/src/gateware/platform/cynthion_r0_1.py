@@ -84,6 +84,16 @@ class CynthionPlatformRev0D1(CynthionPlatform):
             Attrs(IO_TYPE="LVCMOS33")
         ),
 
+        # Connection to our SPI flash but using quad mode (QSPI)
+        Resource("qspi_flash", 0,
+            # SCK is on pin 9; but doesn't have a traditional I/O buffer.
+            # Instead, we'll need to drive a clock into a USRMCLK instance.
+            # See interfaces/flash.py for more information.
+            Subsignal("dq",  Pins("T8 T7 M7 N7",  dir="io")),
+            Subsignal("cs",  PinsN("N8", dir="o")),
+            Attrs(IO_TYPE="LVCMOS33")
+        ),
+
         #
         # Note: r0.1 has a DFM issue that makes it difficult to solder a BGA with
         # reliable connections on the intended SCK pin (P12), and lacks a CS pin on the
