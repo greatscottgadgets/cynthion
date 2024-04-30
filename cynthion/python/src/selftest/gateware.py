@@ -9,16 +9,15 @@ from amaranth import Signal, Elaboratable, Module, Cat, ClockDomain, ClockSignal
 from amaranth.lib.cdc import FFSynchronizer
 
 from luna.gateware.utils.cdc          import synchronize
-from luna.gateware.architecture.car   import LunaECP5DomainGenerator
 from luna.gateware.interface.jtag     import JTAGRegisterInterface
 from luna.gateware.interface.ulpi     import ULPIRegisterWindow
-from luna.gateware.interface.psram    import HyperRAMPHY, HyperRAMInterface
+from luna.gateware.interface.psram    import HyperRAMDQSPHY, HyperRAMDQSInterface
 
 from .registers import *
 
 
 CLOCK_FREQUENCIES = {
-    "fast": 60,
+    "fast": 120,
     "sync": 60,
     "usb":  60
 }
@@ -30,7 +29,7 @@ class SelftestDevice(Elaboratable):
         m = Module()
 
         # Generate our clock domains.
-        clocking = LunaECP5DomainGenerator(clock_frequencies=CLOCK_FREQUENCIES)
+        clocking = platform.clock_domain_generator(clock_frequencies=CLOCK_FREQUENCIES)
         m.submodules.clocking = clocking
 
         registers = JTAGRegisterInterface(default_read_value=0xDEADBEEF)
@@ -64,9 +63,9 @@ class SelftestDevice(Elaboratable):
         #
         # HyperRAM test connections.
         #
-        ram_bus = platform.request('ram')
-        psram_phy = HyperRAMPHY(bus=ram_bus)
-        psram = HyperRAMInterface(phy=psram_phy.phy)
+        ram_bus = platform.request('ram', dir={'rwds':'-', 'dq':'-', 'cs':'-'})
+        psram_phy = HyperRAMDQSPHY(bus=ram_bus)
+        psram = HyperRAMDQSInterface(phy=psram_phy.phy)
         m.submodules += [psram_phy, psram]
 
         psram_address_changed = Signal()

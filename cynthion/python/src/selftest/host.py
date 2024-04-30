@@ -88,7 +88,7 @@ class StandaloneTester(ApolloSelfTestCase):
         """ Assertion that fails iff a RAM register doesn't hold the expected value. """
 
         self.dut.registers.register_write(REGISTER_RAM_REG_ADDR, address)
-        actual_value =  self.dut.registers.register_read(REGISTER_RAM_VALUE)
+        actual_value =  self.dut.registers.register_read(REGISTER_RAM_VALUE) >> 16
 
         if actual_value not in expected_values:
             raise AssertionError(f"RAM register {address} was {actual_value}, not one of expected {expected_values}")
