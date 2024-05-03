@@ -54,11 +54,15 @@ class MoondancerSoc(Elaboratable):
     ]
 
     def __init__(self, clock_frequency, uart_baud_rate=115200):
+
+        # TODO support an offset for flash address
+        flash_offset = 0x00000000
+
         # Create our SoC...
         self.soc = LunaSoC(
             cpu=VexRiscv(
                 variant="cynthion+jtag",
-                reset_addr=0x10000000, # spi flash address
+                reset_addr=0x10000000 + flash_offset, # spi flash address + offset
             ),
             clock_frequency=clock_frequency,
         )
