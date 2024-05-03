@@ -24,7 +24,7 @@ fn main() -> ! {
     let leds = &peripherals.LEDS;
 
     // initialize logging
-    moondancer::log::set_port(moondancer::log::Port::Uart1);
+    moondancer::log::set_port(moondancer::log::Port::Both);
     moondancer::log::init();
 
     let mut timer = hal::Timer0::new(peripherals.TIMER, pac::clock::sysclk());
