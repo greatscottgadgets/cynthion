@@ -27,16 +27,17 @@ classifiers = [
     "Topic :: Security",
 ]
 dependencies = [
-    "pyusb",
     "future",
-    "pyfwup>=0.2",
-    "tqdm",
-    "tabulate",
+    "libusb1",
     "prompt_toolkit",
+    "pyfwup>=0.2",
+    "pyserial>=3.5",
+    "pyusb",
+    "tabulate",
+    "tomli",
+    "tqdm",
     "pygreat @ git+https://github.com/antoinevg/libgreat.git@antoinevg/moondancer#subdirectory=host",
     "apollo_fpga @ git+https://github.com/greatscottgadgets/apollo.git",  # temporarily pull from git until apollo release
-    "libusb1",
-    "tomli",
 ]
 
 [project.optional-dependencies]
