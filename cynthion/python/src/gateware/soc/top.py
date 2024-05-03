@@ -145,7 +145,7 @@ class MoondancerSoc(Elaboratable):
         m = Module()
 
         # add additional resource
-        # platform.add_resources(self.ADDITIONAL_RESOURCES)
+        platform.add_resources(self.ADDITIONAL_RESOURCES)
 
         # generate our domain clocks/resets
         m.submodules.car = platform.clock_domain_generator()
@@ -264,9 +264,6 @@ if __name__ == "__main__":
     if platform is None:
         logging.error("Failed to identify a supported platform")
         sys.exit(1)
-
-    # add additional platform resource
-    platform.add_resources(MoondancerSoc.ADDITIONAL_RESOURCES)
 
     # configure clock frequency
     clock_frequency = int(platform.DEFAULT_CLOCK_FREQUENCIES_MHZ["usb"] * 1e6)

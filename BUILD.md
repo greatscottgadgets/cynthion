@@ -67,7 +67,7 @@ Install RISC-V embedded target support:
     rustup component add llvm-tools-preview
     cargo install cargo-binutils
 
-Install a RISC-V GNU toolchain so we can build litex-bios or run the C examples:
+Install a RISC-V GNU toolchain so we can use gdb for firmware debugging over JTAG.
 
     # debian
     apt install gcc-riscv64-unknown-elf
