@@ -1,9 +1,11 @@
 //! A simple logger for Cynthion's serial ports.
 
 use core::fmt::Write as _;
-use hal::hal::serial::Write as _;
+use core::ptr::addr_of_mut;
 
 use log::{Level, LevelFilter, Metadata, Record};
+
+use hal::hal::serial::Write as _;
 
 use crate::hal;
 
@@ -17,7 +19,7 @@ static mut LOGGER: CynthionLogger = CynthionLogger::new(Port::Uart0, Level::Trac
 ///
 /// This function will panic if the logger cannot be initialized.
 pub fn init() {
-    let logger = unsafe { &mut LOGGER };
+    let logger = unsafe { &mut *addr_of_mut!(LOGGER) };
 
     #[cfg(target_has_atomic)]
     {
@@ -44,7 +46,7 @@ pub fn init() {
 
 /// Override the default Uart (Uart0) to use for the logger
 pub fn set_port(port: Port) {
-    let logger = unsafe { &mut LOGGER };
+    let logger = unsafe { &mut *addr_of_mut!(LOGGER) };
     logger.set_port(port);
 }
 
