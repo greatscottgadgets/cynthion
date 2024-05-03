@@ -1,12 +1,14 @@
+# connect to openocd
 target extended-remote :3333
 
+# print demangled symbols
 set print asm-demangle on
-set backtrace limit 8
 
+# detect unhandled exceptions, hard faults and panics
 break DefaultHandler
 break HardFault
 break rust_begin_unwind
 
-info mem
+# load firmware into memory and go!
 load
 continue
