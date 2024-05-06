@@ -28,7 +28,7 @@ Enable environment with:
 
 ### RiscV GNU Toolchain
 
-This is needed to build litex-bios:
+This is needed if you want to use gdb for firmware debugging over JTAG.
 
     # macOS - https://github.com/riscv-software-src/homebrew-riscv
     brew tap riscv-software-src/riscv
@@ -47,18 +47,6 @@ Build the bitstream with:
 You can load the bitstream with `apollo` using:
 
     apollo configure build/top.bit
-
-Finally, you can check if the soc is working with something like:
-
-    # linux
-    picocom --imap lfcrlf -b 115200 /dev/ttyACM0
-
-    # macos
-    picocom --imap lfcrlf -b 115200 /dev/cu.usbserial-D00137
-
-Hit enter after connecting and you should see a prompt like:
-
-    BIOS>
 
 
 ## Known Issues

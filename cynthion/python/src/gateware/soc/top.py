@@ -9,22 +9,25 @@ import os
 import sys
 
 from amaranth                 import Cat, DomainRenamer, Elaboratable, Module, ResetSignal, Signal, Record
-from amaranth.build           import Attrs, Pins, Resource, Subsignal
+from amaranth.build           import Attrs, Pins, PinsN, Resource, Subsignal
 from amaranth.hdl.rec         import Record
 from amaranth_stdio.serial    import AsyncSerial
 
-from lambdasoc.periph         import Peripheral
-from lambdasoc.periph.serial  import AsyncSerialPeripheral
+from luna_soc.gateware.vendor.lambdasoc.periph         import Peripheral
+from luna_soc.gateware.vendor.lambdasoc.periph.serial  import AsyncSerialPeripheral
 
 from luna                            import configure_default_logging, top_level_cli
 from luna.gateware.platform          import NullPin
 from luna.gateware.usb.usb2.device   import USBDevice
 
 from luna_soc.gateware.cpu.vexriscv  import VexRiscv
-from luna_soc.gateware.soc           import LunaSoC
+from luna_soc.gateware.lunasoc       import LunaSoC
+
 from luna_soc.gateware.csr           import GpioPeripheral, LedPeripheral
 from luna_soc.gateware.csr           import USBDeviceController
 from luna_soc.gateware.csr           import SetupFIFOInterface, InFIFOInterface, OutFIFOInterface
+
+from luna_soc.gateware.wishbone      import ECP5ConfigurationFlashInterface, WishboneSPIFlashReader
 
 from .advertiser import ApolloAdvertiserPeripheral
 
@@ -52,11 +55,16 @@ class MoondancerSoc(Elaboratable):
 
     def __init__(self, clock_frequency, uart_baud_rate=115200):
 
+        # TODO support an offset for flash address
+        flash_offset = 0x00000000
+
         # Create our SoC...
         self.soc = LunaSoC(
-            cpu=VexRiscv(reset_addr=0x00000000, variant="cynthion+jtag"),
+            cpu=VexRiscv(
+                variant="cynthion+jtag",
+                reset_addr=0x10000000 + flash_offset, # spi flash address + offset
+            ),
             clock_frequency=clock_frequency,
-            internal_sram_size=65536,
         )
 
         # ... add some stand-ins for our uart pins ...
@@ -69,11 +77,18 @@ class MoondancerSoc(Elaboratable):
             ('tx', [('o', 1)])
         ])
 
-        # ... add bios and core peripherals ...
-        self.soc.add_bios_and_peripherals(
+        # ... add core peripherals: memory, timer, uart ...
+        self.soc.add_core_peripherals(
             uart_pins=self.uart0_pins,
             uart_baud_rate=uart_baud_rate,
+            internal_sram_size=65536,
+            internal_sram_addr=0x40000000,
         )
+
+        # ... add a qspi flash reader peripheral ...
+        self.spi_bus = ECP5ConfigurationFlashInterface(bus=platform.request("qspi_flash"))
+        self.spi_reader = WishboneSPIFlashReader(pads=self.spi_bus, size=0x400000, name="spiflash", domain="usb")
+        self.soc.add_peripheral(self.spi_reader, addr=0x10000000)
 
         # ... add our LED peripheral, for simple output ...
         self.leds = LedPeripheral()
@@ -146,6 +161,9 @@ class MoondancerSoc(Elaboratable):
         except:
             logging.warn("Platform does not support a user button for cpu reset")
 
+        # add the spi bus
+        m.submodules.spi_bus = self.spi_bus
+
         # connect GPIOA to Cynthion's PMOD A port
         pmoda_io = platform.request("user_pmod", 0)
         m.d.comb += [
@@ -175,7 +193,7 @@ class MoondancerSoc(Elaboratable):
             self.soc.cpu.jtag_tdi  .eq(jtag0_io.tdi.i),
             jtag0_io.tdo.o         .eq(self.soc.cpu.jtag_tdo),
             self.soc.cpu.jtag_tck  .eq(jtag0_io.tck.i),
-            self.soc.cpu.dbg_reset .eq(ResetSignal("usb")),
+            self.soc.cpu.dbg_reset .eq(self.soc.cpu.ext_reset),
         ]
 
         # workaround: disable platform usb device hooks to take care
@@ -223,7 +241,6 @@ class MoondancerSoc(Elaboratable):
 
 
 
-
 # - main ----------------------------------------------------------------------
 
 import luna
@@ -255,18 +272,6 @@ if __name__ == "__main__":
 
     # create design
     design = MoondancerSoc(clock_frequency=clock_frequency)
-
-    # TODO fix litex build
-    thirdparty = os.path.join(build_dir, "lambdasoc.soc.cpu/bios/3rdparty/litex")
-    if not os.path.exists(thirdparty):
-        logging.info("Fixing build, creating output directory: {}".format(thirdparty))
-        os.makedirs(thirdparty)
-
-    # build litex bios
-    logging.info("Building bios")
-    design.soc.build(name="soc",
-                     build_dir=build_dir,
-                     do_init=True)
 
     # build soc
     logging.info("Building soc")

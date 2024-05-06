@@ -1,9 +1,6 @@
 SHELL := /bin/zsh
 
 UART	?= /dev/ttyACM0
-CROSS	?= riscv64-unknown-elf
-
-AR=$(CROSS)-ar
 
 # - gateware ------------------------------------------------------------------
 
@@ -13,7 +10,7 @@ analyzer:
 
 soc:
 	rm -rf build
-	AR=$(AR) python3 -m cynthion.gateware.soc.top
+	python3 -m cynthion.gateware.soc.top
 	cp build/genrust/memory.x ../../firmware/memory.x
 
 

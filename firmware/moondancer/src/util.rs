@@ -178,6 +178,7 @@ pub mod UsbEventExt {
     /// for lower latency.
     ///
     /// Contents is (`usb_interface`, `endpoint_number`, `setup_packet`)
+    #[allow(dead_code)]
     #[derive(Clone, Copy)]
     pub struct ReceiveControl(UsbInterface, u8, SetupPacket);
 
@@ -188,6 +189,7 @@ pub mod UsbEventExt {
     /// for lower latency.
     ///
     /// Contents is (`usb_interface`, `endpoint_number`, `bytes_read`, `packet_buffer`)
+    #[allow(dead_code)]
     #[derive(Clone, Copy)]
     pub struct ReceivePacket(UsbInterface, u8, usize, [u8; smolusb::EP_MAX_PACKET_SIZE]);
 }

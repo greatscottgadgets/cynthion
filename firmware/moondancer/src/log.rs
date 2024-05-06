@@ -1,15 +1,17 @@
 //! A simple logger for Cynthion's serial ports.
 
 use core::fmt::Write as _;
-use hal::hal::serial::Write as _;
+use core::ptr::addr_of_mut;
 
 use log::{Level, LevelFilter, Metadata, Record};
+
+use hal::hal::serial::Write as _;
 
 use crate::hal;
 
 // - initialization -----------------------------------------------------------
 
-static mut LOGGER: CynthionLogger = CynthionLogger::new(Port::Uart0, Level::Trace);
+static mut LOGGER: CynthionLogger = CynthionLogger::new(Port::Both, Level::Trace);
 
 /// Initializes logging using the given serial port
 ///
@@ -17,7 +19,7 @@ static mut LOGGER: CynthionLogger = CynthionLogger::new(Port::Uart0, Level::Trac
 ///
 /// This function will panic if the logger cannot be initialized.
 pub fn init() {
-    let logger = unsafe { &mut LOGGER };
+    let logger = unsafe { &mut *addr_of_mut!(LOGGER) };
 
     #[cfg(target_has_atomic)]
     {
@@ -44,7 +46,7 @@ pub fn init() {
 
 /// Override the default Uart (Uart0) to use for the logger
 pub fn set_port(port: Port) {
-    let logger = unsafe { &mut LOGGER };
+    let logger = unsafe { &mut *addr_of_mut!(LOGGER) };
     logger.set_port(port);
 }
 
@@ -53,6 +55,7 @@ pub fn set_port(port: Port) {
 pub enum Port {
     Uart0,
     Uart1,
+    Both
 }
 
 /// Logger for objects implementing [`Write`] and [`Send`].
@@ -96,6 +99,12 @@ impl log::Log for CynthionLogger {
                 let mut writer = unsafe { hal::Serial1::summon() };
                 writeln!(writer, "{}\t{}", record.level(), record.args()).unwrap_or(());
             }
+            Port::Both => {
+                let mut writer = unsafe { hal::Serial0::summon() };
+                writeln!(writer, "{}\t{}", record.level(), record.args()).unwrap_or(());
+                let mut writer = unsafe { hal::Serial1::summon() };
+                writeln!(writer, "{}\t{}", record.level(), record.args()).unwrap_or(());
+            }
         }
     }
 
@@ -106,6 +115,12 @@ impl log::Log for CynthionLogger {
                 writer.flush().ok();
             }
             Port::Uart1 => {
+                let mut writer = unsafe { hal::Serial1::summon() };
+                writer.flush().ok();
+            }
+            Port::Both => {
+                let mut writer = unsafe { hal::Serial0::summon() };
+                writer.flush().ok();
                 let mut writer = unsafe { hal::Serial1::summon() };
                 writer.flush().ok();
             }

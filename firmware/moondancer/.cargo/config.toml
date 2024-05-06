@@ -1,5 +1,6 @@
 [target.riscv32imac-unknown-none-elf]
-runner = ".cargo/flash.sh"
+runner = ".cargo/apollo.sh"
+#runner = "riscv64-unknown-elf-gdb -q -x .cargo/openocd.gdb"
 rustflags = [
   "-C", "link-arg=-Tmemory.x",
   "-C", "link-arg=-Tlink.x",
