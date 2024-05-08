@@ -30,12 +30,6 @@ Cynthion Documentation
 
 .. toctree::
   :maxdepth: 2
-  :caption: User Documentation
-
-  facedancer_examples
-
-.. toctree::
-  :maxdepth: 2
   :caption: Developer Documentation
 
   cynthion_development
