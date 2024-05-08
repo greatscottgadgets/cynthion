@@ -7,7 +7,7 @@ Cynthion Documentation
 
 .. toctree::
   :maxdepth: 2
-  :caption: Getting Started
+  :caption: User Documentation
 
   introduction
   cynthion_getting_started

@@ -12,13 +12,24 @@ Out-of-the-box, Cynthion acts as a USB protocol analyzer capable of capturing an
 Combined with our LUNA gateware and Facedancer libraries, Cynthion becomes a versatile USB-hacking and development tool. Facedancer makes it quick and easy to create or tamper with real USB devices—not just emulations—even if you don’t have experience with digital-hardware design, HDL, or FPGA architecture!
 
 
+Device Overview
+---------------
+
 
 Top View
 ~~~~~~~~
 
 .. image:: ../images/cynthion-top.svg
-  :width: 400
+  :width: 300
   :alt: Cynthion Top View
+
+- **LEDS A-E** - Five status LEDs managed by the microcontoller.
+  - **A** - TODO
+  - **B** - TODO
+  - **C** - TODO
+  - **D** - TODO
+  - **E** - TODO
+- **LEDS 0-5** - Six user LEDs connected to the FPGA
 
 
 Left View
@@ -62,5 +73,5 @@ Bottom View
 ~~~~~~~~~~~
 
 .. image:: ../images/cynthion-bottom.svg
-  :width: 400
+  :width: 300
   :alt: Cynthion Bottom View

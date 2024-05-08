@@ -67,20 +67,24 @@ Test Installation
 Connect Hardware
 ^^^^^^^^^^^^^^^^
 
-.. image:: ../images/cynthion_connections.png
-  :alt: TODO Cynthion hardware connections to host, target and device
+.. image:: ../images/cynthion-connections-host.svg
+  :width: 800
+  :alt: Connection diagram for testing Cynthion installation.
+
+- Connect the Host computer to the Cynthion Control port.
+- Cynthion will power on and TODO what will the led's be doing at this point?
 
 
 Test hardware connectivity
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Open a terminal and run:
+Open a terminal and confirm that everything is working by running:
 
 .. code-block :: sh
 
     cynthion info
 
-You should see output like the following:
+This will produce the following output:
 
 .. code-block :: sh
 

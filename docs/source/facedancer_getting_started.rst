@@ -1,6 +1,6 @@
-================================================
+==============================
 Using Cynthion with Facedancer
-================================================
+==============================
 
 Before proceeding, please ensure you have completed all steps in the :doc:`cynthion_getting_started` section.
 
@@ -39,10 +39,10 @@ Once you have the source code downloaded you can install the Facedancer library 
 
 
 
-Put Cynthion into "moondancer" mode
------------------------------------
+Load Facedancer Bitstream and Firmware
+--------------------------------------
 
-You can put Cynthion into moondancer mode by running:
+You can load the Facedancer Bitstream and Firmware by running:
 
 .. code-block :: sh
 
@@ -67,6 +67,14 @@ You should see output like:
 .. code-block :: sh
 
     TODO cynthion info output when running as moondancer
+
+
+Connect Hardware
+----------------
+
+.. image:: ../images/cynthion-connections-facedancer.svg
+  :width: 800
+  :alt: Connection diagram for using Cynthion with Facedancer.
 
 
 Run a Facedancer example
