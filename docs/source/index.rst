@@ -9,6 +9,7 @@ Cynthion Documentation
   :maxdepth: 2
   :caption: Getting Started
 
+  introduction
   cynthion_getting_started
   packetry_getting_started
   facedancer_getting_started
