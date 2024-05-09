@@ -35,3 +35,4 @@ Cynthion Documentation
   :caption: Developer Documentation
 
   development/introduction
+  development/apollo
