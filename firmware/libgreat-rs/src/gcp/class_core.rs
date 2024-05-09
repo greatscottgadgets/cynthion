@@ -1,6 +1,7 @@
 #![allow(clippy::missing_errors_doc)]
 
-use zerocopy::{FromBytes, LittleEndian, Unaligned, U32};
+use zerocopy::byteorder::{LittleEndian, U32};
+use zerocopy::{FromBytes, FromZeroes, Unaligned};
 
 use crate::error::{GreatError, GreatResult};
 use crate::firmware::BoardInformation;
@@ -179,7 +180,7 @@ impl Core {
 
     pub fn get_available_verbs(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             class_number: U32<LittleEndian>,
         }
@@ -195,7 +196,7 @@ impl Core {
 
     pub fn get_verb_name(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             class_number: U32<LittleEndian>,
             verb_number: U32<LittleEndian>,
@@ -214,7 +215,7 @@ impl Core {
 
     pub fn get_verb_descriptor(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(Debug, FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             class_number: U32<LittleEndian>,
             verb_number: U32<LittleEndian>,
@@ -241,7 +242,7 @@ impl Core {
 
     pub fn get_class_name(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             class_number: U32<LittleEndian>,
         }
@@ -256,7 +257,7 @@ impl Core {
 
     pub fn get_class_docs(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             class_number: U32<LittleEndian>,
         }

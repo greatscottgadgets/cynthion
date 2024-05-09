@@ -24,4 +24,4 @@ nightly = []
 [dependencies]
 heapless = { version = "=0.7.16" }
 log = "=0.4.17"
-zerocopy = { version = "=0.7.0-alpha.2", default-features = false }
+zerocopy = { version = "0.7.34", default-features = false, features = ["derive"] }

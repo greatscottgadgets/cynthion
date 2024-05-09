@@ -55,7 +55,7 @@ pub fn set_port(port: Port) {
 pub enum Port {
     Uart0,
     Uart1,
-    Both
+    Both,
 }
 
 /// Logger for objects implementing [`Write`] and [`Send`].

@@ -1,6 +1,6 @@
 //! Great Communications Protocol Class Registry
 
-use zerocopy::{LittleEndian, U32};
+use zerocopy::byteorder::{LittleEndian, U32};
 
 // - Classes ------------------------------------------------------------------
 

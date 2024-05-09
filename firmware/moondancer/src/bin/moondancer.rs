@@ -122,7 +122,7 @@ impl<'a> Firmware<'a> {
         advertiser.enable().write(|w| w.enable().bit(true));
 
         // initialize logging
-        moondancer::log::set_port(moondancer::log::Port::Uart1);
+        moondancer::log::set_port(moondancer::log::Port::Both);
         moondancer::log::init();
         info!(
             "{} {}",

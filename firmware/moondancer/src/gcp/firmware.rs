@@ -1,7 +1,8 @@
 use libgreat::error::{GreatError, GreatResult};
 use libgreat::gcp::{self, Verb};
 
-use zerocopy::{FromBytes, LittleEndian, Unaligned, U32};
+use zerocopy::byteorder::{LittleEndian, U32};
+use zerocopy::{FromBytes, FromZeroes, Unaligned};
 
 use core::any::Any;
 
@@ -91,7 +92,7 @@ pub fn page_erase<'a>(
     _context: &'a dyn Any,
 ) -> GreatResult<impl Iterator<Item = u8> + 'a> {
     #[repr(C)]
-    #[derive(FromBytes, Unaligned)]
+    #[derive(FromBytes, FromZeroes, Unaligned)]
     struct Args {
         address: U32<LittleEndian>,
     }
@@ -104,11 +105,11 @@ pub fn write_page<'a>(
     _context: &'a dyn Any,
 ) -> GreatResult<impl Iterator<Item = u8> + 'a> {
     struct Args<B: zerocopy::ByteSlice> {
-        _address: zerocopy::LayoutVerified<B, U32<LittleEndian>>,
+        _address: zerocopy::Ref<B, U32<LittleEndian>>,
         _data: B,
     }
-    let (_address, _data) = zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
-        .ok_or(GreatError::InvalidArgument)?;
+    let (_address, _data) =
+        zerocopy::Ref::new_unaligned_from_prefix(arguments).ok_or(GreatError::InvalidArgument)?;
     let _args = Args { _address, _data };
     Ok([].into_iter())
 }
@@ -118,7 +119,7 @@ pub fn read_page<'a>(
     _context: &'a dyn Any,
 ) -> GreatResult<impl Iterator<Item = u8> + 'a> {
     #[repr(C)]
-    #[derive(FromBytes, Unaligned)]
+    #[derive(FromBytes, FromZeroes, Unaligned)]
     struct Args {
         address: U32<LittleEndian>,
     }

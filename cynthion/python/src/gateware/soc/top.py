@@ -159,7 +159,7 @@ class MoondancerSoc(Elaboratable):
             user1_io = platform.request("button_user")
             m.d.comb += self.soc.cpu.ext_reset.eq(user1_io.i)
         except:
-            logging.warn("Platform does not support a user button for cpu reset")
+            logging.warning("Platform does not support a user button for cpu reset")
 
         # add the spi bus
         m.submodules.spi_bus = self.spi_bus
