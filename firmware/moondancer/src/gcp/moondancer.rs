@@ -1,7 +1,8 @@
 //! Implementation for the GCP `moondancer` class.
 
 use log::{debug, error, trace, warn};
-use zerocopy::{FromBytes, LittleEndian, Unaligned, U16, U32};
+use zerocopy::byteorder::{LittleEndian, U16, U32};
+use zerocopy::{FromBytes, FromZeroes, Unaligned};
 
 use crate::{hal, pac};
 use hal::smolusb;
@@ -237,7 +238,7 @@ impl Moondancer {
     /// Connect the USB interface.
     pub fn connect(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             ep0_max_packet_size: U16<LittleEndian>,
             device_speed: u8,
@@ -312,14 +313,11 @@ impl Moondancer {
 impl Moondancer {
     /// Returns the earliest control packet in the queue.
     pub fn read_control(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        let setup_packet = match self.control_queue.dequeue() {
-            Some(setup_packet) => setup_packet,
-            None => {
-                error!("Moondancer - no packets in control queue");
-                loop {
-                    unsafe {
-                        riscv::asm::nop();
-                    }
+        let Some(setup_packet) = self.control_queue.dequeue() else {
+            error!("Moondancer - no packets in control queue");
+            loop {
+                unsafe {
+                    riscv::asm::nop();
                 }
             }
         };
@@ -332,7 +330,7 @@ impl Moondancer {
     /// Set the device address.
     pub fn set_address(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             address: u8,
             deferred: u8,
@@ -364,7 +362,7 @@ impl Moondancer {
         arguments: &[u8],
     ) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(Debug, FromBytes, Unaligned)]
+        #[derive(Debug, FromBytes, FromZeroes, Unaligned)]
         struct ArgEndpoint {
             address: u8,
             max_packet_size: U16<LittleEndian>,
@@ -376,7 +374,7 @@ impl Moondancer {
         // while we have endpoint triplets to handle
         let mut byte_slice = arguments;
         while let Some((endpoint, next)) =
-            zerocopy::LayoutVerified::<_, ArgEndpoint>::new_from_prefix(byte_slice)
+            zerocopy::Ref::<_, ArgEndpoint>::new_from_prefix(byte_slice)
         {
             let endpoint_number = endpoint.address & 0x7f;
 
@@ -434,7 +432,7 @@ impl Moondancer {
     /// Stall the given USB IN endpoint number.
     pub fn stall_endpoint_in(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             endpoint_number: u8,
         }
@@ -452,7 +450,7 @@ impl Moondancer {
     /// Stall the given USB OUT endpoint number.
     pub fn stall_endpoint_out(&self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             endpoint_number: u8,
         }
@@ -476,7 +474,7 @@ impl Moondancer {
 impl Moondancer {
     pub fn read_endpoint(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             endpoint_number: u8,
         }
@@ -513,7 +511,7 @@ impl Moondancer {
         arguments: &[u8],
     ) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             payload_length: U32<LittleEndian>,
         }
@@ -544,7 +542,7 @@ impl Moondancer {
         arguments: &[u8],
     ) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
-        #[derive(FromBytes, Unaligned)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
             endpoint_number: u8,
         }
@@ -563,14 +561,13 @@ impl Moondancer {
     #[allow(clippy::too_many_lines)]
     pub fn write_endpoint(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         struct Args<B: zerocopy::ByteSlice> {
-            endpoint_number: zerocopy::LayoutVerified<B, u8>,
-            blocking: zerocopy::LayoutVerified<B, u8>,
+            endpoint_number: zerocopy::Ref<B, u8>,
+            blocking: zerocopy::Ref<B, u8>,
             payload: B,
         }
-        let (endpoint_number, arguments) =
-            zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
-                .ok_or(GreatError::InvalidArgument)?;
-        let (blocking, payload) = zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
+        let (endpoint_number, arguments) = zerocopy::Ref::new_unaligned_from_prefix(arguments)
+            .ok_or(GreatError::InvalidArgument)?;
+        let (blocking, payload) = zerocopy::Ref::new_unaligned_from_prefix(arguments)
             .ok_or(GreatError::InvalidArgument)?;
         let args = Args {
             endpoint_number,
@@ -701,12 +698,11 @@ impl Moondancer {
         arguments: &[u8],
     ) -> GreatResult<impl Iterator<Item = u8>> {
         struct Args<B: zerocopy::ByteSlice> {
-            endpoint_number: zerocopy::LayoutVerified<B, u8>,
+            endpoint_number: zerocopy::Ref<B, u8>,
             payload: B,
         }
-        let (endpoint_number, payload) =
-            zerocopy::LayoutVerified::new_unaligned_from_prefix(arguments)
-                .ok_or(GreatError::InvalidArgument)?;
+        let (endpoint_number, payload) = zerocopy::Ref::new_unaligned_from_prefix(arguments)
+            .ok_or(GreatError::InvalidArgument)?;
         let args = Args {
             endpoint_number,
             payload,

@@ -72,6 +72,9 @@ Install a RISC-V GNU toolchain so we can use gdb for firmware debugging over JTA
     # debian
     apt install gcc-riscv64-unknown-elf
 
+    # arch
+    pacman -S riscv-gnu-toolchain-bin
+
     # macos brew - https://github.com/riscv-software-src/homebrew-riscv
     brew tap riscv-software-src/riscv
     brew install riscv-gnu-toolchain

@@ -5,7 +5,7 @@ use core::marker::PhantomData;
 use core::mem::size_of;
 use core::slice;
 
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 use crate::traits::AsByteSliceIterator;
 
@@ -63,7 +63,8 @@ impl From<u8> for DescriptorType {
 // - DeviceDescriptor ---------------------------------------------------------
 
 /// USB device descriptor
-#[derive(AsBytes, FromBytes, Clone, Copy)]
+#[allow(clippy::pub_underscore_fields)]
+#[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct DeviceDescriptor {
     pub _length: u8,             // 18
@@ -116,7 +117,8 @@ impl Default for DeviceDescriptor {
 // - DeviceQualifierDescriptor ------------------------------------------------
 
 /// USB device qualifier descriptor
-#[derive(AsBytes, FromBytes, Clone, Copy)]
+#[allow(clippy::pub_underscore_fields)]
+#[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct DeviceQualifierDescriptor {
     pub _length: u8,          // 10
@@ -159,7 +161,8 @@ impl Default for DeviceQualifierDescriptor {
 // - ConfigurationDescriptor --------------------------------------------------
 
 /// USB configuration descriptor header
-#[derive(AsBytes, FromBytes, Clone, Copy)]
+#[allow(clippy::pub_underscore_fields)]
+#[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct ConfigurationDescriptorHeader {
     pub _length: u8,         // 9
@@ -273,7 +276,8 @@ pub type ConfigurationDescriptorTailIterator<'a> = iter::FlatMap<
 // - InterfaceDescriptor ------------------------------------------------------
 
 /// USB interface descriptor header
-#[derive(AsBytes, FromBytes, Clone, Copy)]
+#[allow(clippy::pub_underscore_fields)]
+#[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct InterfaceDescriptorHeader {
     pub _length: u8,          // 9
@@ -333,7 +337,8 @@ impl<'a> InterfaceDescriptor<'a> {
 // - EndpointDescriptor -------------------------------------------------------
 
 /// USB endpoint descriptor
-#[derive(AsBytes, FromBytes, Clone, Copy)]
+#[allow(clippy::pub_underscore_fields)]
+#[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct EndpointDescriptor {
     pub _length: u8,          // 7
@@ -414,7 +419,8 @@ impl<'a> StringDescriptorZero<'a> {
 // - StringDescriptor ---------------------------------------------------------
 
 /// USB string zero descriptor header
-#[derive(AsBytes, FromBytes, Clone, Copy, Debug)]
+#[allow(clippy::pub_underscore_fields)]
+#[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct StringDescriptorHeader {
     pub _length: u8,

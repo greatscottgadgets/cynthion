@@ -287,7 +287,7 @@
           <fields>
             <field>
               <name>output</name>
-              <description>leds output register field</description>
+              <description/>
               <bitRange>[5:0]</bitRange>
             </field>
           </fields>
@@ -318,7 +318,7 @@
           <fields>
             <field>
               <name>moder</name>
-              <description>gpioa moder register field</description>
+              <description/>
               <bitRange>[7:0]</bitRange>
             </field>
           </fields>
@@ -333,7 +333,7 @@
           <fields>
             <field>
               <name>odr</name>
-              <description>gpioa odr register field</description>
+              <description/>
               <bitRange>[7:0]</bitRange>
             </field>
           </fields>
@@ -348,7 +348,7 @@
           <fields>
             <field>
               <name>idr</name>
-              <description>gpioa idr register field</description>
+              <description/>
               <bitRange>[7:0]</bitRange>
             </field>
           </fields>
@@ -424,7 +424,7 @@
           <fields>
             <field>
               <name>moder</name>
-              <description>gpiob moder register field</description>
+              <description/>
               <bitRange>[7:0]</bitRange>
             </field>
           </fields>
@@ -439,7 +439,7 @@
           <fields>
             <field>
               <name>odr</name>
-              <description>gpiob odr register field</description>
+              <description/>
               <bitRange>[7:0]</bitRange>
             </field>
           </fields>
@@ -454,7 +454,7 @@
           <fields>
             <field>
               <name>idr</name>
-              <description>gpiob idr register field</description>
+              <description/>
               <bitRange>[7:0]</bitRange>
             </field>
           </fields>
@@ -2987,17 +2987,17 @@
       <memoryRegion>
         <name>BOOTROM</name>
         <baseAddress>0x00000000</baseAddress>
-        <size>0x00004000</size>
-      </memoryRegion>
-      <memoryRegion>
-        <name>SCRATCHPAD</name>
-        <baseAddress>0x10000000</baseAddress>
-        <size>0x00001000</size>
+        <size>0x00000020</size>
       </memoryRegion>
       <memoryRegion>
         <name>MAINRAM</name>
         <baseAddress>0x40000000</baseAddress>
         <size>0x00010000</size>
+      </memoryRegion>
+      <memoryRegion>
+        <name>SPIFLASH</name>
+        <baseAddress>0x10000000</baseAddress>
+        <size>0x00400000</size>
       </memoryRegion>
     </memoryRegions>
     <constants/>

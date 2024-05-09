@@ -1,9 +1,9 @@
 #[doc = "Register `odr` writer"]
 pub type W = crate::W<ODR_SPEC>;
-#[doc = "Field `odr` writer - gpiob odr register field"]
+#[doc = "Field `odr` writer - "]
 pub type ODR_W<'a, REG> = crate::FieldWriter<'a, REG, 8>;
 impl W {
-    #[doc = "Bits 0:7 - gpiob odr register field"]
+    #[doc = "Bits 0:7"]
     #[inline(always)]
     #[must_use]
     pub fn odr(&mut self) -> ODR_W<ODR_SPEC> {

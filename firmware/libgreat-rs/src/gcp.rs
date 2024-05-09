@@ -16,11 +16,12 @@ pub const LIBGREAT_MAX_COMMAND_SIZE: usize = 1024;
 
 // - types --------------------------------------------------------------------
 
-use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, LittleEndian, Unaligned, U32};
+use zerocopy::byteorder::{LittleEndian, U32};
+use zerocopy::{AsBytes, ByteSlice, FromBytes, FromZeroes, Unaligned};
 
 /// Great Communication Protocol command prelude
 #[repr(C)]
-#[derive(Debug, FromBytes, AsBytes, Unaligned)]
+#[derive(Debug, FromBytes, FromZeroes, AsBytes, Unaligned)]
 pub struct CommandPrelude {
     pub class: U32<LittleEndian>,
     pub verb: U32<LittleEndian>,
@@ -28,7 +29,7 @@ pub struct CommandPrelude {
 
 #[derive(Debug)]
 pub struct Command<B: ByteSlice> {
-    pub prelude: LayoutVerified<B, CommandPrelude>,
+    pub prelude: zerocopy::Ref<B, CommandPrelude>,
     pub arguments: B,
 }
 
@@ -37,7 +38,7 @@ where
     B: ByteSlice,
 {
     pub fn parse(byte_slice: B) -> Option<Command<B>> {
-        let (prelude, arguments) = LayoutVerified::new_unaligned_from_prefix(byte_slice)?;
+        let (prelude, arguments) = zerocopy::Ref::new_unaligned_from_prefix(byte_slice)?;
         Some(Command { prelude, arguments })
     }
 
@@ -101,7 +102,7 @@ mod tests {
     use core::iter;
     use core::slice;
 
-    use zerocopy::U16;
+    use zerocopy::byteorder::U16;
 
     use crate::firmware::BoardInformation;
 
@@ -216,7 +217,7 @@ mod tests {
     #[test]
     fn test_parse_get_verb_descriptor() {
         #[repr(C)]
-        #[derive(Debug, FromBytes, Unaligned)]
+        #[derive(Debug, FromBytes, FromZeroes, Unaligned)]
         struct Args {
             class_number: U32<LittleEndian>,
             verb_number: U32<LittleEndian>,
@@ -240,14 +241,14 @@ mod tests {
     #[test]
     fn test_parse_complex_arguments() {
         #[repr(C)]
-        #[derive(Debug, FromBytes, Unaligned)]
+        #[derive(Debug, FromBytes, FromZeroes, Unaligned)]
         struct Endpoint {
             address: u8,
             max_packet_size: U16<LittleEndian>,
             transfer_type: u8,
         }
         #[repr(C)]
-        #[derive(Debug, FromBytes, Unaligned)]
+        #[derive(Debug, FromBytes, FromZeroes, Unaligned)]
         struct Args {
             endpoint: Endpoint,
         }
@@ -260,22 +261,19 @@ mod tests {
         assert_eq!(command.verb_number(), 4);
 
         let mut byte_slice = command.arguments;
-        while let Some((arg, next)) =
-            zerocopy::LayoutVerified::<&[u8], Args>::new_from_prefix(byte_slice)
-        {
+        while let Some((arg, next)) = zerocopy::Ref::<&[u8], Args>::new_from_prefix(byte_slice) {
             byte_slice = next;
             println!("  arg: {:?}", arg);
         }
 
-        let (arg0, next) =
-            zerocopy::LayoutVerified::<&[u8], Args>::new_from_prefix(command.arguments)
-                .expect("failed parsing argument");
+        let (arg0, next) = zerocopy::Ref::<&[u8], Args>::new_from_prefix(command.arguments)
+            .expect("failed parsing argument");
         assert_eq!(arg0.endpoint.address, 0);
         assert_eq!(arg0.endpoint.max_packet_size.get(), 64);
         assert_eq!(arg0.endpoint.transfer_type, 0);
 
-        let (arg1, next) = zerocopy::LayoutVerified::<&[u8], Args>::new_from_prefix(next)
-            .expect("failed parsing argument");
+        let (arg1, next) =
+            zerocopy::Ref::<&[u8], Args>::new_from_prefix(next).expect("failed parsing argument");
         assert_eq!(arg1.endpoint.address, 0x82);
         assert_eq!(arg1.endpoint.max_packet_size.get(), 512);
         assert_eq!(arg1.endpoint.transfer_type, 2);
@@ -288,7 +286,7 @@ mod tests {
     #[test]
     fn test_dispatch_read_board_id() {
         let classes = Classes(&SUPPORTED_CLASSES);
-        let core = class_core::Core::new(classes, BOARD_INFORMATION);
+        let mut core = class_core::Core::new(classes, BOARD_INFORMATION);
 
         let command = Command::parse(&COMMAND_READ_BOARD_ID[..]).expect("failed parsing command");
         println!("\ntest_dispatch_read_board_id: {:?}", command);
@@ -308,7 +306,7 @@ mod tests {
     #[test]
     fn test_dispatch_get_verb_descriptor() {
         let classes = Classes(&SUPPORTED_CLASSES);
-        let core = class_core::Core::new(classes, BOARD_INFORMATION);
+        let mut core = class_core::Core::new(classes, BOARD_INFORMATION);
 
         let command =
             Command::parse(&COMMAND_GET_VERB_DESCRIPTOR[..]).expect("failed parsing command");

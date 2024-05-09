@@ -2,7 +2,7 @@ use libgreat::error::{GreatError, GreatResult};
 use libgreat::gcp::{self, Verb};
 
 use log::debug;
-use zerocopy::{FromBytes, LittleEndian, Unaligned, U32};
+use zerocopy::{FromBytes, FromZeroes, LittleEndian, Unaligned, U32};
 
 use core::any::Any;
 
@@ -34,7 +34,7 @@ pub fn test_error_return_code<'a>(
     _context: &'a dyn Any,
 ) -> GreatResult<impl Iterator<Item = u8> + 'a> {
     #[repr(C)]
-    #[derive(FromBytes, Unaligned)]
+    #[derive(FromBytes, FromZeroes, Unaligned)]
     struct Args {
         code: U32<LittleEndian>,
     }
