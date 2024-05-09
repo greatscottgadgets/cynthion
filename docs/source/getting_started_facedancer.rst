@@ -2,7 +2,7 @@
 Using Cynthion with Facedancer
 ==============================
 
-Before proceeding, please ensure you have completed all steps in the :doc:`cynthion_getting_started` section.
+Before proceeding, please ensure you have completed all steps in the :doc:`getting_started` section.
 
 
 Install the Facedancer library
@@ -80,7 +80,7 @@ Connect Hardware
 Run a Facedancer example
 ------------------------
 
-Create a new Python file called `rubber-ducky.py` with the following content:
+Create a new Python file called ``rubber-ducky.py`` with the following content:
 
 .. code-block :: python
 

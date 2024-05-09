@@ -10,28 +10,28 @@ Cynthion Documentation
   :caption: User Documentation
 
   introduction
-  cynthion_getting_started
-  packetry_getting_started
-  facedancer_getting_started
-  usbproxy_getting_started
+  getting_started
+  getting_started_packetry
+  getting_started_facedancer
+  getting_started_usbproxy
 
 .. toctree::
   :maxdepth: 2
   :caption: Cynthion Hardware
 
-  cynthion_hardware
+  hardware/introduction
+  hardware/bringup_guide
 
 .. toctree::
   :maxdepth: 2
   :caption: Support
 
-  getting_help
-  cynthion_safety_information
-  cynthion_project_mentions
+  support/getting_help
+  support/project_mentions
+  support/safety_information
 
 .. toctree::
   :maxdepth: 2
   :caption: Developer Documentation
 
-  cynthion_development
-  cynthion_bringup_guide
+  development/introduction

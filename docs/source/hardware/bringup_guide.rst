@@ -50,7 +50,7 @@ The “recovery mode (RVM)” bootloader for Cynthion boards is named
 *Saturn-V*; as it’s the first stage in “getting to Cynthion”. The bootloader
 is located in `in its own repository <https://github.com/greatscottgadgets/saturn-v>`__
 
-You can clone the bootloader using `git`:
+You can clone the bootloader using ``git``:
 
 .. code:: sh
 
@@ -213,7 +213,7 @@ self-test applet.
 
 Before you can run the applet, you’ll need to have a working
 ``cynthion`` development environment. See
-:doc:`cynthion_development` to get your environment set up.
+:doc:`../development/introduction` to get your environment set up.
 
 Next, we can check to make sure your Cynthion board is recognized by the
 Cynthion toolchain. Running the ``apollo info`` command will list any
