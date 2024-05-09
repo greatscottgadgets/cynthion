@@ -2,19 +2,19 @@
 pub type R = crate::R<MODER_SPEC>;
 #[doc = "Register `moder` writer"]
 pub type W = crate::W<MODER_SPEC>;
-#[doc = "Field `moder` reader - gpioa moder register field"]
+#[doc = "Field `moder` reader - "]
 pub type MODER_R = crate::FieldReader;
-#[doc = "Field `moder` writer - gpioa moder register field"]
+#[doc = "Field `moder` writer - "]
 pub type MODER_W<'a, REG> = crate::FieldWriter<'a, REG, 8>;
 impl R {
-    #[doc = "Bits 0:7 - gpioa moder register field"]
+    #[doc = "Bits 0:7"]
     #[inline(always)]
     pub fn moder(&self) -> MODER_R {
         MODER_R::new((self.bits & 0xff) as u8)
     }
 }
 impl W {
-    #[doc = "Bits 0:7 - gpioa moder register field"]
+    #[doc = "Bits 0:7"]
     #[inline(always)]
     #[must_use]
     pub fn moder(&mut self) -> MODER_W<MODER_SPEC> {

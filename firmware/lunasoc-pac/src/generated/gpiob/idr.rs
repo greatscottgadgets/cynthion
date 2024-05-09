@@ -1,9 +1,9 @@
 #[doc = "Register `idr` reader"]
 pub type R = crate::R<IDR_SPEC>;
-#[doc = "Field `idr` reader - gpiob idr register field"]
+#[doc = "Field `idr` reader - "]
 pub type IDR_R = crate::FieldReader;
 impl R {
-    #[doc = "Bits 0:7 - gpiob idr register field"]
+    #[doc = "Bits 0:7"]
     #[inline(always)]
     pub fn idr(&self) -> IDR_R {
         IDR_R::new((self.bits & 0xff) as u8)

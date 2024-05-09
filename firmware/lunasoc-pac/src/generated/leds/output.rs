@@ -1,9 +1,9 @@
 #[doc = "Register `output` writer"]
 pub type W = crate::W<OUTPUT_SPEC>;
-#[doc = "Field `output` writer - leds output register field"]
+#[doc = "Field `output` writer - "]
 pub type OUTPUT_W<'a, REG> = crate::FieldWriter<'a, REG, 6>;
 impl W {
-    #[doc = "Bits 0:5 - leds output register field"]
+    #[doc = "Bits 0:5"]
     #[inline(always)]
     #[must_use]
     pub fn output(&mut self) -> OUTPUT_W<OUTPUT_SPEC> {
