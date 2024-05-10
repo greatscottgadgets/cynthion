@@ -22,7 +22,6 @@ default-run = "moondancer"
 [package.metadata.docs.rs]
 default-target = "riscv32imac-unknown-none-elf"
 targets = [
-    "riscv32i-unknown-none-elf",
     "riscv32imac-unknown-none-elf",
 ]
 
@@ -75,9 +74,7 @@ smolusb = { path = "../smolusb", default-features = false}
 riscv = { version = "=0.10.1", features = ["critical-section-single-hart"] }
 riscv-rt = { version = "=0.11.0" }
 
-bbqueue = { version = "0.5.1", default-features = false }
-
-heapless = { version = "=0.7.16", default-features = false, features = ["cas", "mpmc_large"] }
+heapless = { version = "0.8.0", default-features = false, features = ["mpmc_large"] }
 zerocopy = { version = "0.7.34", default-features = false, features = ["derive", "byteorder"] }
 
 log = { version="=0.4.17", features = ["release_max_level_info"] }
