@@ -24,11 +24,11 @@ Top View
   :alt: Cynthion Top View
 
 - **LEDS A-E** - Five status LEDs managed by the microcontoller.
-  - **A** - TODO
-  - **B** - TODO
-  - **C** - TODO
-  - **D** - TODO
-  - **E** - TODO
+    - **A** - TODO
+    - **B** - TODO
+    - **C** - TODO
+    - **D** - TODO
+    - **E** - TODO
 - **LEDS 0-5** - Six user LEDs connected to the FPGA
 
 
@@ -65,8 +65,15 @@ Front View
   :alt: Cynthion Front View
 
 - **PMOD A & B** - Digilent Pmod™ Compatible I/O connector with a total of 16 high-speed FPGA user IOs.
+- **PMOD B** can also be configured to act as a serial port and JTAG connector for debugging SoC designs.
 
-**PMOD B** can also be configured to act as a serial port and JTAG connector for debugging SoC designs.
+    - **Pin 1**  - SERIAL RX
+    - **Pin 2**  - SERIAL TX
+    - **Pin 7**  - JTAG TMS
+    - **Pin 8**  - JTAG TDI
+    - **Pin 9**  - JTAG TDO
+    - **Pin 10** - JTAG TCK
+
 
 
 Bottom View

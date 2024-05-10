@@ -34,5 +34,5 @@ Cynthion Documentation
   :maxdepth: 2
   :caption: Developer Documentation
 
-  development/introduction
-  development/apollo
+  developer/introduction
+  developer/apollo

@@ -31,6 +31,8 @@ You can install the Cynthion host software from the `Python Package Index (PyPI)
 Install From PyPI and crates.io
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+TODO consider following Glasgow's lead and use pipx
+
 Until packages are available for your operating system's package manager we recommend installing the Cynthion host software from PyPI.
 
 For example, you can use the `pip <https://pypi.org/project/pip/>`__ tool to install the Cynthion host software using:
@@ -58,6 +60,12 @@ Install the cynthion host package:
 
     cd cynthion/python/
     pip install .
+
+
+TODO Install udev Rules (Linux Only)
+------------------------------------
+
+TODO use ``sphinx_inline_tabs`` plugin to separate platform-specific instructions
 
 
 

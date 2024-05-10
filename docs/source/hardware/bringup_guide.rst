@@ -213,7 +213,7 @@ self-test applet.
 
 Before you can run the applet, you’ll need to have a working
 ``cynthion`` development environment. See
-:doc:`../development/introduction` to get your environment set up.
+:doc:`../developer/introduction` to get your environment set up.
 
 Next, we can check to make sure your Cynthion board is recognized by the
 Cynthion toolchain. Running the ``apollo info`` command will list any
