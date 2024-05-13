@@ -23,12 +23,12 @@ Top View
   :width: 300
   :alt: Cynthion Top View
 
-- **LEDS A-E** - Five status LEDs managed by the microcontoller.
-    - **A** - TODO
-    - **B** - TODO
-    - **C** - TODO
-    - **D** - TODO
-    - **E** - TODO
+- **LEDS A-E** - Five status LEDs managed by the debug micro-contoller.
+    - **A** - Power Indicator.
+    - **B** - FPGA is online.
+    - **C** - FPGA has requested control of the  **CONTROL USB-C** port.
+    - **D** - FPGA has control of the **CONTROL USB-C** port.
+    - **E** - Fault Indicator.
 - **LEDS 0-5** - Six user LEDs connected to the FPGA
 
 
@@ -39,7 +39,10 @@ Left View
   :width: 400
   :alt: Cynthion Left View
 
-- **PROGRAM BUTTON** - Puts Cynthion into DFU mode for firmware updates.
+- **PROGRAM BUTTON** - Returns control of the **CONTROL USB-C** port to the debug micro-controller and holds the FPGA in an unconfigured state.
+
+    - *Recovery mode*: If this button is pressed during power-on it will invoke the `Saturn-V <https://github.com/greatscottgadgets/saturn-v>`__ bootloader on the **CONTROL USB-C** port.
+
 - **CONTROL USB-C**  - Primary USB connector used by the host computer to control Cynthion.
 - **USER BUTTON**    - A user-assignable button that can be used in your own designs.
 - **AUX USB-C**      - An auxillary USB connection that can be used in your own designs.
@@ -54,7 +57,7 @@ Right View
 
 - **TARGET USB-C** - USB Type-C connector for Packetry traffic capture and Facedancer device emulation.
 - **TARGET USB-A** - USB Type-A connector shared with the TARGET USB-C connector.
-- **RESET BUTTON** - Cynthion hardware reset button.
+- **RESET BUTTON** - Resets Cynthion's debug micro-controller and reconfigures the FPGA from flash.
 
 
 Front View
