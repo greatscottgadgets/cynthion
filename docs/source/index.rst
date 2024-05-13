@@ -3,6 +3,7 @@ Cynthion Documentation
 ======================
 
 .. image:: ../images/cynthion.png
+  :width: 400
   :alt: Cynthion
 
 .. toctree::
