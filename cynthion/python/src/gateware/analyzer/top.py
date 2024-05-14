@@ -16,22 +16,23 @@ import usb
 from datetime import datetime
 from enum import IntEnum, IntFlag
 
-from amaranth                          import Signal, Elaboratable, Module
-from amaranth.build.res                import ResourceError
-from usb_protocol.emitters             import DeviceDescriptorCollection
-from usb_protocol.types                import USBRequestType
+from amaranth                            import Signal, Elaboratable, Module
+from amaranth.build.res                  import ResourceError
+from usb_protocol.emitters               import DeviceDescriptorCollection
+from usb_protocol.types                  import USBRequestType
 
-from luna.usb2                         import USBDevice, USBStreamInEndpoint
-from luna                              import top_level_cli
+from luna.usb2                           import USBDevice, USBStreamInEndpoint
+from luna                                import top_level_cli
 
-from luna.gateware.usb.request.control import ControlRequestHandler
-from luna.gateware.usb.stream          import USBInStreamInterface
-from luna.gateware.stream.generator    import StreamSerializer
-from luna.gateware.utils.cdc           import synchronize
-from luna.gateware.architecture.car    import LunaECP5DomainGenerator
-from luna.gateware.interface.ulpi      import UTMITranslator
+from luna.gateware.usb.request.control   import ControlRequestHandler
+from luna.gateware.usb.stream            import USBInStreamInterface
+from luna.gateware.stream.generator      import StreamSerializer
+from luna.gateware.utils.cdc             import synchronize
+from luna.gateware.architecture.car      import LunaECP5DomainGenerator
+from luna.gateware.architecture.flash_sn import ECP5FlashUIDStringDescriptor
+from luna.gateware.interface.ulpi        import UTMITranslator
 
-from .analyzer                         import USBAnalyzer
+from .analyzer                           import USBAnalyzer
 
 import cynthion
 
@@ -162,7 +163,7 @@ class USBAnalyzerApplet(Elaboratable):
 
             d.iManufacturer      = "Cynthion Project"
             d.iProduct           = "USB Analyzer"
-            d.iSerialNumber      = "[autodetect serial here]"
+            d.iSerialNumber      = ECP5FlashUIDStringDescriptor
             d.bcdDevice          = 0.02
 
             d.bNumConfigurations = 1
