@@ -146,9 +146,10 @@ class USBAnalyzerApplet(Elaboratable):
         - DRAM backing for analysis
     """
 
-    def create_descriptors(self):
+    def create_descriptors(self, platform):
         """ Create the descriptors we want to use for our device. """
 
+        major, minor = platform.version
         descriptors = DeviceDescriptorCollection()
 
         #
@@ -164,7 +165,7 @@ class USBAnalyzerApplet(Elaboratable):
             d.iManufacturer      = "Cynthion Project"
             d.iProduct           = "USB Analyzer"
             d.iSerialNumber      = ECP5FlashUIDStringDescriptor
-            d.bcdDevice          = 0.02
+            d.bcdDevice          = major + (minor * 0.01)
 
             d.bNumConfigurations = 1
 
@@ -239,7 +240,7 @@ class USBAnalyzerApplet(Elaboratable):
         m.submodules.usb = usb = USBDevice(bus=uplink_ulpi)
 
         # Add our standard control endpoint to the device.
-        descriptors = self.create_descriptors()
+        descriptors = self.create_descriptors(platform)
         control_endpoint = usb.add_standard_control_endpoint(descriptors)
 
         # Add our vendor request handler to the control endpoint.
