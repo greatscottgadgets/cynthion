@@ -19,7 +19,7 @@ from enum import IntEnum, IntFlag
 from amaranth                            import Signal, Elaboratable, Module
 from amaranth.build.res                  import ResourceError
 from usb_protocol.emitters               import DeviceDescriptorCollection
-from usb_protocol.types                  import USBRequestType
+from usb_protocol.types                  import USBRequestType, USBRequestRecipient
 
 from luna.usb2                           import USBDevice, USBStreamInEndpoint
 from luna                                import top_level_cli
@@ -94,8 +94,11 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
         m.submodules.transmitter = transmitter = \
             StreamSerializer(data_length=1, domain="usb", stream_type=USBInStreamInterface, max_length_width=1)
 
-        # Handle vendor requests
-        with m.If(setup.type == USBRequestType.VENDOR):
+        # Handle vendor requests to our interface.
+        with m.If(
+                (setup.type == USBRequestType.VENDOR) &
+                (setup.recipient == USBRequestRecipient.INTERFACE) &
+                (setup.index == 0)):
 
             m.d.comb += interface.claim.eq(
                 (setup.request == USBAnalyzerVendorRequests.GET_STATE) |
