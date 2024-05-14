@@ -17,8 +17,10 @@ release = ''
 # -- General configuration ---------------------------------------------------
 
 extensions = [
-  'sphinx.ext.autodoc'
+    'sphinx.ext.autosectionlabel',
+    'sphinx.ext.autodoc',
 ]
+autosectionlabel_prefix_document = True
 
 templates_path = ['_templates']
 exclude_patterns = ['_build']
