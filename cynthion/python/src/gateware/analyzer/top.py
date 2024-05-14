@@ -175,6 +175,10 @@ class USBAnalyzerApplet(Elaboratable):
 
             with c.InterfaceDescriptor() as i:
                 i.bInterfaceNumber = 0
+                i.bInterfaceClass = 0xFF
+                i.bInterfaceSubclass = cynthion.shared.usb.bInterfaceSubClass.analyzer
+                i.bInterfaceProtocol = cynthion.shared.usb.bInterfaceProtocol.analyzer
+                i.iInterface = "USB Analyzer"
 
                 with i.EndpointDescriptor() as e:
                     e.bEndpointAddress = BULK_ENDPOINT_ADDRESS
