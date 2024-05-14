@@ -82,22 +82,24 @@ log = { version="=0.4.17", features = ["release_max_level_info"] }
 # - binaries ------------------------------------------------------------------
 
 [[bin]]
-name = "bulk_speed_test"
-
-[[bin]]
-name = "cdc_serial_loopback"
-
-[[bin]]
-name = "gpio"
-
-[[bin]]
-name = "hello"
-
-[[bin]]
-name = "interrupts"
-
-[[bin]]
 name = "moondancer"
 
-[[bin]]
+# - examples ------------------------------------------------------------------
+
+[[example]]
+name = "bulk_speed_test"
+
+[[example]]
+name = "cdc_serial_loopback"
+
+[[example]]
+name = "gpio"
+
+[[example]]
+name = "hello"
+
+[[example]]
+name = "interrupts"
+
+[[example]]
 name = "usb_hal"
