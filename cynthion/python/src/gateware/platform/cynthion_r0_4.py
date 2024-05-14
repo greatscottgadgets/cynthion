@@ -23,7 +23,7 @@ class CynthionPlatformRev0D4(CynthionPlatform):
     """ Board description for the pre-release r0.4 revision of Cynthion. """
 
     name        = "Cynthion r0.4"
-
+    version     = (0, 4)
     device      = "LFE5U-12F"
     package     = "BG256"
     speed       = os.getenv("ECP5_SPEED_GRADE", "8")

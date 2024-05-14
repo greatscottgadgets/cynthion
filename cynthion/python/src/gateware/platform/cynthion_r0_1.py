@@ -37,7 +37,7 @@ class CynthionPlatformRev0D1(CynthionPlatform):
     """ Board description for the pre-release r0.1 revision of Cynthion. """
 
     name        = "Cynthion r0.1"
-
+    version     = (0, 1)
     device      = "LFE5U-12F"
     package     = "BG256"
 
