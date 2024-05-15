@@ -40,30 +40,10 @@ This is needed if you want to use gdb for firmware debugging over JTAG.
 
 ## Build SoC bitstream
 
-Build the bitstream with:
+Build the bitstream by running the following command from the `cynthion/package/` directory:
 
-    make top
+    make soc
 
 You can load the bitstream with the `cynthion` command-line tool using:
 
-    cynthion configure build/top.bit
-
-
-## Known Issues
-
-### Firmware compilation errors on x86_64 Mac:
-
-See:
-
-* https://github.com/riscv-software-src/homebrew-riscv/issues/99
-* https://github.com/riscv-software-src/homebrew-riscv/pull/101
-
-Use this for now:
-
-    brew tap gmerlino/homebrew-riscv
-    brew install riscv-gnu-toolchain
-
-Also try:
-
-1. Get homebrew cache directory with: `brew --cache`
-1. Then delete: `riscv-gnu-toolchain--git`
+    cynthion configure build/soc.bit
