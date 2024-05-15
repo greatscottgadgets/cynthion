@@ -78,14 +78,12 @@ pub mod usb {
         use super::TOML;
         pub static apollo: u8 = TOML.b_interface_sub_class.apollo as u8;
         pub static analyzer: u8 = TOML.b_interface_sub_class.analyzer as u8;
-        pub static libgreat: u8 = TOML.b_interface_sub_class.libgreat as u8;
         pub static moondancer: u8 = TOML.b_interface_sub_class.moondancer as u8;
     }
 
     pub mod bInterfaceProtocol {
         use super::TOML;
         pub static analyzer: u8 = TOML.b_interface_protocol.analyzer as u8;
-        pub static libgreat: u8 = TOML.b_interface_protocol.libgreat as u8;
         pub static moondancer: u8 = TOML.b_interface_protocol.moondancer as u8;
     }
 }

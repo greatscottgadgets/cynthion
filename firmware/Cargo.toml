@@ -22,3 +22,12 @@ incremental = false
 lto = true
 opt-level = "s"
 overflow-checks = false
+
+[profile.dev]
+codegen-units = 1
+debug = true
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = "s"
+overflow-checks = false
