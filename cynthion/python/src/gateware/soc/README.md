@@ -44,9 +44,9 @@ Build the bitstream with:
 
     make top
 
-You can load the bitstream with `apollo` using:
+You can load the bitstream with the `cynthion` command-line tool using:
 
-    apollo configure build/top.bit
+    cynthion configure build/top.bit
 
 
 ## Known Issues

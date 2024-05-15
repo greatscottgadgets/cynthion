@@ -22,7 +22,7 @@ fi
 
 # flash firmware to cynthion
 echo "Flashing firmware image: $1.bin"
-cynthion flash-fast --offset $FLASH_OFFSET $1.bin
+cynthion flash --offset $FLASH_OFFSET $1.bin
 
 # configure cynthion with soc bitstream
 echo "Configuring fpga: $BITSTREAM"

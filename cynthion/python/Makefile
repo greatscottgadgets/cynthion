@@ -33,7 +33,7 @@ console:
 	pyserial-miniterm $(UART) 115200
 
 load:
-	apollo configure build/top.bit
+	cynthion configure build/top.bit
 
 tests:
 	python3 -m unittest

@@ -21,11 +21,11 @@ Once the SoC bitstream has been built you can execute your firmware with:
 
 The behaviour of `cargo run` if governed by the `runner` parameter in the `.cargo/config.toml` file.
 
-By default, it uses the `.cargo/apollo.sh` script to perform the following steps, in order:
+By default, it uses the `.cargo/cynthion.sh` script to perform the following steps, in order:
 
 1. Converts the ELF executable produced by the Rust compiler into a firmware binary image.
-2. Uses `apollo` to flash the firmware binary image to Cynthion's SPI flash memory.
-3. Uses `apollo` to configure Cynthion's FPGA with the SoC bitstream.
+2. Uses the `cynthion` command-line tool to flash the firmware binary image to Cynthion's SPI flash memory.
+3. Uses the `cynthion` command-line tool to configure Cynthion's FPGA with the SoC bitstream.
 4. Starts a serial terminal for viewing firmware log output.
 
 
@@ -155,7 +155,7 @@ You'll need a basic configuration file for gdb which looks something like this:
 
 #### 3. configure cargo to use gdb
 
-By default the firmware uses `apollo` to flash your firmware and bitstream to Cynthion.
+By default the firmware uses the `cynthion` command-line tool to flash your firmware and bitstream to Cynthion.
 
 You will therefore need to modify the `.cargo/config.toml` configuration file to instead use `gdb` as the runner for your firmware:
 
@@ -164,7 +164,7 @@ You will therefore need to modify the `.cargo/config.toml` configuration file to
     #
 
     [target.riscv32imac-unknown-none-elf]
-    runner = "apollo.sh"                     # <==
+    runner = "cynthion.sh"                     # <==
     rustflags = [
       "-C", "link-arg=-Tmemory.x",
       "-C", "link-arg=-Tlink.x",
