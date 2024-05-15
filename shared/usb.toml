@@ -63,26 +63,22 @@ example_5       = "pid.codes Test PID 5"
 #   0x00       - Apollo / Flash Bridge Interface
 #   0x01..0x0f - Reserved
 #   0x10       - Analyzer
-#   0x11       - libgreat
-#   0x11       - Moondancer
+#   0x20       - Moondancer
 #
 [bInterfaceSubClass]
 apollo     = 0x00
 analyzer   = 0x10
-libgreat   = 0x11
-moondancer = 0x11
+moondancer = 0x20
 
-# bInterfaceProtocol
+# bInterfaceProtocol (Optional)
 #
 # It is recommended to use the interface protocol field to version the
 # protocol used for the the interface subclass in the form:
 #
-#   Bits 0-3:  Minor version
-#   Bits 4-7: Major version
+#   Bits 0-7:  Incremental version number
 #
-# e.g. 0x01 = v0.1, 0x02 = v0.2, 0x10 = v1.0, 0x11 = v1.1
+#   0xff = unused
 #
 [bInterfaceProtocol]
-analyzer = 0x01
-libgreat = 0x01
-moondancer = 0x01
+analyzer   = 0x00
+moondancer = 0x00
