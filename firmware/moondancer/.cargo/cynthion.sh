@@ -1,14 +1,13 @@
 #!/usr/bin/env zsh
 
 # configuration
-# TODO support flash offset address
-: ${FLASH_OFFSET:=0x00000000}
+: ${FLASHADDR:=0x000b0000}
 : ${BITSTREAM:=../../cynthion/python/build/soc.bit}
 : ${UART:=/dev/ttyACM0}
 
 echo
 echo "Using bitstream: BITSTREAM=$BITSTREAM"
-echo "Using flash address: FLASH_OFFSET=$FLASH_OFFSET"
+echo "Using flash address: FLASHADDR=$FLASHADDR"
 echo "Using uart: UART=$UART"
 
 if [ ! -f $BITSTREAM ]
@@ -36,11 +35,11 @@ fi
 
 # flash firmware to cynthion
 echo "Flashing firmware image: $1.bin"
-cynthion flash --offset $FLASH_OFFSET $1.bin
+cynthion flash --offset $FLASHADDR $1.bin
 
 # configure cynthion with soc bitstream
 echo "Configuring fpga: $BITSTREAM"
-cynthion configure $BITSTREAM 2>/dev/null
+cynthion configure $BITSTREAM
 
 # start a terminal for debug output
 pyserial-miniterm $UART 115200

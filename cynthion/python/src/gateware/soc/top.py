@@ -54,15 +54,16 @@ class MoondancerSoc(Elaboratable):
     ]
 
     def __init__(self, clock_frequency, uart_baud_rate=115200):
-
-        # TODO support an offset for flash address
-        flash_offset = 0x00000000
+        # qspi flash configuration
+        qspi_flash_size = 0x00400000
+        qspi_flash_addr = 0x10000000
+        firmware_start  = 0x000b0000
 
         # Create our SoC...
         self.soc = LunaSoC(
             cpu=VexRiscv(
                 variant="cynthion+jtag",
-                reset_addr=0x10000000 + flash_offset, # spi flash address + offset
+                reset_addr=qspi_flash_addr + firmware_start,
             ),
             clock_frequency=clock_frequency,
         )
@@ -91,8 +92,13 @@ class MoondancerSoc(Elaboratable):
 
         # ... add a qspi flash reader peripheral ...
         self.qspi_bus = ECP5ConfigurationFlashInterface(bus=self.qspi0_pins)
-        self.qspi_reader = WishboneSPIFlashReader(pads=self.qspi_bus, size=0x400000, name="spiflash", domain="usb")
-        self.soc.add_peripheral(self.qspi_reader, addr=0x10000000)
+        self.qspi_reader = WishboneSPIFlashReader(
+            pads=self.qspi_bus,
+            size=qspi_flash_size,
+            name="spiflash",
+            domain="usb"
+        )
+        self.soc.add_peripheral(self.qspi_reader, addr=qspi_flash_addr)
 
         # ... add our LED peripheral, for simple output ...
         self.leds = LedPeripheral()
