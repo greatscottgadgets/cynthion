@@ -317,7 +317,7 @@ if __name__ == "__main__":
     with open(os.path.join(path, "memory.x"), "w") as f:
         generate.memory_x(file=f)
 
-    print("Build completed. Use 'make load' to load bitstream to device.")
+    print("Build completed. Use 'cynthion configure build/top.bit' to upload bitstream to device.")
 
     # TODO
     #top_level_cli(design)
