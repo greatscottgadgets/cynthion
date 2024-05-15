@@ -13,7 +13,12 @@ echo "Using uart: UART=$UART"
 # convert ELF executable to bin image
 echo "Creating firmware image: $1.bin"
 NAME=$(basename $1)
-cargo objcopy --release --bin $NAME -- -Obinary $1.bin
+if [[ $1 = *"examples/$NAME" ]]
+then
+    cargo objcopy --release --example $NAME -- -Obinary $1.bin
+else
+    cargo objcopy --release --bin $NAME -- -Obinary $1.bin
+fi
 
 # flash firmware to cynthion
 echo "Flashing firmware image: $1.bin"
