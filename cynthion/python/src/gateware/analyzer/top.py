@@ -32,7 +32,7 @@ from luna.gateware.architecture.car      import LunaECP5DomainGenerator
 from luna.gateware.architecture.flash_sn import ECP5FlashUIDStringDescriptor
 from luna.gateware.interface.ulpi        import UTMITranslator
 
-from apollo_fpga.gateware.advertiser     import ApolloAdvertiser
+from apollo_fpga.gateware.advertiser     import ApolloAdvertiser, ApolloAdvertiserRequestHandler
 
 from .analyzer                           import USBAnalyzer
 
@@ -194,6 +194,7 @@ class USBAnalyzerApplet(Elaboratable):
                     i.bInterfaceNumber = 1
                     i.bInterfaceClass = 0xFF
                     i.bInterfaceSubclass = cynthion.shared.usb.bInterfaceSubClass.apollo
+                    i.bInterfaceProtocol = ApolloAdvertiserRequestHandler.PROTOCOL_VERSION
 
         return descriptors
 
