@@ -207,7 +207,7 @@ class USBAnalyzerApplet(Elaboratable):
 
         # Strap our power controls to be in VBUS passthrough by default,
         # on the target port.
-        try:
+        if platform.version >= (0, 6):
             # On Cynthion r1.4, Target-C to Target-A VBUS passthrough is
             # off by default and must be enabled by the gateware.
             m.d.comb += [
@@ -216,7 +216,7 @@ class USBAnalyzerApplet(Elaboratable):
             # On Cynthion r0.6 - r1.3 this passthrough is enabled by
             # default, even with the hardware unpowered, but it does no
             # harm to explicitly set it here.
-        except ResourceError:
+        else:
             # On Cynthion r0.1 - r0.5, there is no `target_c_vbus_en`
             # signal. The following two signals are needed to have
             # the same effect:
@@ -239,11 +239,14 @@ class USBAnalyzerApplet(Elaboratable):
             utmi.term_select .eq(0)
         ]
 
+        # Select the appropriate PHY according to platform version.
+        if platform.version >= (0, 6):
+            phy_name = "control_phy"
+        else:
+            phy_name = "host_phy"
+
         # Create our USB uplink interface...
-        try:
-            uplink_ulpi = platform.request("control_phy")
-        except ResourceError:
-            uplink_ulpi = platform.request("host_phy")
+        uplink_ulpi = platform.request(phy_name)
         m.submodules.usb = usb = USBDevice(bus=uplink_ulpi)
 
         # Add our standard control endpoint to the device.
