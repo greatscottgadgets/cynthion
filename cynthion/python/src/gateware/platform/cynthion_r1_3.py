@@ -18,7 +18,7 @@ class CynthionPlatformRev1D3(CynthionPlatform):
     """ Board description for Cynthion r1.3 """
 
     name        = "Cynthion r1.3"
-
+    version     = (1, 3)
     device      = "LFE5U-12F"
     package     = "BG256"
     speed       = os.getenv("ECP5_SPEED_GRADE", "8")

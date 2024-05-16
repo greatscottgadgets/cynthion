@@ -16,22 +16,23 @@ import usb
 from datetime import datetime
 from enum import IntEnum, IntFlag
 
-from amaranth                          import Signal, Elaboratable, Module
-from amaranth.build.res                import ResourceError
-from usb_protocol.emitters             import DeviceDescriptorCollection
-from usb_protocol.types                import USBRequestType
+from amaranth                            import Signal, Elaboratable, Module
+from amaranth.build.res                  import ResourceError
+from usb_protocol.emitters               import DeviceDescriptorCollection
+from usb_protocol.types                  import USBRequestType, USBRequestRecipient
 
-from luna.usb2                         import USBDevice, USBStreamInEndpoint
-from luna                              import top_level_cli
+from luna.usb2                           import USBDevice, USBStreamInEndpoint
+from luna                                import top_level_cli
 
-from luna.gateware.usb.request.control import ControlRequestHandler
-from luna.gateware.usb.stream          import USBInStreamInterface
-from luna.gateware.stream.generator    import StreamSerializer
-from luna.gateware.utils.cdc           import synchronize
-from luna.gateware.architecture.car    import LunaECP5DomainGenerator
-from luna.gateware.interface.ulpi      import UTMITranslator
+from luna.gateware.usb.request.control   import ControlRequestHandler
+from luna.gateware.usb.stream            import USBInStreamInterface
+from luna.gateware.stream.generator      import StreamSerializer
+from luna.gateware.utils.cdc             import synchronize
+from luna.gateware.architecture.car      import LunaECP5DomainGenerator
+from luna.gateware.architecture.flash_sn import ECP5FlashUIDStringDescriptor
+from luna.gateware.interface.ulpi        import UTMITranslator
 
-from .analyzer                         import USBAnalyzer
+from .analyzer                           import USBAnalyzer
 
 import cynthion
 
@@ -93,8 +94,11 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
         m.submodules.transmitter = transmitter = \
             StreamSerializer(data_length=1, domain="usb", stream_type=USBInStreamInterface, max_length_width=1)
 
-        # Handle vendor requests
-        with m.If(setup.type == USBRequestType.VENDOR):
+        # Handle vendor requests to our interface.
+        with m.If(
+                (setup.type == USBRequestType.VENDOR) &
+                (setup.recipient == USBRequestRecipient.INTERFACE) &
+                (setup.index == 0)):
 
             m.d.comb += interface.claim.eq(
                 (setup.request == USBAnalyzerVendorRequests.GET_STATE) |
@@ -145,9 +149,10 @@ class USBAnalyzerApplet(Elaboratable):
         - DRAM backing for analysis
     """
 
-    def create_descriptors(self):
+    def create_descriptors(self, platform):
         """ Create the descriptors we want to use for our device. """
 
+        major, minor = platform.version
         descriptors = DeviceDescriptorCollection()
 
         #
@@ -160,10 +165,10 @@ class USBAnalyzerApplet(Elaboratable):
             d.idVendor           = USB_VENDOR_ID
             d.idProduct          = USB_PRODUCT_ID
 
-            d.iManufacturer      = "LUNA"
+            d.iManufacturer      = "Cynthion Project"
             d.iProduct           = "USB Analyzer"
-            d.iSerialNumber      = "[autodetect serial here]"
-            d.bcdDevice          = 0.02
+            d.iSerialNumber      = ECP5FlashUIDStringDescriptor
+            d.bcdDevice          = major + (minor * 0.01)
 
             d.bNumConfigurations = 1
 
@@ -173,6 +178,10 @@ class USBAnalyzerApplet(Elaboratable):
 
             with c.InterfaceDescriptor() as i:
                 i.bInterfaceNumber = 0
+                i.bInterfaceClass = 0xFF
+                i.bInterfaceSubclass = cynthion.shared.usb.bInterfaceSubClass.analyzer
+                i.bInterfaceProtocol = cynthion.shared.usb.bInterfaceProtocol.analyzer
+                i.iInterface = "USB Analyzer"
 
                 with i.EndpointDescriptor() as e:
                     e.bEndpointAddress = BULK_ENDPOINT_ADDRESS
@@ -238,7 +247,7 @@ class USBAnalyzerApplet(Elaboratable):
         m.submodules.usb = usb = USBDevice(bus=uplink_ulpi)
 
         # Add our standard control endpoint to the device.
-        descriptors = self.create_descriptors()
+        descriptors = self.create_descriptors(platform)
         control_endpoint = usb.add_standard_control_endpoint(descriptors)
 
         # Add our vendor request handler to the control endpoint.
