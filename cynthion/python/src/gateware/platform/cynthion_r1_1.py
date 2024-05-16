@@ -10,7 +10,6 @@ from amaranth.build import *
 from amaranth_boards.resources import *
 
 from .core import CynthionPlatform
-from .adv import control_phy_hook
 
 __all__ = ["CynthionPlatformRev1D1"]
 
@@ -183,6 +182,4 @@ class CynthionPlatformRev1D1(CynthionPlatform):
             "- - B8 A9 B10 A10 B11 D14 C14 F14 E14 G13 G12 - - - - C16 C15 B16 B15 A14 B13 A13 D13 A12 B12 A11 - -"),
     ]
 
-    usb_device_hooks = {
-        "control_phy_0": control_phy_hook
-    }
+    apollo_port_sharing = {'control_phy': 'advertising'}

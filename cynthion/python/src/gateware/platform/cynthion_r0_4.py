@@ -97,20 +97,10 @@ class CynthionPlatformRev0D4(CynthionPlatform):
         *LEDResources(pins="P14 P16 P15 R16 R15 T15", attrs=Attrs(IO_TYPE="LVCMOS33"), invert=True),
 
         # USB PHYs
-        ULPIResource("control_phy", 0,
-            data="R1 P3 P1 P2 N1 M2 M1 L2", clk="P4", clk_dir='o',
-            dir="T2", nxt="R2", stp="R3", rst="T3", rst_invert=True,
-            attrs=Attrs(IO_TYPE="LVCMOS33", SLEWRATE="FAST")),
-        ULPIResource("aux_phy", 0,
-            data="F1 F2 E1 E2 D1 E3 C1 C2", clk="J1", clk_dir='o',
-            dir="G1", nxt="G2", stp="H2", rst="J2", rst_invert=True,
-            attrs=Attrs(IO_TYPE="LVCMOS33", SLEWRATE="FAST")),
         ULPIResource("target_phy", 0,
             data="E16 F14 F16 F15 G16 G15 H15 J16", clk="C15", clk_dir='o',
             dir="D16", nxt="E15", stp="D14", rst="C16", rst_invert=True,
             attrs=Attrs(IO_TYPE="LVCMOS33", SLEWRATE="FAST")),
-
-        # legacy USB port names
         ULPIResource("sideband_phy", 0,
             data="R1 P3 P1 P2 N1 M2 M1 L2", clk="P4", clk_dir='o',
             dir="T2", nxt="R2", stp="R3", rst="T3", rst_invert=True,

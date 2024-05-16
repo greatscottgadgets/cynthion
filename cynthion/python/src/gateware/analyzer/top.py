@@ -32,6 +32,8 @@ from luna.gateware.architecture.car      import LunaECP5DomainGenerator
 from luna.gateware.architecture.flash_sn import ECP5FlashUIDStringDescriptor
 from luna.gateware.interface.ulpi        import UTMITranslator
 
+from apollo_fpga.gateware.advertiser     import ApolloAdvertiser
+
 from .analyzer                           import USBAnalyzer
 
 import cynthion
@@ -149,7 +151,7 @@ class USBAnalyzerApplet(Elaboratable):
         - DRAM backing for analysis
     """
 
-    def create_descriptors(self, platform):
+    def create_descriptors(self, platform, sharing):
         """ Create the descriptors we want to use for our device. """
 
         major, minor = platform.version
@@ -187,6 +189,12 @@ class USBAnalyzerApplet(Elaboratable):
                     e.bEndpointAddress = BULK_ENDPOINT_ADDRESS
                     e.wMaxPacketSize   = MAX_BULK_PACKET_SIZE
 
+            # Include Apollo stub interface, if using a shared port.
+            if sharing is not None:
+                with c.InterfaceDescriptor() as i:
+                    i.bInterfaceNumber = 1
+                    i.bInterfaceClass = 0xFF
+                    i.bInterfaceSubclass = cynthion.shared.usb.bInterfaceSubClass.apollo
 
         return descriptors
 
@@ -207,7 +215,7 @@ class USBAnalyzerApplet(Elaboratable):
 
         # Strap our power controls to be in VBUS passthrough by default,
         # on the target port.
-        try:
+        if platform.version >= (0, 6):
             # On Cynthion r1.4, Target-C to Target-A VBUS passthrough is
             # off by default and must be enabled by the gateware.
             m.d.comb += [
@@ -216,7 +224,7 @@ class USBAnalyzerApplet(Elaboratable):
             # On Cynthion r0.6 - r1.3 this passthrough is enabled by
             # default, even with the hardware unpowered, but it does no
             # harm to explicitly set it here.
-        except ResourceError:
+        else:
             # On Cynthion r0.1 - r0.5, there is no `target_c_vbus_en`
             # signal. The following two signals are needed to have
             # the same effect:
@@ -239,20 +247,31 @@ class USBAnalyzerApplet(Elaboratable):
             utmi.term_select .eq(0)
         ]
 
+        # Select the appropriate PHY according to platform version.
+        if platform.version >= (0, 6):
+            phy_name = "control_phy"
+        else:
+            phy_name = "host_phy"
+
+        # Check how the port is shared with Apollo.
+        sharing = platform.port_sharing(phy_name)
+
         # Create our USB uplink interface...
-        try:
-            uplink_ulpi = platform.request("control_phy")
-        except ResourceError:
-            uplink_ulpi = platform.request("host_phy")
+        uplink_ulpi = platform.request(phy_name)
         m.submodules.usb = usb = USBDevice(bus=uplink_ulpi)
 
         # Add our standard control endpoint to the device.
-        descriptors = self.create_descriptors(platform)
+        descriptors = self.create_descriptors(platform, sharing)
         control_endpoint = usb.add_standard_control_endpoint(descriptors)
 
         # Add our vendor request handler to the control endpoint.
         vendor_request_handler = USBAnalyzerVendorRequestHandler(state)
         control_endpoint.add_request_handler(vendor_request_handler)
+
+        # If needed, create an advertiser and add its request handler.
+        if sharing == "advertising":
+            adv = m.submodules.adv = ApolloAdvertiser()
+            control_endpoint.add_request_handler(adv.default_request_handler(1))
 
         # Add a stream endpoint to our device.
         stream_ep = USBStreamInEndpoint(

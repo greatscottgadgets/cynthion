@@ -52,11 +52,11 @@ class SelftestDevice(Elaboratable):
             register_base=REGISTER_TARGET_ADDR
         )
         self.add_ulpi_registers(m, platform,
-            ulpi_bus="aux_phy",
+            ulpi_bus="aux_phy" if platform.version >= (0, 6) else "host_phy",
             register_base=REGISTER_AUX_ADDR
         )
         self.add_ulpi_registers(m, platform,
-            ulpi_bus="control_phy",
+            ulpi_bus="control_phy" if platform.version >= (0, 6) else "sideband_phy",
             register_base=REGISTER_CONTROL_ADDR
         )
 
