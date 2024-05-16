@@ -31,8 +31,11 @@ from luna.gateware.utils.cdc             import synchronize
 from luna.gateware.architecture.car      import LunaECP5DomainGenerator
 from luna.gateware.architecture.flash_sn import ECP5FlashUIDStringDescriptor
 from luna.gateware.interface.ulpi        import UTMITranslator
+from luna.gateware.usb.request.windows   import MicrosoftOS10DescriptorCollection, MicrosoftOS10RequestHandler
 
 from apollo_fpga.gateware.advertiser     import ApolloAdvertiser
+
+from usb_protocol.emitters.descriptors.standard import get_string_descriptor
 
 from .analyzer                           import USBAnalyzer
 
@@ -260,9 +263,27 @@ class USBAnalyzerApplet(Elaboratable):
         uplink_ulpi = platform.request(phy_name)
         m.submodules.usb = usb = USBDevice(bus=uplink_ulpi)
 
-        # Add our standard control endpoint to the device.
+        # Create descriptors.
         descriptors = self.create_descriptors(platform, sharing)
-        control_endpoint = usb.add_standard_control_endpoint(descriptors)
+
+        # Add Microsoft OS 1.0 descriptors for Windows compatibility.
+        descriptors.add_descriptor(get_string_descriptor("MSFT100\xee"), index=0xee)
+        msft_descriptors = MicrosoftOS10DescriptorCollection()
+        with msft_descriptors.ExtendedCompatIDDescriptor() as c:
+            with c.Function() as f:
+                f.bFirstInterfaceNumber = 0
+                f.compatibleID          = 'WINUSB'
+            if sharing is not None:
+                with c.Function() as f:
+                    f.bFirstInterfaceNumber = 1
+                    f.compatibleID          = 'WINUSB'
+
+        # Add our standard control endpoint to the device.
+        control_endpoint = usb.add_standard_control_endpoint(descriptors, avoid_blockram=True)
+
+        # Add handler for Microsoft descriptors.
+        msft_handler = MicrosoftOS10RequestHandler(msft_descriptors, request_code=0xee)
+        control_endpoint.add_request_handler(msft_handler)
 
         # Add our vendor request handler to the control endpoint.
         vendor_request_handler = USBAnalyzerVendorRequestHandler(state)
