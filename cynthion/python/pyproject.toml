@@ -36,7 +36,7 @@ dependencies = [
     "tabulate",
     "tomli",
     "tqdm",
-    "pygreat @ git+https://github.com/antoinevg/libgreat.git@antoinevg/moondancer#subdirectory=host",
+    "pygreat @ git+https://github.com/greatscottgadgets/libgreat.git#subdirectory=host",
     "apollo_fpga @ git+https://github.com/greatscottgadgets/apollo.git",  # temporarily pull from git until apollo release
 ]
 
