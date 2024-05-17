@@ -36,6 +36,7 @@ from luna.gateware.usb.request.windows   import MicrosoftOS10DescriptorCollectio
 from apollo_fpga.gateware.advertiser     import ApolloAdvertiser, ApolloAdvertiserRequestHandler
 
 from usb_protocol.emitters.descriptors.standard import get_string_descriptor
+from usb_protocol.types.descriptors.microsoft10 import RegistryTypes
 
 from .analyzer                           import USBAnalyzer
 
@@ -277,6 +278,11 @@ class USBAnalyzerApplet(Elaboratable):
                 with c.Function() as f:
                     f.bFirstInterfaceNumber = 1
                     f.compatibleID          = 'WINUSB'
+        with msft_descriptors.ExtendedPropertiesDescriptor() as d:
+            with d.Property() as p:
+                p.dwPropertyDataType = RegistryTypes.REG_SZ
+                p.PropertyName       = "DeviceInterfaceGUID"
+                p.PropertyData       = "{88bae032-5a81-49f0-bc3d-a4ff138216d6}"
 
         # Add our standard control endpoint to the device.
         control_endpoint = usb.add_standard_control_endpoint(descriptors, avoid_blockram=True)
