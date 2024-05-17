@@ -1,31 +1,34 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel", "setuptools-git-versioning<2"]
+requires = ["setuptools>=64.0", "wheel", "setuptools-git-versioning<2"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "cynthion"
-dynamic = ["version"]
+description = "Python package and utilities for the Great Scott Gadgets Cynthion USB Test Instrument"
+license = { text = "BSD" }
+readme = "README.md"
 requires-python = ">=3.8"
 authors = [
     {name = "Great Scott Gadgets", email = "dev@greatscottgadgets.com"},
 ]
-license = { text = "BSD" }
-description = "Python library for the Great Scott Gadgets Cynthion USB Test Instrument"
-urls = { Source = "https://greatscottgadgets.com/cynthion" }
-readme = "README.md"
+
 classifiers = [
-    "Programming Language :: Python",
     "Development Status :: 5 - Production/Stable",
-    "Natural Language :: English",
-    "Environment :: Console",
-    "Environment :: Plugins",
-    "Intended Audience :: Developers",
-    "Intended Audience :: Science/Research",
+    "Programming Language :: Python",
     "License :: OSI Approved :: BSD License",
     "Operating System :: OS Independent",
-    "Topic :: Scientific/Engineering",
+    "Natural Language :: English",
+    "Environment :: Console",
+    "Environment :: Other Environment",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
     "Topic :: Security",
+    "Topic :: System :: Hardware :: Universal Serial Bus (USB)",
 ]
+
+dynamic = ["version"]
+
 dependencies = [
     "future",
     "libusb1",
@@ -36,8 +39,9 @@ dependencies = [
     "tabulate",
     "tomli",
     "tqdm",
-    "pygreat @ git+https://github.com/greatscottgadgets/libgreat.git#subdirectory=host",
+    "pygreat~=2024.0",
     "apollo_fpga @ git+https://github.com/greatscottgadgets/apollo.git",  # temporarily pull from git until apollo release
+    #"apollo~=???",
 ]
 
 [project.optional-dependencies]
@@ -46,13 +50,20 @@ gateware = [
     "amaranth-boards @ git+https://github.com/amaranth-lang/amaranth-boards.git@main",
     "amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio@4a14bb17",
     "luna-usb @ git+https://github.com/greatscottgadgets/luna@main",
+    #"luna-usb~=0.1"
 ]
 gateware-soc = [
     "luna-soc @ git+https://github.com/greatscottgadgets/luna-soc@main",
+    #"luna-soc~=0.1"
 ]
 
 [project.scripts]
 cynthion = "cynthion.commands.cli:main"
+
+[project.urls]
+Documentation = "https://luna-soc.readthedocs.io"
+Repository    = "https://github.com/greatscottgadgets/luna-soc"
+Issues        = "https://github.com/greatscottgadgets/luna-soc/issues"
 
 [tool.setuptools]
 include-package-data = true
@@ -60,9 +71,9 @@ include-package-data = true
 [tool.setuptools.package-dir]
 cynthion = "src"
 
-[tool.setuptools-git-versioning]
-enabled = true
-starting_version = "1.0.0"
-
 [tool.setuptools.package-data]
 "cynthion.shared" = ["*.toml"]
+
+[tool.setuptools-git-versioning]
+enabled = true
+starting_version = "0.0.0"
