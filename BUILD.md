@@ -99,7 +99,7 @@ Things can get somewhat hairy over time so I usually clean out my pyenv environm
 Then install the `cynthion` package with:
 
     cd cynthion.git/cynthion/python/
-    pip3 install --upgrade ".[gateware,gateware-soc]"
+    pip3 install --upgrade ".[gateware]"
 
 
 ## Build Packetry Gateware
