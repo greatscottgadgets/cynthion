@@ -38,4 +38,4 @@ Cynthion Documentation
   developer/introduction
   developer/bitstream_generation
   developer/soc_firmware_compilation
-  developer/apollo
+  developer/cli

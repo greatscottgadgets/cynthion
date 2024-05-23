@@ -16,7 +16,7 @@ Cynthion Host Software Installation
 
 You can install the Cynthion host software from the `Python Package Index (PyPI) <https://pypi.org/project/cynthion/>`__ or :doc:`directly from source <developer/introduction>`.
 
-Install the Cynthion host software from PyPI using the `pip <https://pypi.org/project/pip/>`__ tool:
+To install the GreatFET host software from PyPI using the `pip <https://pypi.org/project/pip/>`__ tool:
 
 .. code-block :: sh
 
@@ -74,6 +74,6 @@ If everything is working you will see the following output:
 
 .. code-block :: text
 
-   Detected a Cynthion device!
-       Hardware: Cynthion r1.4
-       Serial number: <snip>
+    Detected a Cynthion device!
+        Hardware: Cynthion r1.4
+        Serial number: <snip>
