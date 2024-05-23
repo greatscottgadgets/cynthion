@@ -109,14 +109,3 @@ pub trait AsByteSliceIterator: AsBytes {
         self.as_bytes().iter()
     }
 }
-
-trait AsByteIterator<'a> {
-    type AsIter: Iterator<Item = &'a u8>;
-    fn as_iter(&'a self) -> Self::AsIter;
-}
-
-trait AsIterator<'a> {
-    type Item;
-    type AsIter: Iterator<Item = Self::Item>;
-    fn as_iter(&'a self) -> Self::AsIter;
-}

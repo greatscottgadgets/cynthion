@@ -5,13 +5,15 @@ UART	?= /dev/ttyACM0
 # - gateware ------------------------------------------------------------------
 
 analyzer:
-	rm -rf build
 	python3 -m cynthion.gateware.analyzer.top
 
 soc:
-	rm -rf build
-	python3 -m cynthion.gateware.soc.top
-	cp build/genrust/memory.x ../../firmware/memory.x
+	mkdir -p build/
+	python3 -m cynthion.gateware.soc.top --output build/$@.bit
+
+svd:
+	mkdir -p build/gensvd/
+	python3 -m cynthion.gateware.soc.top --generate-svd > build/gensvd/lunasoc.svd
 
 
 # - helpers -------------------------------------------------------------------
@@ -21,9 +23,6 @@ clean:
 
 console:
 	pyserial-miniterm $(UART) 115200
-
-load:
-	apollo configure build/top.bit
 
 tests:
 	python3 -m unittest

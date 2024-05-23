@@ -54,15 +54,16 @@ class MoondancerSoc(Elaboratable):
     ]
 
     def __init__(self, clock_frequency, uart_baud_rate=115200):
-
-        # TODO support an offset for flash address
-        flash_offset = 0x00000000
+        # qspi flash configuration
+        qspi_flash_size = 0x00400000
+        qspi_flash_addr = 0x10000000
+        firmware_start  = 0x000b0000
 
         # Create our SoC...
         self.soc = LunaSoC(
             cpu=VexRiscv(
                 variant="cynthion+jtag",
-                reset_addr=0x10000000 + flash_offset, # spi flash address + offset
+                reset_addr=qspi_flash_addr + firmware_start,
             ),
             clock_frequency=clock_frequency,
         )
@@ -76,6 +77,10 @@ class MoondancerSoc(Elaboratable):
             ('rx', [('i', 1)]),
             ('tx', [('o', 1)])
         ])
+        self.qspi0_pins = Record([
+            ('dq', [('i', 4), ('o', 4), ('oe', 1)]),
+            ('cs', [('o', 1)])
+        ])
 
         # ... add core peripherals: memory, timer, uart ...
         self.soc.add_core_peripherals(
@@ -86,9 +91,14 @@ class MoondancerSoc(Elaboratable):
         )
 
         # ... add a qspi flash reader peripheral ...
-        self.spi_bus = ECP5ConfigurationFlashInterface(bus=platform.request("qspi_flash"))
-        self.spi_reader = WishboneSPIFlashReader(pads=self.spi_bus, size=0x400000, name="spiflash", domain="usb")
-        self.soc.add_peripheral(self.spi_reader, addr=0x10000000)
+        self.qspi_bus = ECP5ConfigurationFlashInterface(bus=self.qspi0_pins)
+        self.qspi_reader = WishboneSPIFlashReader(
+            pads=self.qspi_bus,
+            size=qspi_flash_size,
+            name="spiflash",
+            domain="usb"
+        )
+        self.soc.add_peripheral(self.qspi_reader, addr=qspi_flash_addr)
 
         # ... add our LED peripheral, for simple output ...
         self.leds = LedPeripheral()
@@ -161,8 +171,15 @@ class MoondancerSoc(Elaboratable):
         except:
             logging.warning("Platform does not support a user button for cpu reset")
 
-        # add the spi bus
-        m.submodules.spi_bus = self.spi_bus
+        # connect QSPI0 to Cynthion's qspi flash port
+        qspi0_io = platform.request("qspi_flash", 0)
+        m.d.comb += [
+            self.qspi0_pins.dq.i.eq(qspi0_io.dq.i),
+            qspi0_io.dq.o.eq(self.qspi0_pins.dq.o),
+            qspi0_io.dq.oe.eq(self.qspi0_pins.dq.oe),
+            qspi0_io.cs.o.eq(self.qspi0_pins.cs.o),
+        ]
+        m.submodules.qspi_bus = self.qspi_bus
 
         # connect GPIOA to Cynthion's PMOD A port
         pmoda_io = platform.request("user_pmod", 0)
@@ -243,17 +260,10 @@ class MoondancerSoc(Elaboratable):
 
 # - main ----------------------------------------------------------------------
 
-import luna
-
-from luna.gateware.platform  import get_appropriate_platform
-from luna_soc.generate       import Generate
-
 if __name__ == "__main__":
-    # Disable UnusedElaborable warnings
-    from amaranth._unused import MustUse
-    MustUse._MustUse__silence = True
-
-    build_dir = os.path.join("build")
+    from luna                    import configure_default_logging
+    from luna.gateware.platform  import get_appropriate_platform
+    from luna_soc                import top_level_cli
 
     # configure logging
     configure_default_logging()
@@ -267,57 +277,14 @@ if __name__ == "__main__":
 
     # configure clock frequency
     clock_frequency = int(platform.DEFAULT_CLOCK_FREQUENCIES_MHZ["usb"] * 1e6)
-
     logging.info(f"Building for {platform} with clock frequency: {clock_frequency}")
 
     # create design
     design = MoondancerSoc(clock_frequency=clock_frequency)
 
-    # build soc
-    logging.info("Building soc")
+    # invoke cli
     overrides = {
         "debug_verilog": False,
         "verbose": False,
     }
-    products = platform.build(design, do_program=False, build_dir=build_dir, **overrides)
-
-    # log resources
-    from luna_soc.generate import Introspect
-    Introspect(design.soc).log_resources()
-
-    # generate artifacts
-    generate = Generate(design.soc)
-
-    # generate: c-header and ld-script
-    path = os.path.join(build_dir, "genc")
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    logging.info("Generating c-header and ld-script: {}".format(path))
-    with open(os.path.join(path, "resources.h"), "w") as f:
-        generate.c_header(platform_name=platform.name, file=f)
-    with open(os.path.join(path, "soc.ld"), "w") as f:
-        generate.ld_script(file=f)
-
-    # generate: svd file
-    path = os.path.join(build_dir, "gensvd")
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    logging.info("Generating svd file: {}".format(path))
-    with open(os.path.join(path, "lunasoc.svd"), "w") as f:
-        generate.svd(file=f)
-
-    # generate: rust memory.x file
-    path = os.path.join(build_dir, "genrust")
-    if not os.path.exists(path):
-        os.makedirs(path)
-
-    logging.info("Generating memory.x file: {}".format(path))
-    with open(os.path.join(path, "memory.x"), "w") as f:
-        generate.memory_x(file=f)
-
-    print("Build completed. Use 'cynthion configure build/top.bit' to upload bitstream to device.")
-
-    # TODO
-    #top_level_cli(design)
+    top_level_cli(design, **overrides)
