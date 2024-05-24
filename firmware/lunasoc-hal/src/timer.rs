@@ -39,7 +39,7 @@ macro_rules! impl_timer {
                 /// 'Tis thine responsibility, that which thou doth summon.
                 pub unsafe fn summon() -> Self {
                     Self {
-                        registers: $crate::pac::Peripherals::steal().TIMER,
+                        registers: <$PACTIMERX>::steal(),
                         clk: 0,
                     }
                 }
@@ -90,18 +90,18 @@ macro_rules! impl_timer {
             // interrupts
             impl $TIMERX {
                 /// Start listening for [`Event`]
-                pub fn listen(&mut self, event: Event) {
+                pub fn listen(&mut self, event: $crate::timer::Event) {
                     match event {
-                        Event::TimeOut => {
+                        $crate::timer::Event::TimeOut => {
                             self.registers.ev_enable().write(|w| w.enable().bit(true));
                         }
                     }
                 }
 
                 /// Stop listening for [`Event`]
-                pub fn unlisten(&mut self, event: Event) {
+                pub fn unlisten(&mut self, event: $crate::timer::Event) {
                     match event {
-                        Event::TimeOut => {
+                        $crate::timer::Event::TimeOut => {
                             self.registers.ev_enable().write(|w| w.enable().bit(false));
                         }
                     }
@@ -143,5 +143,3 @@ macro_rules! impl_timer {
         )+
     }
 }
-
-crate::impl_timer! { Timer0: crate::pac::TIMER, }

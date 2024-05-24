@@ -3,7 +3,7 @@
 /// Re-export smolusb error type
 pub use smolusb::error::ErrorKind as Error;
 
-use smolusb::device::Speed;
+/*use smolusb::device::Speed;
 use smolusb::setup::Direction;
 use smolusb::traits::{
     ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriver, UsbDriverOperations,
@@ -11,9 +11,7 @@ use smolusb::traits::{
 };
 
 use crate::pac;
-use pac::interrupt::Interrupt;
-
-use log::{error, trace, warn};
+use pac::interrupt::Interrupt;*/
 
 /// Default timeout for USB operations
 pub const DEFAULT_TIMEOUT: usize = 1_000_000;
@@ -27,6 +25,7 @@ pub const DEFAULT_TIMEOUT: usize = 1_000_000;
 ///         Usb1: USB1, USB1_EP_CONTROL, USB1_EP_IN, USB1_EP_OUT,
 ///     }
 ///
+#[macro_export]
 macro_rules! impl_usb {
     ($(
         $USBX:ident: $USBX_CONTROLLER:ident, $USBX_EP_CONTROL:ident, $USBX_EP_IN:ident, $USBX_EP_OUT:ident,
@@ -137,7 +136,7 @@ macro_rules! impl_usb {
                             .ev_enable()
                             .write(|w| w.enable().bit(true)),
                         _ => {
-                            warn!("Ignoring invalid interrupt enable: {:?}", interrupt);
+                            log::warn!("Ignoring invalid interrupt enable: {:?}", interrupt);
                         }
                     }
                 }
@@ -162,7 +161,7 @@ macro_rules! impl_usb {
                             .ev_enable()
                             .write(|w| w.enable().bit(false)),
                         _ => {
-                            warn!("Ignoring invalid interrupt enable: {:?}", interrupt);
+                            log::warn!("Ignoring invalid interrupt enable: {:?}", interrupt);
                         }
                     }
                 }
@@ -198,7 +197,7 @@ macro_rules! impl_usb {
                             .ev_pending()
                             .modify(|r, w| w.pending().bit(r.pending().bit())),
                         _ => {
-                            warn!("Ignoring invalid clear pending for interrupt: {:?}", interrupt);
+                            log::warn!("Ignoring invalid clear pending for interrupt: {:?}", interrupt);
                         }
                     }
 
@@ -230,7 +229,7 @@ macro_rules! impl_usb {
                             .ev_pending()
                             .read().bits(),
                         _ => {
-                            warn!("Ignoring invalid status pending for interrupt: {:?}", interrupt);
+                            log::warn!("Ignoring invalid status pending for interrupt: {:?}", interrupt);
                             0
                         }
                     }
@@ -328,7 +327,7 @@ macro_rules! impl_usb {
                     // re-enable interrupt events
                     self.enable_interrupts();
 
-                    trace!("UsbInterface0::bus_reset()");
+                    log::trace!("UsbInterface0::bus_reset()");
                 }
 
                 /// Acknowledge the status stage of an incoming control request.
@@ -476,15 +475,15 @@ macro_rules! impl_usb {
                     }
 
                     if bytes_read != buffer.len() {
-                        warn!("  RX {} CONTROL {} bytes read - expected {}",
+                        log::warn!("  RX {} CONTROL {} bytes read - expected {}",
                               stringify!($USBX),
                               bytes_read, buffer.len());
                     }
 
                     if overflow == 0 {
-                        trace!("  RX {} CONTROL {} bytes read", stringify!($USBX), bytes_read);
+                        log::trace!("  RX {} CONTROL {} bytes read", stringify!($USBX), bytes_read);
                     } else {
-                        warn!("  RX {} CONTROL {} bytes read + {} bytes overflow",
+                        log::warn!("  RX {} CONTROL {} bytes read + {} bytes overflow",
                               stringify!($USBX),
                               bytes_read, overflow);
                     }
@@ -499,7 +498,7 @@ macro_rules! impl_usb {
                 fn ep_out_prime_receive(&self, endpoint_number: u8) {
                     // 0. clear receive fifo in case the previous transaction wasn't handled
                     if self.ep_out.have().read().have().bit() {
-                        warn!("  {} priming out endpoint with unread data", stringify!($USBX));
+                        log::warn!("  {} priming out endpoint with unread data", stringify!($USBX));
                         self.ep_out.reset().write(|w| w.reset().bit(true));
                     }
 
@@ -537,9 +536,9 @@ macro_rules! impl_usb {
                     }
 
                     if overflow == 0 {
-                        trace!("  RX {} OUT {} {} bytes read", stringify!($USBX), endpoint_number, bytes_read);
+                        log::trace!("  RX {} OUT {} {} bytes read", stringify!($USBX), endpoint_number, bytes_read);
                     } else {
-                        warn!("  RX {} OUT {} {} bytes read + {} bytes overflow",
+                        log::warn!("  RX {} OUT {} {} bytes read + {} bytes overflow",
                               stringify!($USBX),
                               endpoint_number, bytes_read, overflow);
                     }
@@ -558,7 +557,7 @@ macro_rules! impl_usb {
                         (Speed::High, _) => smolusb::EP_MAX_PACKET_SIZE,
                         (Speed::Full, _) => 64,
                         (_, _) => {
-                            warn!("{}::write unsupported device speed: {:?}", stringify!($USBX), self.device_speed);
+                            log::warn!("{}::write unsupported device speed: {:?}", stringify!($USBX), self.device_speed);
                             64
                         }
                     };
@@ -576,10 +575,10 @@ macro_rules! impl_usb {
                     let mut timeout = 0;
                     while self.ep_in.have().read().have().bit() {
                         if timeout == 0 {
-                            warn!("  {} clear tx", stringify!($USBX));
+                            log::warn!("  {} clear tx", stringify!($USBX));
                         } else if timeout > DEFAULT_TIMEOUT {
                             self.ep_in.reset().write(|w| w.reset().bit(true));
-                            error!("  {} clear tx timeout", stringify!($USBX));
+                            log::error!("  {} clear tx timeout", stringify!($USBX));
                         }
                         timeout += 1;
                     }
@@ -629,10 +628,4 @@ macro_rules! impl_usb {
             impl UsbDriver for $USBX {}
         )+
     }
-}
-
-impl_usb! {
-    Usb0: USB0, USB0_EP_CONTROL, USB0_EP_IN, USB0_EP_OUT,
-    Usb1: USB1, USB1_EP_CONTROL, USB1_EP_IN, USB1_EP_OUT,
-    Usb2: USB2, USB2_EP_CONTROL, USB2_EP_IN, USB2_EP_OUT,
 }
