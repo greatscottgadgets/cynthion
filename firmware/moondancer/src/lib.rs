@@ -17,7 +17,7 @@ pub mod util;
 // - aliases ------------------------------------------------------------------
 
 pub use lunasoc_hal as hal;
-pub use lunasoc_pac as pac;
+pub use moondancer_pac as pac;
 
 // - re-exports ---------------------------------------------------------------
 

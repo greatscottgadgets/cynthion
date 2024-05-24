@@ -20,7 +20,7 @@ pub use usb::{Usb0, Usb1, Usb2};
 #[cfg(feature = "usb")]
 pub use smolusb;
 
-pub use lunasoc_pac as pac;
+pub use moondancer_pac as pac;
 
 pub use embedded_hal as hal;
 pub use embedded_hal_0 as hal_0;

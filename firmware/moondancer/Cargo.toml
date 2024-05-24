@@ -47,10 +47,10 @@ ladybug = ["ladybug/enable"]
 
 # select softcore
 minerva = [
-    "lunasoc-pac/minerva",
+    "moondancer-pac/minerva",
 ]
 vexriscv = [
-    "lunasoc-pac/vexriscv",
+    "moondancer-pac/vexriscv",
 ]
 vexriscv_dcache = []
 
@@ -67,7 +67,7 @@ nightly = [
 cynthion = { path = "../../cynthion/rust" }
 ladybug = { path = "../ladybug" }
 libgreat = { path = "../libgreat", features = ["errno_minimal"] }
-lunasoc-pac = { path = "../lunasoc-pac", default-features = false, features = ["critical-section"]}
+moondancer-pac = { path = "../moondancer-pac", default-features = false, features = ["critical-section"]}
 lunasoc-hal = { path = "../lunasoc-hal", default-features = false, features = ["usb"]}
 smolusb = { path = "../smolusb", default-features = false}
 

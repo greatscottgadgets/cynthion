@@ -1,13 +1,13 @@
 [package]
-name = "lunasoc-pac"
-version = "0.0.1"
+name = "moondancer-pac"
+version = "0.0.0"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
-description = "A peripheral access crate for LunaSoC cores"
+description = "A peripheral access crate for the Cynthion Moondancer SoC"
 categories = ["embedded", "hardware-support", "no-std"]
-keywords = ["cynthion", "luna", "luna-soc", "riscv", "register", "peripheral"]
+keywords = ["cynthion", "luna", "luna-soc", "riscv", "register", "peripheral", "usb"]
 repository = "https://github.com/greatscottgadgets/cynthion"
-documentation = "https://docs.rs/lunasoc-pac"
+documentation = "https://docs.rs/moondancer-pac"
 edition = "2021"
 rust-version = "1.68"
 include = ["src/**/*", "README.md", "device.x", "build.rs"]

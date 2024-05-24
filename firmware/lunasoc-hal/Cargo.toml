@@ -33,10 +33,10 @@ default = [
 
 # select softcore
 minerva = [
-    "lunasoc-pac/minerva",
+    "moondancer-pac/minerva",
 ]
 vexriscv = [
-    "lunasoc-pac/vexriscv",
+    "moondancer-pac/vexriscv",
 ]
 
 # use nightly features
@@ -56,7 +56,7 @@ embedded-hal = "=1.0.0-alpha.9"
 embedded-hal-0 = { package = "embedded-hal", version = "=0.2.7", features = ["unproven"] }
 embedded-hal-nb = "=1.0.0-alpha.1"
 log = { version = "=0.4.17", optional = true }
-lunasoc-pac = { path = "../lunasoc-pac", default-features = false }
+moondancer-pac = { path = "../moondancer-pac", default-features = false }
 nb = "=1.1.0"
 riscv = { version = "=0.10.1" }
 smolusb = { path = "../smolusb", optional = true }
@@ -64,7 +64,7 @@ smolusb = { path = "../smolusb", optional = true }
 # - dev-dependencies ----------------------------------------------------------
 
 [dev-dependencies]
-lunasoc-pac = { path = "../lunasoc-pac", default-features = false, features = ["critical-section", "rt"]}
+moondancer-pac = { path = "../moondancer-pac", default-features = false, features = ["critical-section", "rt"]}
 panic-halt = "=0.2.0"
 riscv = { version = "=0.10.1", features = ["critical-section-single-hart"] }
 riscv-rt = { version = "=0.11.0" }
@@ -74,24 +74,24 @@ riscv-rt = { version = "=0.11.0" }
 
 [[example]]
 name = "blinky"
-required-features = ["lunasoc-pac/rt"]
+required-features = ["moondancer-pac/rt"]
 
 [[example]]
 name = "blinky_pac"
-required-features = ["lunasoc-pac/rt"]
+required-features = ["moondancer-pac/rt"]
 
 [[example]]
 name = "interrupts"
-required-features = ["lunasoc-pac/rt"]
+required-features = ["moondancer-pac/rt"]
 
 [[example]]
 name = "interrupts_pac"
-required-features = ["lunasoc-pac/rt"]
+required-features = ["moondancer-pac/rt"]
 
 [[example]]
 name = "uart"
-required-features = ["lunasoc-pac/rt"]
+required-features = ["moondancer-pac/rt"]
 
 [[example]]
 name = "uart_pac"
-required-features = ["lunasoc-pac/rt"]
+required-features = ["moondancer-pac/rt"]
