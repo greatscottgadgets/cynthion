@@ -1,16 +1,15 @@
 [package]
 name = "smolusb"
-version = "0.0.1"
+version = "0.0.0"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
-description = "A lightweight library for implementing USB on embedded systems."
+description = "An experimental lightweight library for implementing USB on embedded systems."
 categories = ["embedded", "hardware-support", "no-std"]
-keywords = ["cynthion", "luna", "usb"]
+keywords = ["cynthion", "luna", "soc", "usb"]
 repository = "https://github.com/greatscottgadgets/cynthion"
 documentation = "https://docs.rs/smolusb"
 edition = "2021"
 rust-version = "1.68"
-include = ["examples/**/*", "src/**/*", "README.md", "memory.x"]
 
 [features]
 default = []
