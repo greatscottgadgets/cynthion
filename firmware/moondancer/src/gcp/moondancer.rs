@@ -18,7 +18,8 @@ use libgreat::gcp::{
     self, iter_to_response, GreatDispatch, GreatResponse, Verb, LIBGREAT_MAX_COMMAND_SIZE,
 };
 
-use ladybug::{Bit, Channel};
+use crate::debug::Bit;
+use ladybug::Channel;
 
 // - types --------------------------------------------------------------------
 

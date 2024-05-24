@@ -1,6 +1,31 @@
 //! ladybug implementation for cynthion
 use crate::pac;
 
+#[non_exhaustive]
+pub struct Bit;
+
+impl Bit {
+    // - PMOD A --
+
+    pub const A_GET_EVENTS: u8 = 0;
+    pub const A_READ_CONTROL: u8 = 1;
+    pub const A_READ_ENDPOINT: u8 = 2;
+    pub const A_WRITE_ENDPOINT: u8 = 3;
+    pub const A_PRIME_RECEIVE: u8 = 4;
+
+    pub const A_PACKET_PUSH: u8 = 6;
+    pub const A_PACKET_POP: u8 = 7;
+
+    // - PMOD B --
+
+    pub const B_EP_IS_0: u8 = 0;
+    pub const B_EP_IS_1: u8 = 1;
+    pub const B_IRQ_BUS_RESET: u8 = 2;
+    pub const B_IRQ_EP_CONTROL: u8 = 3;
+    pub const B_IRQ_EP_IN: u8 = 4;
+    pub const B_IRQ_EP_OUT: u8 = 5;
+}
+
 #[allow(clippy::needless_pass_by_value)]
 #[allow(clippy::missing_panics_doc)]
 pub fn init(_gpioa: pac::GPIOA, _gpiob: pac::GPIOB) {

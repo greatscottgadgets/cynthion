@@ -1,4 +1,4 @@
-use ladybug::{Bit, Channel};
+use pac::csr::interrupt;
 
 use smolusb::event::UsbEvent;
 use smolusb::setup::SetupPacket;
@@ -7,7 +7,8 @@ use smolusb::traits::{ReadControl, UnsafeUsbDriverOperations, UsbDriverOperation
 use crate::event::InterruptEvent;
 use crate::{hal, pac};
 
-use pac::csr::interrupt;
+use crate::debug::Bit;
+use ladybug::Channel;
 
 // - generic usb isr ----------------------------------------------------------
 
