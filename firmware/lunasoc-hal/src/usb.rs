@@ -28,24 +28,24 @@ pub const DEFAULT_TIMEOUT: usize = 1_000_000;
 #[macro_export]
 macro_rules! impl_usb {
     ($(
-        $USBX:ident: $USBX_CONTROLLER:ident, $USBX_EP_CONTROL:ident, $USBX_EP_IN:ident, $USBX_EP_OUT:ident,
+        $USBX:ident: $IDX:ident, $USBX_CONTROLLER:ty, $USBX_EP_CONTROL:ty, $USBX_EP_IN:ty, $USBX_EP_OUT:ty,
     )+) => {
         $(
             pub struct $USBX {
-                pub controller: pac::$USBX_CONTROLLER,
-                pub ep_control: pac::$USBX_EP_CONTROL,
-                pub ep_in: pac::$USBX_EP_IN,
-                pub ep_out: pac::$USBX_EP_OUT,
+                pub controller: $USBX_CONTROLLER,
+                pub ep_control: $USBX_EP_CONTROL,
+                pub ep_in: $USBX_EP_IN,
+                pub ep_out: $USBX_EP_OUT,
                 pub device_speed: Speed,
             }
 
             impl $USBX {
                 /// Create a new `Usb` instance.
                 pub fn new(
-                    controller: pac::$USBX_CONTROLLER,
-                    ep_control: pac::$USBX_EP_CONTROL,
-                    ep_in: pac::$USBX_EP_IN,
-                    ep_out: pac::$USBX_EP_OUT,
+                    controller: $USBX_CONTROLLER,
+                    ep_control: $USBX_EP_CONTROL,
+                    ep_in: $USBX_EP_IN,
+                    ep_out: $USBX_EP_OUT,
                 ) -> Self {
                     Self {
                         controller,
@@ -60,10 +60,10 @@ macro_rules! impl_usb {
                 pub fn free(
                     self,
                 ) -> (
-                    pac::$USBX_CONTROLLER,
-                    pac::$USBX_EP_CONTROL,
-                    pac::$USBX_EP_IN,
-                    pac::$USBX_EP_OUT,
+                    $USBX_CONTROLLER,
+                    $USBX_EP_CONTROL,
+                    $USBX_EP_IN,
+                    $USBX_EP_OUT,
                 ) {
                     (self.controller, self.ep_control, self.ep_in, self.ep_out)
                 }
@@ -76,10 +76,10 @@ macro_rules! impl_usb {
                 #[inline(always)]
                 pub unsafe fn summon() -> Self {
                     Self {
-                        controller: pac::Peripherals::steal().$USBX_CONTROLLER,
-                        ep_control: pac::Peripherals::steal().$USBX_EP_CONTROL,
-                        ep_in: pac::Peripherals::steal().$USBX_EP_IN,
-                        ep_out: pac::Peripherals::steal().$USBX_EP_OUT,
+                        controller: <$USBX_CONTROLLER>::steal(),
+                        ep_control: <$USBX_EP_CONTROL>::steal(),
+                        ep_in: <$USBX_EP_IN>::steal(),
+                        ep_out: <$USBX_EP_OUT>::steal(),
                         device_speed: Speed::Unknown,
                     }
                 }
@@ -114,69 +114,6 @@ macro_rules! impl_usb {
                     self.ep_control.ev_enable().write(|w| w.enable().bit(false));
                     self.ep_in.ev_enable().write(|w| w.enable().bit(false));
                     self.ep_out.ev_enable().write(|w| w.enable().bit(false));
-                }
-
-                /// Clear pending interrupt event.
-                ///
-                /// Returns the status of the pending interrupt event.
-                #[inline(always)]
-                pub fn clear_pending(&self, interrupt: Interrupt) -> u32 {
-                    let status = self.status_pending(interrupt);
-
-                    match interrupt {
-                        Interrupt::$USBX_CONTROLLER => self
-                            .controller
-                            .ev_pending()
-                            .modify(|r, w| w.pending().bit(r.pending().bit())),
-                        Interrupt::$USBX_EP_CONTROL => self
-                            .ep_control
-                            .ev_pending()
-                            .modify(|r, w| w.pending().bit(r.pending().bit())),
-                        Interrupt::$USBX_EP_IN => self
-                            .ep_in
-                            .ev_pending()
-                            .modify(|r, w| w.pending().bit(r.pending().bit())),
-                        Interrupt::$USBX_EP_OUT => self
-                            .ep_out
-                            .ev_pending()
-                            .modify(|r, w| w.pending().bit(r.pending().bit())),
-                        _ => {
-                            log::warn!("Ignoring invalid clear pending for interrupt: {:?}", interrupt);
-                        }
-                    }
-
-                    status
-                }
-
-                /// Returns the status of the given interrupt event.
-                #[must_use]
-                #[inline(always)]
-                pub fn status_pending(&self, interrupt: Interrupt) -> u32 {
-                    // for reasons that are still to be understood the
-                    // ev_status register is always 0 irrespective of
-                    // the event but ev_pending has the correct value.
-                    match interrupt {
-                        Interrupt::$USBX_CONTROLLER => self
-                            .controller
-                            .ev_pending()
-                            .read().bits(),
-                        Interrupt::$USBX_EP_CONTROL => self
-                            .ep_control
-                            .ev_pending()
-                            .read().bits(),
-                        Interrupt::$USBX_EP_IN => self
-                            .ep_in
-                            .ev_pending()
-                            .read().bits(),
-                        Interrupt::$USBX_EP_OUT => self
-                            .ep_out
-                            .ev_pending()
-                            .read().bits(),
-                        _ => {
-                            log::warn!("Ignoring invalid status pending for interrupt: {:?}", interrupt);
-                            0
-                        }
-                    }
                 }
 
                 /// Returns the address of the control endpoint.
@@ -333,7 +270,7 @@ macro_rules! impl_usb {
             // - trait: UnsafeUsbDriverOperations -----------------------------
 
             #[allow(non_snake_case)]
-            mod $USBX_CONTROLLER {
+            mod $IDX {
                 use smolusb::EP_MAX_ENDPOINTS;
 
                 #[cfg(target_has_atomic)]
@@ -355,14 +292,14 @@ macro_rules! impl_usb {
                     {
                         let endpoint_number = endpoint_number as usize;
                         riscv::interrupt::free(|| {
-                            $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number] = true;
+                            $IDX::TX_ACK_ACTIVE[endpoint_number] = true;
                         });
                     }
                     #[cfg(target_has_atomic)]
                     {
                         use core::sync::atomic::Ordering;
                         let endpoint_number = endpoint_number as usize;
-                        $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].store(true, Ordering::Relaxed);
+                        $IDX::TX_ACK_ACTIVE[endpoint_number].store(true, Ordering::Relaxed);
                     }
                 }
                 #[inline(always)]
@@ -371,14 +308,14 @@ macro_rules! impl_usb {
                     {
                         let endpoint_number = endpoint_number as usize;
                         riscv::interrupt::free(|| {
-                            $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number] = false;
+                            $IDX::TX_ACK_ACTIVE[endpoint_number] = false;
                         });
                     }
                     #[cfg(target_has_atomic)]
                     {
                         use core::sync::atomic::Ordering;
                         let endpoint_number = endpoint_number as usize;
-                        $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].store(false, Ordering::Relaxed);
+                        $IDX::TX_ACK_ACTIVE[endpoint_number].store(false, Ordering::Relaxed);
                     }
                 }
                 #[inline(always)]
@@ -387,7 +324,7 @@ macro_rules! impl_usb {
                     {
                         let endpoint_number = endpoint_number as usize;
                         let active = riscv::interrupt::free(|| {
-                            $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number]
+                            $IDX::TX_ACK_ACTIVE[endpoint_number]
                         });
                         active
                     }
@@ -395,7 +332,7 @@ macro_rules! impl_usb {
                     {
                         use core::sync::atomic::Ordering;
                         let endpoint_number = endpoint_number as usize;
-                        $USBX_CONTROLLER::TX_ACK_ACTIVE[endpoint_number].load(Ordering::Relaxed)
+                        $IDX::TX_ACK_ACTIVE[endpoint_number].load(Ordering::Relaxed)
                     }
                 }
             }

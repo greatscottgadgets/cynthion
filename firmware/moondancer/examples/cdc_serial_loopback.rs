@@ -94,10 +94,15 @@ extern "C" fn MachineExternal() {
     match pending {
         // - Usb0 (Target) interrupts --
         pac::Interrupt::USB0 => {
+            usb0.controller
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
             usb0.bus_reset();
-            usb0.clear_pending(pac::Interrupt::USB0);
         }
         pac::Interrupt::USB0_EP_CONTROL => {
+            usb0.ep_control
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
             let endpoint = usb0.ep_control.epno().read().bits() as u8;
             let mut buffer = [0_u8; 8];
             let _bytes_read = usb0.read_control(&mut buffer);
@@ -106,17 +111,21 @@ extern "C" fn MachineExternal() {
                 Target,
                 UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
             ));
-            usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
         }
         pac::Interrupt::USB0_EP_IN => {
+            usb0.ep_in
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
             let endpoint = usb0.ep_in.epno().read().bits() as u8;
             dispatch_event(InterruptEvent::Usb(
                 Target,
                 UsbEvent::SendComplete(endpoint),
             ));
-            usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
         }
         pac::Interrupt::USB0_EP_OUT => {
+            usb0.ep_out
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
             // read data from endpoint
             let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
             let mut receive_packet = UsbDataPacket {
@@ -127,15 +136,19 @@ extern "C" fn MachineExternal() {
             };
             receive_packet.bytes_read = usb0.read(endpoint, &mut receive_packet.buffer);
             dispatch_receive_packet(receive_packet);
-            usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
         }
 
         // - Usb1 (Aux) interrupts --
         pac::Interrupt::USB1 => {
+            usb1.controller
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
             usb1.bus_reset();
-            usb1.clear_pending(pac::Interrupt::USB1);
         }
         pac::Interrupt::USB1_EP_CONTROL => {
+            usb1.ep_control
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
             let endpoint = usb1.ep_control.epno().read().bits() as u8;
             let mut buffer = [0_u8; 8];
             let _bytes_read = usb1.read_control(&mut buffer);
@@ -144,14 +157,18 @@ extern "C" fn MachineExternal() {
                 Aux,
                 UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
             ));
-            usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
         }
         pac::Interrupt::USB1_EP_IN => {
+            usb1.ep_in
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
             let endpoint = usb1.ep_in.epno().read().bits() as u8;
             dispatch_event(InterruptEvent::Usb(Aux, UsbEvent::SendComplete(endpoint)));
-            usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
         }
         pac::Interrupt::USB1_EP_OUT => {
+            usb1.ep_out
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
             // read data from endpoint
             let endpoint = usb1.ep_out.data_ep().read().bits() as u8;
             let mut receive_packet = UsbDataPacket {
@@ -162,7 +179,6 @@ extern "C" fn MachineExternal() {
             };
             receive_packet.bytes_read = usb1.read(endpoint, &mut receive_packet.buffer);
             dispatch_receive_packet(receive_packet);
-            usb1.clear_pending(pac::Interrupt::USB1_EP_OUT);
         }
         // - Unhandled Interrupt --
         _ => dispatch_event(InterruptEvent::UnhandledInterrupt(pending)),

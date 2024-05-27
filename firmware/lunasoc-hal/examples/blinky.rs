@@ -8,7 +8,10 @@ use lunasoc_hal as hal;
 use moondancer_pac as pac;
 
 use hal::hal::delay::DelayUs;
-use hal::Timer;
+
+lunasoc_hal::impl_timer! {
+    Timer: pac::TIMER,
+}
 
 #[entry]
 fn main() -> ! {

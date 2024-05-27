@@ -56,7 +56,6 @@ embedded-hal = "=1.0.0-alpha.9"
 embedded-hal-0 = { package = "embedded-hal", version = "=0.2.7", features = ["unproven"] }
 embedded-hal-nb = "=1.0.0-alpha.1"
 log = { version = "=0.4.17", optional = true }
-moondancer-pac = { path = "../moondancer-pac", default-features = false }
 nb = "=1.1.0"
 riscv = { version = "=0.10.1" }
 smolusb = { path = "../smolusb", optional = true }

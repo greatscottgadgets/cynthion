@@ -1,4 +1,5 @@
 pub use lunasoc_hal::*;
+pub use crate::pac;
 
 self::impl_gpio! {
     Gpio0: pac::GPIOA,
@@ -20,12 +21,8 @@ use self::smolusb::traits::{
     WriteEndpoint,
 };
 use self::usb::DEFAULT_TIMEOUT;
-use pac::Interrupt;
 self::impl_usb! {
-    Usb0: USB0, USB0_EP_CONTROL, USB0_EP_IN, USB0_EP_OUT,
-    Usb1: USB1, USB1_EP_CONTROL, USB1_EP_IN, USB1_EP_OUT,
-    Usb2: USB2, USB2_EP_CONTROL, USB2_EP_IN, USB2_EP_OUT,
-    //Usb0: pac::USB0, pac::USB0_EP_CONTROL, pac::USB0_EP_IN, pac::USB0_EP_OUT,
-    //Usb1: pac::USB1, pac::USB1_EP_CONTROL, pac::USB1_EP_IN, pac::USB1_EP_OUT,
-    //Usb2: pac::USB2, pac::USB2_EP_CONTROL, pac::USB2_EP_IN, pac::USB2_EP_OUT,
+    Usb0: usb0, pac::USB0, pac::USB0_EP_CONTROL, pac::USB0_EP_IN, pac::USB0_EP_OUT,
+    Usb1: usb1, pac::USB1, pac::USB1_EP_CONTROL, pac::USB1_EP_IN, pac::USB1_EP_OUT,
+    Usb2: usb2, pac::USB2, pac::USB2_EP_CONTROL, pac::USB2_EP_IN, pac::USB2_EP_OUT,
 }

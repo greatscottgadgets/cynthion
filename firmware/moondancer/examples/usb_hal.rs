@@ -74,14 +74,20 @@ extern "C" fn MachineExternal() {
 
         // USB0 BusReset
         pac::Interrupt::USB0 => {
+            usb0.controller
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
+
             // handle bus reset in interrupt handler for lowest latency
             usb0.bus_reset();
             dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
-
-            usb0.clear_pending(pac::Interrupt::USB0);
         }
         // USB0_EP_CONTROL ReceiveControl
         pac::Interrupt::USB0_EP_CONTROL => {
+            usb0.ep_control
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
+
             let endpoint = usb0.ep_control.epno().read().bits() as u8;
             let mut buffer = [0_u8; 8];
             let _bytes_read = usb0.read_control(&mut buffer);
@@ -90,24 +96,15 @@ extern "C" fn MachineExternal() {
                 Target,
                 UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
             ));
-
-            usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-        }
-        // USB0_EP_OUT ReceivePacket
-        pac::Interrupt::USB0_EP_OUT => {
-            let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
-            dispatch_event(InterruptEvent::Usb(
-                Target,
-                UsbEvent::ReceivePacket(endpoint),
-            ));
-
-            usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
         }
         // USB0_EP_IN SendComplete
         pac::Interrupt::USB0_EP_IN => {
-            let endpoint = usb0.ep_in.epno().read().bits() as u8;
+            usb0.ep_in
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
 
             // TODO something a little safer would be nice
+            let endpoint = usb0.ep_in.epno().read().bits() as u8;
             unsafe {
                 usb0.clear_tx_ack_active(endpoint);
             }
@@ -116,8 +113,18 @@ extern "C" fn MachineExternal() {
                 Target,
                 UsbEvent::SendComplete(endpoint),
             ));
+        }
+        // USB0_EP_OUT ReceivePacket
+        pac::Interrupt::USB0_EP_OUT => {
+            usb0.ep_out
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
 
-            usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
+            let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
+            dispatch_event(InterruptEvent::Usb(
+                Target,
+                UsbEvent::ReceivePacket(endpoint),
+            ));
         }
 
         // - Unhandled Interrupt --

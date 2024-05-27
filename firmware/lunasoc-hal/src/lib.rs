@@ -15,8 +15,6 @@ pub mod usb;
 #[cfg(feature = "usb")]
 pub use smolusb;
 
-pub use moondancer_pac as pac;
-
 pub use embedded_hal as hal;
 pub use embedded_hal_0 as hal_0;
 pub use embedded_hal_nb as hal_nb;
