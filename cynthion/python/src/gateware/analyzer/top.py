@@ -254,6 +254,9 @@ class USBAnalyzerApplet(Elaboratable):
         # Select the appropriate PHY according to platform version.
         if platform.version >= (0, 6):
             phy_name = "control_phy"
+
+            # Also set up a test device on the AUX PHY.
+            m.submodules += AnalyzerTestDevice()
         else:
             phy_name = "host_phy"
 
@@ -336,6 +339,72 @@ class USBAnalyzerApplet(Elaboratable):
         ]
 
         # Return our elaborated module.
+        return m
+
+
+class AnalyzerTestDevice(Elaboratable):
+    """ Built-in example device that can be used to test the analyzer. """
+
+    def elaborate(self, platform):
+        m = Module()
+
+        MAX_PACKET = 512
+
+        # Create a USB device and connect it by default.
+        m.submodules.usb = usb = USBDevice(bus=platform.request("aux_phy"))
+        m.d.comb += usb.connect.eq(1)
+
+        # Set up descriptors.
+        descriptors = DeviceDescriptorCollection()
+
+        with descriptors.DeviceDescriptor() as d:
+            d.idVendor           = cynthion.shared.usb.bVendorId.example
+            d.idProduct          = cynthion.shared.usb.bProductId.analyzer_test
+            d.iManufacturer      = "Cynthion Project"
+            d.iProduct           = "USB Analyzer Test Device"
+            d.bcdDevice          = 0.01
+            d.bNumConfigurations = 1
+
+        with descriptors.ConfigurationDescriptor() as c:
+            with c.InterfaceDescriptor() as i:
+                i.bInterfaceNumber = 0
+                with i.EndpointDescriptor() as e:
+                    e.bEndpointAddress = 0x81
+                    e.wMaxPacketSize   = MAX_PACKET
+
+        # Add Microsoft OS 1.0 descriptors for Windows compatibility.
+        descriptors.add_descriptor(
+                get_string_descriptor("MSFT100\xee"), index=0xee)
+        msft_descriptors = MicrosoftOS10DescriptorCollection()
+        with msft_descriptors.ExtendedCompatIDDescriptor() as c:
+            with c.Function() as f:
+                f.bFirstInterfaceNumber = 0
+                f.compatibleID          = 'WINUSB'
+
+        # Add control endpoint.
+        control_ep = usb.add_standard_control_endpoint(
+                descriptors, avoid_blockram=True)
+
+        # Add handler for Microsoft descriptors.
+        msft_handler = MicrosoftOS10RequestHandler(
+                msft_descriptors, request_code=0xee)
+        control_ep.add_request_handler(msft_handler)
+
+        # Add IN endpoint.
+        in_ep = USBStreamInEndpoint(
+            endpoint_number=1,
+            max_packet_size=MAX_PACKET)
+        usb.add_endpoint(in_ep)
+
+        # Output a counter to IN endpoint.
+        counter = Signal(8)
+        m.d.comb += [
+            in_ep.stream.valid.eq(1),
+            in_ep.stream.payload.eq(counter),
+        ]
+        with m.If(in_ep.stream.ready):
+            m.d.usb += counter.eq(counter + 1)
+
         return m
 
 
