@@ -53,7 +53,7 @@ unsafe fn MachineExternal() {
     let leds = &peripherals.LEDS;
     let timer = &peripherals.TIMER;
 
-    if csr::interrupt::pending(pac::Interrupt::TIMER) {
+    if csr::interrupt::is_pending(pac::Interrupt::TIMER) {
         // clear interrupt
         let pending = timer.ev_pending().read().pending().bit();
         timer.ev_pending().write(|w| w.pending().bit(pending));

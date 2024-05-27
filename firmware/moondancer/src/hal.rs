@@ -13,11 +13,14 @@ self::impl_timer! {
     Timer0: pac::TIMER,
 }
 
-use pac::Interrupt;
 use self::smolusb::device::Speed;
 use self::smolusb::setup::Direction;
-use self::smolusb::traits::{UsbDriver, UsbDriverOperations, UnsafeUsbDriverOperations, ReadControl, ReadEndpoint, WriteEndpoint};
+use self::smolusb::traits::{
+    ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriver, UsbDriverOperations,
+    WriteEndpoint,
+};
 use self::usb::DEFAULT_TIMEOUT;
+use pac::Interrupt;
 self::impl_usb! {
     Usb0: USB0, USB0_EP_CONTROL, USB0_EP_IN, USB0_EP_OUT,
     Usb1: USB1, USB1_EP_CONTROL, USB1_EP_IN, USB1_EP_OUT,

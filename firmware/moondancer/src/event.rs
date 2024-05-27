@@ -15,7 +15,7 @@ pub enum InterruptEvent {
     UnknownInterrupt(usize),
 
     /// Received an unhandled interrupt event
-    UnhandledInterrupt(usize),
+    UnhandledInterrupt(pac::Interrupt),
 
     /// Received a timer event
     Timer(usize),
@@ -63,7 +63,7 @@ impl core::fmt::Debug for InterruptEvent {
                 write!(f, "UnknownInterrupt({interrupt})")
             }
             InterruptEvent::UnhandledInterrupt(interrupt) => {
-                write!(f, "UnhandledInterrupt({interrupt})")
+                write!(f, "UnhandledInterrupt({interrupt:?})")
             }
 
             // timer events

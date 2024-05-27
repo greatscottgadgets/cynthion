@@ -43,6 +43,14 @@ fn dispatch_event(event: InterruptEvent) {
         Ok(()) => (),
         Err(_) => {
             error!("MachineExternal - event queue overflow");
+            while let Some(interrupt_event) = EVENT_QUEUE.dequeue() {
+                error!("{:?}", interrupt_event);
+            }
+            loop {
+                unsafe {
+                    riscv::asm::nop();
+                }
+            }
         }
     }
 }
@@ -71,77 +79,93 @@ extern "C" fn MachineExternal() {
     let usb1 = unsafe { hal::Usb1::summon() };
 
     // debug
-    let pending = interrupt::reg_pending();
     leds.output()
-        .write(|w| unsafe { w.output().bits(pending as u8) });
+        .write(|w| unsafe { w.output().bits(interrupt::bits_pending() as u8) });
 
-    // - Usb0 (Target) interrupts --
-    if usb0.is_pending(pac::Interrupt::USB0) {
-        usb0.clear_pending(pac::Interrupt::USB0);
-        usb0.bus_reset();
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
-        let endpoint = usb0.ep_control.epno().read().bits() as u8;
-        usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
-        dispatch_event(InterruptEvent::Usb(
-            Target,
-            UsbEvent::ReceiveControl(endpoint),
-        ));
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
-        let endpoint = usb0.ep_in.epno().read().bits() as u8;
-        usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
-        dispatch_event(InterruptEvent::Usb(
-            Target,
-            UsbEvent::SendComplete(endpoint),
-        ));
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
-        // read data from endpoint
-        let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
-        let mut receive_packet = UsbDataPacket {
-            interface: Target,
-            endpoint,
-            bytes_read: 0,
-            buffer: [0_u8; smolusb::EP_MAX_PACKET_SIZE],
-        };
-        receive_packet.bytes_read = usb0.read(endpoint, &mut receive_packet.buffer);
+    // get pending interrupt
+    let pending = match pac::csr::interrupt::pending() {
+        Ok(interrupt) => interrupt,
+        Err(pending) => {
+            dispatch_event(InterruptEvent::UnknownInterrupt(pending));
+            return;
+        }
+    };
 
-        // clear pending IRQ after data is read
-        usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
+    match pending {
+        // - Usb0 (Target) interrupts --
+        pac::Interrupt::USB0 => {
+            usb0.bus_reset();
+            usb0.clear_pending(pac::Interrupt::USB0);
+        }
+        pac::Interrupt::USB0_EP_CONTROL => {
+            let endpoint = usb0.ep_control.epno().read().bits() as u8;
+            let mut buffer = [0_u8; 8];
+            let _bytes_read = usb0.read_control(&mut buffer);
+            let setup_packet = SetupPacket::from(buffer);
+            dispatch_event(InterruptEvent::Usb(
+                Target,
+                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
+            ));
+            usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
+        }
+        pac::Interrupt::USB0_EP_IN => {
+            let endpoint = usb0.ep_in.epno().read().bits() as u8;
+            dispatch_event(InterruptEvent::Usb(
+                Target,
+                UsbEvent::SendComplete(endpoint),
+            ));
+            usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
+        }
+        pac::Interrupt::USB0_EP_OUT => {
+            // read data from endpoint
+            let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
+            let mut receive_packet = UsbDataPacket {
+                interface: Target,
+                endpoint,
+                bytes_read: 0,
+                buffer: [0_u8; smolusb::EP_MAX_PACKET_SIZE],
+            };
+            receive_packet.bytes_read = usb0.read(endpoint, &mut receive_packet.buffer);
+            dispatch_receive_packet(receive_packet);
+            usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
+        }
 
-        // dispatch packet to main loop
-        dispatch_receive_packet(receive_packet);
-
-    // - Usb1 (Aux) interrupts --
-    } else if usb1.is_pending(pac::Interrupt::USB1) {
-        usb1.clear_pending(pac::Interrupt::USB1);
-        usb1.bus_reset();
-    } else if usb1.is_pending(pac::Interrupt::USB1_EP_CONTROL) {
-        let endpoint = usb1.ep_control.epno().read().bits() as u8;
-        usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
-        dispatch_event(InterruptEvent::Usb(Aux, UsbEvent::ReceiveControl(endpoint)));
-    } else if usb1.is_pending(pac::Interrupt::USB1_EP_IN) {
-        let endpoint = usb1.ep_in.epno().read().bits() as u8;
-        usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
-        dispatch_event(InterruptEvent::Usb(Aux, UsbEvent::SendComplete(endpoint)));
-    } else if usb1.is_pending(pac::Interrupt::USB1_EP_OUT) {
-        // read data from endpoint
-        let endpoint = usb1.ep_out.data_ep().read().bits() as u8;
-        let mut receive_packet = UsbDataPacket {
-            interface: Aux,
-            endpoint,
-            bytes_read: 0,
-            buffer: [0_u8; smolusb::EP_MAX_PACKET_SIZE],
-        };
-        receive_packet.bytes_read = usb1.read(endpoint, &mut receive_packet.buffer);
-
-        // clear pending IRQ after data is read
-        usb1.clear_pending(pac::Interrupt::USB1_EP_OUT);
-
-        // dispatch packet to main loop
-        dispatch_receive_packet(receive_packet);
-
-    // - Unknown Interrupt --
-    } else {
-        dispatch_event(InterruptEvent::UnknownInterrupt(pending));
+        // - Usb1 (Aux) interrupts --
+        pac::Interrupt::USB1 => {
+            usb1.bus_reset();
+            usb1.clear_pending(pac::Interrupt::USB1);
+        }
+        pac::Interrupt::USB1_EP_CONTROL => {
+            let endpoint = usb1.ep_control.epno().read().bits() as u8;
+            let mut buffer = [0_u8; 8];
+            let _bytes_read = usb1.read_control(&mut buffer);
+            let setup_packet = SetupPacket::from(buffer);
+            dispatch_event(InterruptEvent::Usb(
+                Aux,
+                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
+            ));
+            usb1.clear_pending(pac::Interrupt::USB1_EP_CONTROL);
+        }
+        pac::Interrupt::USB1_EP_IN => {
+            let endpoint = usb1.ep_in.epno().read().bits() as u8;
+            dispatch_event(InterruptEvent::Usb(Aux, UsbEvent::SendComplete(endpoint)));
+            usb1.clear_pending(pac::Interrupt::USB1_EP_IN);
+        }
+        pac::Interrupt::USB1_EP_OUT => {
+            // read data from endpoint
+            let endpoint = usb1.ep_out.data_ep().read().bits() as u8;
+            let mut receive_packet = UsbDataPacket {
+                interface: Aux,
+                endpoint,
+                bytes_read: 0,
+                buffer: [0_u8; smolusb::EP_MAX_PACKET_SIZE],
+            };
+            receive_packet.bytes_read = usb1.read(endpoint, &mut receive_packet.buffer);
+            dispatch_receive_packet(receive_packet);
+            usb1.clear_pending(pac::Interrupt::USB1_EP_OUT);
+        }
+        // - Unhandled Interrupt --
+        _ => dispatch_event(InterruptEvent::UnhandledInterrupt(pending)),
     }
 }
 
@@ -238,8 +262,8 @@ fn main() -> ! {
         interrupt::enable(pac::Interrupt::USB1_EP_CONTROL);
         interrupt::enable(pac::Interrupt::USB1_EP_IN);
         interrupt::enable(pac::Interrupt::USB1_EP_OUT);
-        usb0.enable_interrupts();
-        usb1.enable_interrupts();
+        usb0.enable_events();
+        usb1.enable_events();
     }
 
     // prime the usb OUT endpoints we'll be using
@@ -262,7 +286,11 @@ fn main() -> ! {
                 // Usb0 received a control event
                 Usb(
                     Target,
-                    event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0)),
+                    event @ (BusReset
+                    | ReceiveControl(0)
+                    | ReceiveSetupPacket(0, _)
+                    | ReceivePacket(0)
+                    | SendComplete(0)),
                 ) => {
                     if let Some(setup_packet) = control_usb0.dispatch_event(&usb0, event) {
                         // vendor requests are not handled by control
@@ -273,7 +301,11 @@ fn main() -> ! {
                 // Usb1 received a control event
                 Usb(
                     Aux,
-                    event @ (BusReset | ReceiveControl(0) | ReceivePacket(0) | SendComplete(0)),
+                    event @ (BusReset
+                    | ReceiveControl(0)
+                    | ReceiveSetupPacket(0, _)
+                    | ReceivePacket(0)
+                    | SendComplete(0)),
                 ) => {
                     if let Some(setup_packet) = control_usb1.dispatch_event(&usb1, event) {
                         // vendor requests are not handled by control

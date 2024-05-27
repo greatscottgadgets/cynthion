@@ -33,6 +33,9 @@ fn dispatch_event(event: InterruptEvent) {
         Ok(()) => (),
         Err(_) => {
             error!("MachineExternal - event queue overflow");
+            while let Some(interrupt_event) = EVENT_QUEUE.dequeue() {
+                error!("{:?}", interrupt_event);
+            }
             loop {
                 unsafe {
                     riscv::asm::nop();
@@ -45,14 +48,8 @@ fn dispatch_event(event: InterruptEvent) {
 #[allow(non_snake_case)]
 #[no_mangle]
 extern "C" fn MachineExternal() {
-    match moondancer::util::get_usb_interrupt_event() {
-        InterruptEvent::UnhandledInterrupt(pending) => {
-            dispatch_event(InterruptEvent::UnknownInterrupt(pending));
-        }
-        event => {
-            dispatch_event(event);
-        }
-    }
+    let event = moondancer::util::get_usb_interrupt_event();
+    dispatch_event(event);
 }
 
 // - main entry point ---------------------------------------------------------
@@ -200,14 +197,14 @@ impl<'a> Firmware<'a> {
             // set mie register: machine external interrupts enable
             riscv::register::mie::set_mext();
 
-            // write csr: enable usb1 interrupts and events
+            // write csr: enable usb1 interrupts
             interrupt::enable(pac::Interrupt::USB1);
             interrupt::enable(pac::Interrupt::USB1_EP_CONTROL);
             interrupt::enable(pac::Interrupt::USB1_EP_IN);
             interrupt::enable(pac::Interrupt::USB1_EP_OUT);
 
-            // enable all usb events
-            self.usb1.enable_interrupts();
+            // enable usb1 interrupt events
+            self.usb1.enable_events();
         }
 
         Ok(())

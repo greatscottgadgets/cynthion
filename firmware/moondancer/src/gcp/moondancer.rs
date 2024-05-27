@@ -212,7 +212,7 @@ impl Moondancer {
         interrupt::enable(pac::Interrupt::USB0_EP_OUT);
 
         // enable all usb events
-        self.usb0.enable_interrupts();
+        self.usb0.enable_events();
     }
 
     /// Disable USB events and CPU interrupts for the USB controller.
@@ -224,7 +224,7 @@ impl Moondancer {
     /// may be dropped when calling it.
     pub unsafe fn disable_usb_interrupts(&self) {
         // disable all usb events
-        self.usb0.disable_interrupts();
+        self.usb0.disable_events();
 
         interrupt::disable(pac::Interrupt::USB0);
         interrupt::disable(pac::Interrupt::USB0_EP_CONTROL);

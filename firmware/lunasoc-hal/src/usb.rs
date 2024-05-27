@@ -86,90 +86,34 @@ macro_rules! impl_usb {
             }
 
             impl $USBX {
-                /// Enable all device interrupts.
-                pub fn enable_interrupts(&self) {
+                /// Enable all device interrupt events.
+                pub fn enable_events(&self) {
                     // clear all event handlers
-                    self.clear_pending(Interrupt::$USBX_CONTROLLER);
-                    self.clear_pending(Interrupt::$USBX_EP_CONTROL);
-                    self.clear_pending(Interrupt::$USBX_EP_IN);
-                    self.clear_pending(Interrupt::$USBX_EP_OUT);
+                    self.controller.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
+                    self.ep_control.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
+                    self.ep_in.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
+                    self.ep_out.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
 
                     // enable all device controller events
-                    self.enable_interrupt(Interrupt::$USBX_CONTROLLER);
-                    self.enable_interrupt(Interrupt::$USBX_EP_CONTROL);
-                    self.enable_interrupt(Interrupt::$USBX_EP_IN);
-                    self.enable_interrupt(Interrupt::$USBX_EP_OUT);
+                    self.controller.ev_enable().write(|w| w.enable().bit(true));
+                    self.ep_control.ev_enable().write(|w| w.enable().bit(true));
+                    self.ep_in.ev_enable().write(|w| w.enable().bit(true));
+                    self.ep_out.ev_enable().write(|w| w.enable().bit(true));
                 }
 
-                /// Disable all device interrupts.
-                pub fn disable_interrupts(&self) {
+                /// Disable all device interrupt events.
+                pub fn disable_events(&self) {
                     // clear all event handlers
-                    self.clear_pending(Interrupt::$USBX_CONTROLLER);
-                    self.clear_pending(Interrupt::$USBX_EP_CONTROL);
-                    self.clear_pending(Interrupt::$USBX_EP_IN);
-                    self.clear_pending(Interrupt::$USBX_EP_OUT);
+                    self.controller.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
+                    self.ep_control.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
+                    self.ep_in.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
+                    self.ep_out.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
 
                     // disable all device controller events
-                    self.disable_interrupt(Interrupt::$USBX_CONTROLLER);
-                    self.disable_interrupt(Interrupt::$USBX_EP_CONTROL);
-                    self.disable_interrupt(Interrupt::$USBX_EP_IN);
-                    self.disable_interrupt(Interrupt::$USBX_EP_OUT);
-                }
-
-                /// Enable the given interrupt for the device.
-                pub fn enable_interrupt(&self, interrupt: Interrupt) {
-                    match interrupt {
-                        Interrupt::$USBX_CONTROLLER => self
-                            .controller
-                            .ev_enable()
-                            .write(|w| w.enable().bit(true)),
-                        Interrupt::$USBX_EP_CONTROL => self
-                            .ep_control
-                            .ev_enable()
-                            .write(|w| w.enable().bit(true)),
-                        Interrupt::$USBX_EP_IN => self
-                            .ep_in
-                            .ev_enable()
-                            .write(|w| w.enable().bit(true)),
-                        Interrupt::$USBX_EP_OUT => self
-                            .ep_out
-                            .ev_enable()
-                            .write(|w| w.enable().bit(true)),
-                        _ => {
-                            log::warn!("Ignoring invalid interrupt enable: {:?}", interrupt);
-                        }
-                    }
-                }
-
-                /// Disable the given interrupt for the device.
-                pub fn disable_interrupt(&self, interrupt: Interrupt) {
-                    match interrupt {
-                        Interrupt::$USBX_CONTROLLER => self
-                            .controller
-                            .ev_enable()
-                            .write(|w| w.enable().bit(false)),
-                        Interrupt::$USBX_EP_CONTROL => self
-                            .ep_control
-                            .ev_enable()
-                            .write(|w| w.enable().bit(false)),
-                        Interrupt::$USBX_EP_IN => self
-                            .ep_in
-                            .ev_enable()
-                            .write(|w| w.enable().bit(true)),
-                        Interrupt::$USBX_EP_OUT => self
-                            .ep_out
-                            .ev_enable()
-                            .write(|w| w.enable().bit(false)),
-                        _ => {
-                            log::warn!("Ignoring invalid interrupt enable: {:?}", interrupt);
-                        }
-                    }
-                }
-
-                /// Test if the given interrupt is pending.
-                #[inline(always)]
-                pub fn is_pending(&self, interrupt: Interrupt) -> bool {
-                    pac::csr::interrupt::pending(interrupt)
+                    self.controller.ev_enable().write(|w| w.enable().bit(false));
+                    self.ep_control.ev_enable().write(|w| w.enable().bit(false));
+                    self.ep_in.ev_enable().write(|w| w.enable().bit(false));
+                    self.ep_out.ev_enable().write(|w| w.enable().bit(false));
                 }
 
                 /// Clear pending interrupt event.
@@ -273,7 +217,7 @@ macro_rules! impl_usb {
                     self.controller.connect().write(|w| w.connect().bit(false));
 
                     // disable endpoint events
-                    self.disable_interrupts();
+                    self.disable_events();
 
                     // reset FIFOs
                     self.ep_control.reset().write(|w| w.reset().bit(true));
@@ -292,7 +236,7 @@ macro_rules! impl_usb {
                     self.device_speed = Speed::Unknown;
 
                     // disable endpoint events
-                    self.disable_interrupts();
+                    self.disable_events();
 
                     // reset device address to 0
                     self.set_address(0);
@@ -309,7 +253,7 @@ macro_rules! impl_usb {
                 /// Perform a bus reset of the device.
                 fn bus_reset(&self) {
                     // disable interrupt events
-                    self.disable_interrupts();
+                    self.disable_events();
 
                     // reset device address to 0
                     self.set_address(0);
@@ -325,7 +269,7 @@ macro_rules! impl_usb {
                     }
 
                     // re-enable interrupt events
-                    self.enable_interrupts();
+                    self.enable_events();
 
                     log::trace!("UsbInterface0::bus_reset()");
                 }

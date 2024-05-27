@@ -34,13 +34,27 @@ pub mod interrupt {
     }
 
     #[must_use]
-    pub fn pending(interrupt: Interrupt) -> bool {
+    pub fn bits_pending() -> usize {
+        register::mip::read()
+    }
+
+    #[must_use]
+    pub fn is_pending(interrupt: Interrupt) -> bool {
         let pending = register::mip::read();
         (pending & (1 << interrupt as usize)) != 0
     }
 
     #[must_use]
-    pub fn reg_pending() -> usize {
-        register::mip::read()
+    pub fn pending() -> Result<Interrupt, usize> {
+        let bit = register::mip::read();
+        if bit == 0 {
+            return Err(usize::MAX);
+        }
+        let pending = bit.ilog2();
+        if let Ok(interrupt) = Interrupt::try_from(pending as u8) {
+            return Ok(interrupt);
+        } else {
+            return Err(usize::MAX);
+        }
     }
 }
