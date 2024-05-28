@@ -47,12 +47,8 @@ dependencies = [
 [project.optional-dependencies]
 gateware = [
     "amaranth==0.4.1",
-    "amaranth-boards @ git+https://github.com/amaranth-lang/amaranth-boards.git@main",
-    "amaranth-stdio @ git+https://github.com/amaranth-lang/amaranth-stdio@4a14bb17",
     "luna-usb @ git+https://github.com/greatscottgadgets/luna@main",
     #"luna-usb~=0.1"
-]
-gateware-soc = [
     "luna-soc @ git+https://github.com/greatscottgadgets/luna-soc@main",
     #"luna-soc~=0.1"
 ]

@@ -7,7 +7,7 @@
 import os
 
 from amaranth.build import *
-from amaranth_boards.resources import *
+from ..vendor.amaranth_boards.resources import *
 
 from .core import CynthionPlatform
 

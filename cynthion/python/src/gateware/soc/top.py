@@ -11,10 +11,10 @@ import sys
 from amaranth                 import Cat, DomainRenamer, Elaboratable, Module, ResetSignal, Signal, Record
 from amaranth.build           import Attrs, Pins, PinsN, Resource, Subsignal
 from amaranth.hdl.rec         import Record
-from amaranth_stdio.serial    import AsyncSerial
 
 from luna_soc.gateware.vendor.lambdasoc.periph         import Peripheral
 from luna_soc.gateware.vendor.lambdasoc.periph.serial  import AsyncSerialPeripheral
+from luna_soc.gateware.vendor.amaranth_stdio.serial    import AsyncSerial
 
 from luna                            import configure_default_logging, top_level_cli
 from luna.gateware.platform          import NullPin
