@@ -1,17 +1,23 @@
 #![no_std]
 #![no_main]
 
+use core::fmt::Write;
+
 use panic_halt as _;
 use riscv_rt::entry;
 
 use lunasoc_hal as hal;
-use lunasoc_pac as pac;
+use moondancer_pac as pac;
 
 use hal::hal::delay::DelayUs;
-use hal::Timer;
 
-use core::fmt::Write;
-use hal::Serial;
+lunasoc_hal::impl_serial! {
+    Serial: pac::UART,
+}
+
+lunasoc_hal::impl_timer! {
+    Timer: pac::TIMER,
+}
 
 const SYSTEM_CLOCK_FREQUENCY: u32 = pac::clock::sysclk();
 

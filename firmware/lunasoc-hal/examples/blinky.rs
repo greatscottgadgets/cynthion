@@ -5,10 +5,13 @@ use panic_halt as _;
 use riscv_rt::entry;
 
 use lunasoc_hal as hal;
-use lunasoc_pac as pac;
+use moondancer_pac as pac;
 
 use hal::hal::delay::DelayUs;
-use hal::Timer;
+
+lunasoc_hal::impl_timer! {
+    Timer: pac::TIMER,
+}
 
 #[entry]
 fn main() -> ! {

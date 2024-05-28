@@ -8,22 +8,19 @@ pub mod debug;
 pub mod error;
 pub mod event;
 pub mod gcp;
+pub mod hal;
 pub mod log;
 pub mod macros;
 pub mod panic_log;
 pub mod usb;
 pub mod util;
 
-// - aliases ------------------------------------------------------------------
-
-pub use lunasoc_hal as hal;
-pub use lunasoc_pac as pac;
-
 // - re-exports ---------------------------------------------------------------
 
 pub use error::FirmwareError;
 pub use libgreat::error::GreatResult;
 pub use libgreat::firmware::BoardInformation;
+pub use moondancer_pac as pac;
 
 // - constants ----------------------------------------------------------------
 

@@ -1,6 +1,6 @@
 [package]
 name = "moondancer"
-version = "0.0.1"
+version = "0.0.0"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
 description = "Moondancer firmware for the Great Scott Gadgets Cynthion USB Test Instrument"
@@ -29,28 +29,19 @@ targets = [
 
 [features]
 default = [
-    #"minerva",
     "vexriscv",
     "vexriscv_dcache",
-
-    #"nightly",
-
-    #"chonky_events",
-    #"ladybug",
 ]
-
-# pack rx packet buffers into event queue
-chonky_events = ["smolusb/chonky_events"]
 
 # support for using a logic analyzer and the gpio ports for debugging
 ladybug = ["ladybug/enable"]
 
 # select softcore
 minerva = [
-    "lunasoc-pac/minerva",
+    "moondancer-pac/minerva",
 ]
 vexriscv = [
-    "lunasoc-pac/vexriscv",
+    "moondancer-pac/vexriscv",
 ]
 vexriscv_dcache = []
 
@@ -64,12 +55,11 @@ nightly = [
 # - dependencies --------------------------------------------------------------
 
 [dependencies]
-cynthion = { path = "../../cynthion/rust" }
-ladybug = { path = "../ladybug" }
-libgreat = { path = "../libgreat-rs", features = ["errno_minimal"] }
-lunasoc-pac = { path = "../lunasoc-pac", default-features = false, features = ["critical-section"]}
-lunasoc-hal = { path = "../lunasoc-hal", default-features = false, features = ["usb"]}
-smolusb = { path = "../smolusb", default-features = false}
+cynthion = { version = "0.0", path = "../../cynthion/rust" }
+ladybug = { version = "0.0", path = "../ladybug" }
+libgreat = { version = "0.0", path = "../libgreat", features = ["errno_minimal"] }
+lunasoc-hal = { version = "0.0", path = "../lunasoc-hal", default-features = false, features = ["usb"]}
+moondancer-pac = { version = "0.0", path = "../moondancer-pac", default-features = false, features = ["critical-section"]}
 
 riscv = { version = "=0.10.1", features = ["critical-section-single-hart"] }
 riscv-rt = { version = "=0.11.0" }

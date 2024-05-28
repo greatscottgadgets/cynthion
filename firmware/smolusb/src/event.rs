@@ -7,28 +7,28 @@ pub enum UsbEvent {
     /// Received a USB bus reset
     BusReset = 10,
 
-    /// Received a setup packet on USBx_EP_CONTROL
+    /// Received a setup packet on `USBx_EP_CONTROL`
     ///
-    /// Contents is (endpoint_number)
+    /// Contents is (`endpoint_number`)
     ReceiveControl(u8) = 11,
 
-    /// Received a data packet on USBx_EP_OUT
+    /// Received a data packet on `USBx_EP_OUT`
     ///
-    /// Contents is (endpoint_number)
+    /// Contents is (`endpoint_number`)
     ReceivePacket(u8) = 12,
 
-    /// Send is complete on USBx_EP_IN
+    /// Send is complete on `USBx_EP_IN`
     ///
-    /// Contents is (endpoint_number)
+    /// Contents is (`endpoint_number`)
     SendComplete(u8) = 13,
 
-    /// Received a setup packet on USBx_EP_CONTROL
+    /// Received a setup packet on `USBx_EP_CONTROL`
     ///
     /// An alternate version of `ReceiveControl` that can be used
     /// when the setup packet is read inside the interrupt handler
     /// for lower latency.
     ///
-    /// Contents is (endpoint_number, setup_packet)
+    /// Contents is (`endpoint_number`, `setup_packet`)
     ReceiveSetupPacket(u8, SetupPacket) = 201,
 
     #[cfg(feature = "chonky_events")]
@@ -38,7 +38,7 @@ pub enum UsbEvent {
     /// when the packet is read inside the interrupt handler
     /// for lower latency.
     ///
-    /// Contents is (endpoint_number, bytes_read, packet_buffer)
+    /// Contents is (`endpoint_number`, `bytes_read`, `packet_buffer`)
     ReceiveBuffer(u8, usize, [u8; crate::EP_MAX_PACKET_SIZE]) = 202,
 }
 

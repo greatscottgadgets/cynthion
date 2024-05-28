@@ -1,3 +1,3 @@
-# SmolUSB
+# smolusb
 
-A lightweight library for implementing USB on embedded systems.
+An experimental lightweight library for implementing USB on embedded systems.

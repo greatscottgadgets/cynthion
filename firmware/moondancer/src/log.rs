@@ -1,6 +1,6 @@
 //! A simple logger for Cynthion's serial ports.
 
-use core::fmt::Write as _;
+use core::fmt::Write;
 use core::ptr::addr_of_mut;
 
 use log::{Level, LevelFilter, Metadata, Record};

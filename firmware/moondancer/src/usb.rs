@@ -1,3 +1,5 @@
+use crate::hal::smolusb;
+
 use smolusb::descriptor::{
     ConfigurationDescriptor, ConfigurationDescriptorHeader, DescriptorType, DeviceDescriptor,
     DeviceQualifierDescriptor, EndpointDescriptor, InterfaceDescriptor, InterfaceDescriptorHeader,

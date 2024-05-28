@@ -36,11 +36,11 @@ CLIPPY_DISABLE=-Aclippy::enum_glob_use \
 			   -Aclippy::single_match_else \
 			   -Aclippy::cast_possible_truncation \
 			   -Aclippy::inline_always \
-			   -Aclippy::multiple_crate_versions
+			   -Aclippy::multiple_crate_versions \
+			   -Aclippy::new-without-default
 
 clippy:
 	cargo clippy --target riscv32imac-unknown-none-elf -- -Dwarnings $(CLIPPY_GROUPS) $(CLIPPY_DISABLE)
-
 
 doc:
 	cargo doc --no-deps --document-private-items

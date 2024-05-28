@@ -1,9 +1,9 @@
 [workspace]
 members = [
     "ladybug",
-    "libgreat-rs",
+    "libgreat",
     "lunasoc-hal",
-    "lunasoc-pac",
+    "moondancer-pac",
     "moondancer",
     "smolusb",
 ]

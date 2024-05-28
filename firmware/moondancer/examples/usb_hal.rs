@@ -6,6 +6,7 @@ use log::{debug, error, info};
 
 use libgreat::GreatResult;
 
+use crate::hal::smolusb;
 use smolusb::control::Control;
 use smolusb::descriptor::{
     ConfigurationDescriptor, ConfigurationDescriptorHeader, DescriptorType, DeviceDescriptor,
@@ -24,7 +25,7 @@ use moondancer::{hal, pac};
 
 // - configuration ------------------------------------------------------------
 
-const DEVICE_SPEED: Speed = Speed::Full;
+const DEVICE_SPEED: Speed = Speed::High;
 
 const VENDOR_REQUEST: u8 = 0x65;
 const VENDOR_CONTROL_OUT: u16 = 0x0001;
@@ -61,81 +62,74 @@ extern "C" fn MachineExternal() {
 
     let usb0 = unsafe { hal::Usb0::summon() };
 
-    // - usb0 interrupts - "target_phy" --
+    let pending = match pac::csr::interrupt::pending() {
+        Ok(interrupt) => interrupt,
+        Err(pending) => {
+            dispatch_event(InterruptEvent::UnknownInterrupt(pending));
+            return;
+        }
+    };
 
-    // USB0 BusReset
-    if usb0.is_pending(pac::Interrupt::USB0) {
-        // handle bus reset in interrupt handler for lowest latency
-        usb0.bus_reset();
-        dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
+    match pending {
+        // - usb0 interrupts - "target_phy" --
 
-        usb0.clear_pending(pac::Interrupt::USB0);
+        // USB0 BusReset
+        pac::Interrupt::USB0 => {
+            usb0.controller
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
 
-    // USB0_EP_CONTROL ReceiveControl
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_CONTROL) {
-        let endpoint = usb0.ep_control.epno().read().bits() as u8;
-        let mut buffer = [0_u8; 8];
-        let _bytes_read = usb0.read_control(&mut buffer);
-        let setup_packet = SetupPacket::from(buffer);
-        dispatch_event(InterruptEvent::Usb(
-            Target,
-            UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
-        ));
+            // handle bus reset in interrupt handler for lowest latency
+            usb0.bus_reset();
+            dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
+        }
+        // USB0_EP_CONTROL ReceiveControl
+        pac::Interrupt::USB0_EP_CONTROL => {
+            usb0.ep_control
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
 
-        usb0.clear_pending(pac::Interrupt::USB0_EP_CONTROL);
+            let endpoint = usb0.ep_control.epno().read().bits() as u8;
+            let mut buffer = [0_u8; 8];
+            let _bytes_read = usb0.read_control(&mut buffer);
+            let setup_packet = SetupPacket::from(buffer);
+            dispatch_event(InterruptEvent::Usb(
+                Target,
+                UsbEvent::ReceiveSetupPacket(endpoint, setup_packet),
+            ));
+        }
+        // USB0_EP_IN SendComplete
+        pac::Interrupt::USB0_EP_IN => {
+            usb0.ep_in
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
 
-    // USB0_EP_OUT ReceivePacket
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_OUT) {
-        let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
+            // TODO something a little safer would be nice
+            let endpoint = usb0.ep_in.epno().read().bits() as u8;
+            unsafe {
+                usb0.clear_tx_ack_active(endpoint);
+            }
 
-        #[cfg(not(feature = "chonky_events"))]
-        {
+            dispatch_event(InterruptEvent::Usb(
+                Target,
+                UsbEvent::SendComplete(endpoint),
+            ));
+        }
+        // USB0_EP_OUT ReceivePacket
+        pac::Interrupt::USB0_EP_OUT => {
+            usb0.ep_out
+                .ev_pending()
+                .modify(|r, w| w.pending().bit(r.pending().bit()));
+
+            let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
             dispatch_event(InterruptEvent::Usb(
                 Target,
                 UsbEvent::ReceivePacket(endpoint),
             ));
         }
 
-        #[cfg(feature = "chonky_events")]
-        {
-            // #1 empty fifo into a receive buffer
-            let mut packet_buffer: [u8; smolusb::EP_MAX_PACKET_SIZE] =
-                [0; smolusb::EP_MAX_PACKET_SIZE];
-            let bytes_read = usb0.read(endpoint, &mut packet_buffer);
-
-            // #2 dispatch receive buffer to the main loop
-            dispatch_event(InterruptEvent::Usb(
-                Target,
-                UsbEvent::ReceiveBuffer(endpoint, bytes_read, packet_buffer),
-            ));
-
-            // #3 tell eptri we're ready to receive another packet
-            //usb0.ep_out_prime_receive(endpoint);
-        }
-
-        // #4 tell the cpu we're ready for another rx interrupt
-        usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
-
-    // USB0_EP_IN SendComplete
-    } else if usb0.is_pending(pac::Interrupt::USB0_EP_IN) {
-        let endpoint = usb0.ep_in.epno().read().bits() as u8;
-
-        // TODO something a little safer would be nice
-        unsafe {
-            usb0.clear_tx_ack_active(endpoint);
-        }
-
-        dispatch_event(InterruptEvent::Usb(
-            Target,
-            UsbEvent::SendComplete(endpoint),
-        ));
-
-        usb0.clear_pending(pac::Interrupt::USB0_EP_IN);
-
-    // - Unknown Interrupt --
-    } else {
-        let pending = pac::csr::interrupt::reg_pending();
-        dispatch_event(InterruptEvent::UnknownInterrupt(pending));
+        // - Unhandled Interrupt --
+        _ => dispatch_event(InterruptEvent::UnhandledInterrupt(pending)),
     }
 }
 
@@ -211,7 +205,7 @@ fn main_loop() -> GreatResult<()> {
         pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_CONTROL);
         pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_IN);
         pac::csr::interrupt::enable(pac::Interrupt::USB0_EP_OUT);
-        usb0.enable_interrupts();
+        usb0.enable_events();
     }
 
     // prime the usb Bulk OUT endpoint(s) we'll be using
@@ -227,20 +221,6 @@ fn main_loop() -> GreatResult<()> {
         if let Some(event) = EVENT_QUEUE.dequeue() {
             // Usb0 received a control event
             match event {
-                #[cfg(feature = "chonky_events")]
-                Usb(
-                    Target,
-                    event @ (BusReset
-                    | ReceiveSetupPacket(0, _)
-                    | ReceiveBuffer(0, _, _)
-                    | SendComplete(0)),
-                ) => {
-                    if let Some((setup_packet, rx_buffer)) = control.dispatch_event(&usb0, event) {
-                        // vendor requests are not handled by control
-                        handle_vendor_request(&usb0, setup_packet, rx_buffer);
-                    }
-                }
-                #[cfg(not(feature = "chonky_events"))]
                 Usb(
                     Target,
                     event @ (BusReset

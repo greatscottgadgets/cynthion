@@ -156,7 +156,7 @@ pub enum Speed {
     Full = 1,
     /// Low speed (1.5 Mbps)
     Low = 2,
-    /// Super Speed (5/10 Gbps - includes SuperSpeed+)
+    /// Super Speed (5/10 Gbps - includes `SuperSpeed+`)
     Super = 3,
     /// unsupported: compatibility fallback
     SuperPlus = 4,

@@ -1,22 +1,30 @@
 #![no_std]
 #![no_main]
 
+use core::fmt::Write;
+
 use panic_halt as _;
 use riscv_rt::entry;
 
 use lunasoc_hal as hal;
-use lunasoc_pac as pac;
+use moondancer_pac as pac;
 
-use core::fmt::Write;
+lunasoc_hal::impl_serial! {
+    Serial: pac::UART,
+}
+
+lunasoc_hal::impl_timer! {
+    Timer: pac::TIMER,
+}
 
 #[entry]
 fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
-    let mut serial = hal::Serial::new(peripherals.UART);
+    let mut serial = Serial::new(peripherals.UART);
 
     // configure and enable timer
     let one_second = pac::clock::sysclk();
-    let mut timer = hal::Timer::new(peripherals.TIMER, one_second);
+    let mut timer = Timer::new(peripherals.TIMER, one_second);
     timer.set_timeout_ticks(one_second / 2);
     timer.enable();
 
@@ -54,10 +62,10 @@ fn main() -> ! {
 fn MachineExternal() {
     static mut TOGGLE: bool = true;
 
-    let mut serial = unsafe { hal::Serial::summon() };
+    let mut serial = unsafe { Serial::summon() };
 
-    if pac::csr::interrupt::pending(pac::Interrupt::TIMER) {
-        let timer = unsafe { hal::Timer::summon() };
+    if pac::csr::interrupt::is_pending(pac::Interrupt::TIMER) {
+        let timer = unsafe { Timer::summon() };
         timer.clear_pending();
 
         writeln!(serial, "MachineExternal - timer interrupt").unwrap();

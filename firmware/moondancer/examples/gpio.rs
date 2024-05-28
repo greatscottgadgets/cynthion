@@ -18,7 +18,7 @@ extern "C" fn MachineExternal() {
     let peripherals = unsafe { pac::Peripherals::steal() };
     let gpioa = &peripherals.GPIOA;
 
-    if pac::csr::interrupt::pending(pac::Interrupt::GPIOA) {
+    if pac::csr::interrupt::is_pending(pac::Interrupt::GPIOA) {
         let pending = gpioa.ev_pending().read().pending().bit();
         gpioa.ev_pending().write(|w| w.pending().bit(pending));
 

@@ -10,7 +10,7 @@ cynthion/rust/**/target/
 firmware/**/target/
 **/Cargo.lock
 **/*.rs.bk
-firmware/lunasoc-pac/build/
+firmware/moondancer-pac/build/
 
 # Scala
 .metals/

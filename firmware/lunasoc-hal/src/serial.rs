@@ -4,23 +4,23 @@ pub use crate::hal::serial::ErrorKind as Error;
 #[macro_export]
 macro_rules! impl_serial {
     ($(
-        $SERIALX:ident: $UARTX:ident,
+        $SERIALX:ident: $PACUARTX:ty,
     )+) => {
         $(
             #[derive(Debug)]
             pub struct $SERIALX {
-                registers: $crate::pac::$UARTX,
+                registers: $PACUARTX,
             }
 
             // lifecycle
             impl $SERIALX {
                 /// Create a new `Serial` from the [`UART`](crate::pac::UART) peripheral.
-                pub fn new(registers: $crate::pac::$UARTX) -> Self {
+                pub fn new(registers: $PACUARTX) -> Self {
                     Self { registers }
                 }
 
                 /// Release the [`Uart`](crate::pac::UART) peripheral and consume self.
-                pub fn free(self) -> $crate::pac::$UARTX {
+                pub fn free(self) -> $PACUARTX {
                     self.registers
                 }
 
@@ -31,14 +31,14 @@ macro_rules! impl_serial {
                 /// 'Tis thine responsibility, that which thou doth summon.
                 pub unsafe fn summon() -> Self {
                     Self {
-                        registers: $crate::pac::Peripherals::steal().$UARTX,
+                        registers: <$PACUARTX>::steal(),
                     }
                 }
             }
 
             // trait: From
-            impl From<$crate::pac::$UARTX> for $SERIALX {
-                fn from(registers: $crate::pac::$UARTX) -> $SERIALX {
+            impl From<$PACUARTX> for $SERIALX {
+                fn from(registers: $PACUARTX) -> $SERIALX {
                     $SERIALX::new(registers)
                 }
             }
@@ -52,92 +52,78 @@ macro_rules! impl_serial {
                 }
             }
 
-            #[allow(non_snake_case)]
-            mod $UARTX {
-                use super::$SERIALX;
+            // - embedded_hal 1.0 traits --------------------------------------
 
-                // embedded_hal 1.0 traits
-                mod embedded_hal_1 {
-                    use super::$SERIALX;
+            // trait: hal::serial::ErrorType
+            impl $crate::hal::serial::ErrorType for $SERIALX {
+                type Error = $crate::serial::Error;
+            }
 
-                    // trait: hal::serial::ErrorType
-                    impl $crate::hal::serial::ErrorType for $SERIALX {
-                        type Error = $crate::serial::Error;
+            // trait: hal::serial::Write
+            impl $crate::hal::serial::Write<u8> for $SERIALX {
+                fn write(&mut self, buffer: &[u8]) -> Result<(), Self::Error> {
+                    for &byte in buffer {
+                        $crate::nb::block!(
+                            <$SERIALX as $crate::hal_nb::serial::Write<u8>>::write(self, byte)
+                        )?;
                     }
-
-                    // trait: hal::serial::Write
-                    impl $crate::hal::serial::Write<u8> for $SERIALX {
-                        fn write(&mut self, buffer: &[u8]) -> Result<(), Self::Error> {
-                            for &byte in buffer {
-                                $crate::nb::block!(
-                                    <$SERIALX as $crate::hal_nb::serial::Write<u8>>::write(self, byte)
-                                )?;
-                            }
-                            Ok(())
-                        }
-
-                        fn flush(&mut self) -> Result<(), Self::Error> {
-                            $crate::nb::block!(
-                                <$SERIALX as $crate::hal_nb::serial::Write<u8>>::flush(self)
-                            )
-                        }
-                    }
-
-                    // trait: hal_nb::serial::Write
-                    impl $crate::hal_nb::serial::Write<u8> for $SERIALX {
-                        fn write(&mut self, byte: u8) -> $crate::nb::Result<(), Self::Error> {
-                            if self.registers.tx_rdy().read().tx_rdy().bit() {
-                                self.registers.tx_data().write(|w| unsafe { w.tx_data().bits(byte.into()) });
-                                Ok(())
-                            } else {
-                                Err($crate::nb::Error::WouldBlock)
-                            }
-                        }
-
-                        fn flush(&mut self) -> $crate::nb::Result<(), Self::Error> {
-                            if self.registers.tx_rdy().read().tx_rdy().bit() {
-                                Ok(())
-                            } else {
-                                Err($crate::nb::Error::WouldBlock)
-                            }
-                        }
-                    }
+                    Ok(())
                 }
 
-                // embedded_hal 0.x traits
-                mod embedded_hal_0 {
-                    use super::$SERIALX;
-
-                    // trait: hal::serial::Write
-                    impl $crate::hal_0::serial::Write<u8> for $SERIALX {
-                        type Error = $crate::serial::Error;
-
-                        fn write(&mut self, byte: u8) -> $crate::nb::Result<(), Self::Error> {
-                            if self.registers.tx_rdy().read().tx_rdy().bit() {
-                                self.registers.tx_data().write(|w| unsafe { w.tx_data().bits(byte.into()) });
-                                Ok(())
-                            } else {
-                                Err($crate::nb::Error::WouldBlock)
-                            }
-                        }
-                        fn flush(&mut self) -> $crate::nb::Result<(), Self::Error> {
-                            if self.registers.tx_rdy().read().tx_rdy().bit() {
-                                Ok(())
-                            } else {
-                                Err($crate::nb::Error::WouldBlock)
-                            }
-                        }
-                    }
-
-                    // trait: hal::blocking::serial::write::Default
-                    impl $crate::hal_0::blocking::serial::write::Default<u8> for $SERIALX {}
+                fn flush(&mut self) -> Result<(), Self::Error> {
+                    $crate::nb::block!(
+                        <$SERIALX as $crate::hal_nb::serial::Write<u8>>::flush(self)
+                    )
                 }
             }
+
+            // trait: hal_nb::serial::Write
+            impl $crate::hal_nb::serial::Write<u8> for $SERIALX {
+                fn write(&mut self, byte: u8) -> $crate::nb::Result<(), Self::Error> {
+                    if self.registers.tx_rdy().read().tx_rdy().bit() {
+                        self.registers.tx_data().write(|w| unsafe { w.tx_data().bits(byte.into()) });
+                        Ok(())
+                    } else {
+                        Err($crate::nb::Error::WouldBlock)
+                    }
+                }
+
+                fn flush(&mut self) -> $crate::nb::Result<(), Self::Error> {
+                    if self.registers.tx_rdy().read().tx_rdy().bit() {
+                        Ok(())
+                    } else {
+                        Err($crate::nb::Error::WouldBlock)
+                    }
+                }
+            }
+
+
+            // - embedded_hal 0.x traits --------------------------------------
+
+            // trait: hal::serial::Write
+            impl $crate::hal_0::serial::Write<u8> for $SERIALX {
+                type Error = $crate::serial::Error;
+
+                fn write(&mut self, byte: u8) -> $crate::nb::Result<(), Self::Error> {
+                    if self.registers.tx_rdy().read().tx_rdy().bit() {
+                        self.registers.tx_data().write(|w| unsafe { w.tx_data().bits(byte.into()) });
+                        Ok(())
+                    } else {
+                        Err($crate::nb::Error::WouldBlock)
+                    }
+                }
+                fn flush(&mut self) -> $crate::nb::Result<(), Self::Error> {
+                    if self.registers.tx_rdy().read().tx_rdy().bit() {
+                        Ok(())
+                    } else {
+                        Err($crate::nb::Error::WouldBlock)
+                    }
+                }
+            }
+
+            // trait: hal::blocking::serial::write::Default
+            impl $crate::hal_0::blocking::serial::write::Default<u8> for $SERIALX {}
+
         )+
     }
-}
-
-impl_serial! {
-    Serial0: UART,
-    Serial1: UART1,
 }

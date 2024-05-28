@@ -13,7 +13,7 @@ use riscv_rt::entry;
 extern "C" fn MachineExternal() {
     static mut TOGGLE: bool = true;
 
-    if pac::csr::interrupt::pending(pac::Interrupt::TIMER) {
+    if pac::csr::interrupt::is_pending(pac::Interrupt::TIMER) {
         let timer = unsafe { hal::Timer0::summon() };
         timer.clear_pending();
 

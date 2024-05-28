@@ -12,6 +12,7 @@ import usb1
 from luna import configure_default_logging
 
 from pygreat.comms_backends.usb1 import USB1CommsBackend as backend
+from pygreat.errors              import DeviceNotFoundError
 
 import cynthion
 

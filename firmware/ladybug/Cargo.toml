@@ -1,6 +1,6 @@
 [package]
 name = "ladybug"
-version = "0.0.1"
+version = "0.0.0"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
 description = "A small library for triggering a logic analyzer from program events"

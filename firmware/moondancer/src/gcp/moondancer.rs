@@ -18,7 +18,8 @@ use libgreat::gcp::{
     self, iter_to_response, GreatDispatch, GreatResponse, Verb, LIBGREAT_MAX_COMMAND_SIZE,
 };
 
-use ladybug::{Bit, Channel};
+use crate::debug::Bit;
+use ladybug::Channel;
 
 // - types --------------------------------------------------------------------
 
@@ -176,12 +177,6 @@ impl Moondancer {
                 // no-op, just pass it on through
                 event
             }
-
-            #[cfg(feature = "chonky_events")]
-            UsbEvent::ReceiveBuffer(_, _, _) => {
-                // no-op, just pass it on through
-                event
-            }
         };
 
         // enqueue interrupt event
@@ -211,7 +206,7 @@ impl Moondancer {
         interrupt::enable(pac::Interrupt::USB0_EP_OUT);
 
         // enable all usb events
-        self.usb0.enable_interrupts();
+        self.usb0.enable_events();
     }
 
     /// Disable USB events and CPU interrupts for the USB controller.
@@ -223,7 +218,7 @@ impl Moondancer {
     /// may be dropped when calling it.
     pub unsafe fn disable_usb_interrupts(&self) {
         // disable all usb events
-        self.usb0.disable_interrupts();
+        self.usb0.disable_events();
 
         interrupt::disable(pac::Interrupt::USB0);
         interrupt::disable(pac::Interrupt::USB0_EP_CONTROL);
