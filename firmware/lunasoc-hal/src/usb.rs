@@ -16,7 +16,7 @@ use pac::interrupt::Interrupt;*/
 /// Default timeout for USB operations
 pub const DEFAULT_TIMEOUT: usize = 1_000_000;
 
-/// Macro to generate smolusb hal wrappers for [`pac::USB0`] peripherals
+/// Macro to generate smolusb hal wrappers for `pac::USBx` peripherals
 ///
 /// For example:
 ///
@@ -271,7 +271,7 @@ macro_rules! impl_usb {
 
             #[allow(non_snake_case)]
             mod $IDX {
-                use smolusb::EP_MAX_ENDPOINTS;
+                use lunasoc_hal::smolusb::EP_MAX_ENDPOINTS;
 
                 #[cfg(target_has_atomic)]
                 #[allow(clippy::declare_interior_mutable_const)]

@@ -17,7 +17,6 @@ lunasoc_hal::impl_timer! {
     Timer: pac::TIMER,
 }
 
-
 #[entry]
 fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
