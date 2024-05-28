@@ -4,9 +4,9 @@
 use heapless::mpmc::MpMcQueue as Queue;
 use log::{debug, error, info, trace, warn};
 
+use crate::hal::smolusb;
 use smolusb::control::Control;
 use smolusb::device::{Descriptors, Speed};
-
 use smolusb::setup::{Direction, RequestType, SetupPacket};
 use smolusb::traits::{ReadEndpoint, UsbDriverOperations, WriteEndpoint};
 

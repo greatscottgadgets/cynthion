@@ -6,6 +6,7 @@ use log::{debug, error, info};
 
 use libgreat::GreatResult;
 
+use crate::hal::smolusb;
 use smolusb::control::Control;
 use smolusb::descriptor::{
     ConfigurationDescriptor, ConfigurationDescriptorHeader, DescriptorType, DeviceDescriptor,

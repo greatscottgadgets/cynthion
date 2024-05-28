@@ -1,6 +1,6 @@
-use smolusb::event::UsbEvent;
-
+use crate::hal::smolusb::event::UsbEvent;
 use crate::pac;
+
 use crate::UsbInterface;
 
 /// Interrupt events are used to notify the main loop of events

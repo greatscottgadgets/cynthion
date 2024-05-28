@@ -177,12 +177,6 @@ impl Moondancer {
                 // no-op, just pass it on through
                 event
             }
-
-            #[cfg(feature = "chonky_events")]
-            UsbEvent::ReceiveBuffer(_, _, _) => {
-                // no-op, just pass it on through
-                event
-            }
         };
 
         // enqueue interrupt event

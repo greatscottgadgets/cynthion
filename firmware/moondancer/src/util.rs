@@ -1,3 +1,4 @@
+use crate::hal::smolusb;
 use pac::csr::interrupt;
 
 use smolusb::event::UsbEvent;
@@ -209,7 +210,9 @@ pub mod UsbEventExt {
     //! Alternate implementation of some [`UsbEvent`](smolusb::event::UsbEvent) values that also
     //! contain their associated data.
 
+    use crate::hal::smolusb;
     use crate::UsbInterface;
+
     use smolusb::setup::SetupPacket;
 
     /// Received a setup packet on [`USB0_EP_CONTROL`](crate::pac::Interrupt::USB0_EP_CONTROL)

@@ -3,6 +3,7 @@
 
 use log::{debug, error, info};
 
+use crate::hal::smolusb;
 use smolusb::class::cdc;
 use smolusb::control::Control;
 use smolusb::descriptor::DescriptorType;
