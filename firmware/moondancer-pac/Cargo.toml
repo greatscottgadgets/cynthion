@@ -1,6 +1,6 @@
 [package]
 name = "moondancer-pac"
-version = "0.0.0"
+version = "0.0.1"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
 description = "A peripheral access crate for the Cynthion Moondancer SoC"
