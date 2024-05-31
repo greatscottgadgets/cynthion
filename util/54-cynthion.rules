@@ -1,13 +1,24 @@
-ATTR{idVendor}=="1d50", ATTR{idProduct}=="615c", SYMLINK+="apollo%k", MODE="660", GROUP="plugdev"
-ATTR{idVendor}=="1d50", ATTR{idProduct}=="615b", SYMLINK+="cynthion%k", MODE="660", GROUP="plugdev"
+# Configures Linux to allow access to Cynthion hardware for anyone logged into the physical terminal.
+#
+#     # install udev rules
+#     sudo cp 54-cynthion.rules /etc/udev/rules.d
+#
+#     # reload udev rules
+#     sudo udevadm control --reload
+#
+#     # apply udev rules to any devices that are already plugged in
+#     sudo udevadm trigger
+
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="615c", SYMLINK+="apollo%k", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="615b", SYMLINK+="cynthion%k", TAG+="uaccess"
 
 # legacy revisions
-ATTR{idVendor}=="16d0", ATTR{idProduct}=="05a5", SYMLINK+="cynthion%k", MODE="660", GROUP="plugdev"
-ATTR{idVendor}=="16d0", ATTR{idProduct}=="0f3b", SYMLINK+="cynthiontarget%k", MODE="660", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTR{idVendor}=="16d0", ATTR{idProduct}=="05a5", SYMLINK+="cynthion%k", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="16d0", ATTR{idProduct}=="0f3b", SYMLINK+="cynthiontarget%k", TAG+="uaccess"
 
 # pid.codes test id's
-ATTR{idVendor}=="1209", ATTR{idProduct}=="0001", SYMLINK+="cynthion-test1-%k", MODE="660", GROUP="plugdev"
-ATTR{idVendor}=="1209", ATTR{idProduct}=="0002", SYMLINK+="cynthion-test2-%k", MODE="660", GROUP="plugdev"
-ATTR{idVendor}=="1209", ATTR{idProduct}=="0003", SYMLINK+="cynthion-test3-%k", MODE="660", GROUP="plugdev"
-ATTR{idVendor}=="1209", ATTR{idProduct}=="0004", SYMLINK+="cynthion-test4-%k", MODE="660", GROUP="plugdev"
-ATTR{idVendor}=="1209", ATTR{idProduct}=="0005", SYMLINK+="cynthion-test5-%k", MODE="660", GROUP="plugdev"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1209", ATTR{idProduct}=="0001", SYMLINK+="cynthion-test1-%k", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1209", ATTR{idProduct}=="0002", SYMLINK+="cynthion-test2-%k", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1209", ATTR{idProduct}=="0003", SYMLINK+="cynthion-test3-%k", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1209", ATTR{idProduct}=="0004", SYMLINK+="cynthion-test4-%k", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="1209", ATTR{idProduct}=="0005", SYMLINK+="cynthion-test5-%k", TAG+="uaccess"
