@@ -8,8 +8,7 @@ use smolusb::descriptor::{
 
 // - constants ----------------------------------------------------------------
 
-pub const DEVICE_VERSION_NUMBER: u16 = 0x0004; // Cynthion r0.4 TODO read from?
-pub const DEVICE_SERIAL_STRING: &str = "r0.4"; // TODO read from?
+pub const DEVICE_SERIAL_STRING: &str = "moondancer"; // TODO read flash uid
 
 // - vendor request -----------------------------------------------------------
 
@@ -76,7 +75,6 @@ pub static DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     bMaxPacketSize: 64,
     idVendor: cynthion::shared::usb::bVendorId::cynthion,
     idProduct: cynthion::shared::usb::bProductId::cynthion,
-    bcdDevice: DEVICE_VERSION_NUMBER,
     iManufacturer: 1,
     iProduct: 2,
     iSerialNumber: 3,

@@ -119,13 +119,20 @@ impl<'a> Firmware<'a> {
         //let advertiser = peripherals.ADVERTISER;
         //advertiser.enable().write(|w| w.enable().bit(true));
 
+        // get Cynthion hardware revision information from the SoC
+        let info = &peripherals.INFO;
+        let board_major = info.version_major().read().bits() as u8;
+        let board_minor = info.version_minor().read().bits() as u8;
+
         // initialize logging
         moondancer::log::set_port(moondancer::log::Port::Both);
         moondancer::log::init();
         info!(
-            "{} {}",
+            "{} {} r{}.{}",
             cynthion::shared::usb::bManufacturerString::cynthion,
             cynthion::shared::usb::bProductString::cynthion,
+            board_major,
+            board_minor,
         );
         info!("Logging initialized");
 
@@ -148,11 +155,17 @@ impl<'a> Firmware<'a> {
             peripherals.USB0_EP_OUT,
         );
 
+        // format bcdDevice
+        let bcd_device: u16 = u16::from_be_bytes([board_major, board_minor]);
+
         let usb1_control = Control::<_, LIBGREAT_MAX_COMMAND_SIZE>::new(
             0,
             Descriptors {
                 device_speed: DEVICE_SPEED,
-                device_descriptor: moondancer::usb::DEVICE_DESCRIPTOR,
+                device_descriptor: smolusb::descriptor::DeviceDescriptor {
+                    bcdDevice: bcd_device,
+                    ..moondancer::usb::DEVICE_DESCRIPTOR
+                },
                 configuration_descriptor: moondancer::usb::CONFIGURATION_DESCRIPTOR_0,
                 other_speed_configuration_descriptor: Some(
                     moondancer::usb::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0,

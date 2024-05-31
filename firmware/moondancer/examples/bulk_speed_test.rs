@@ -494,7 +494,6 @@ static USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
     bMaxPacketSize: 64,
     idVendor: cynthion::shared::usb::bVendorId::example,
     idProduct: cynthion::shared::usb::bProductId::example,
-    bcdDevice: moondancer::usb::DEVICE_VERSION_NUMBER,
     iManufacturer: 1,
     iProduct: 2,
     iSerialNumber: 3,
