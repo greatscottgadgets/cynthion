@@ -2981,6 +2981,52 @@
         </register>
       </registers>
     </peripheral>
+    <peripheral>
+      <name>INFO</name>
+      <groupName>INFO</groupName>
+      <baseAddress>0xf0007100</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x08</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>version_major</name>
+          <description>info version_major register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>version_major</name>
+              <description>
+            Contains the Cynthion hardware major revision number.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>version_minor</name>
+          <description>info version_minor register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>version_minor</name>
+              <description>
+            Contains the Cynthion hardware minor revision number.
+        </description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
   </peripherals>
   <vendorExtensions>
     <memoryRegions>
