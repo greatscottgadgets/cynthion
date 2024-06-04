@@ -168,8 +168,19 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                 .ev_pending()
                 .modify(|r, w| w.pending().bit(r.pending().bit()));
 
+            // read setup packet in interrupt handler for lowest latency
             let endpoint_number = usb2.ep_control.epno().read().bits() as u8;
-            InterruptEvent::Usb(Control, UsbEvent::ReceiveControl(endpoint_number))
+            let mut setup_packet_buffer = [0_u8; 8];
+            let bytes_read = usb2.read_control(&mut setup_packet_buffer);
+            let setup_packet = SetupPacket::from(setup_packet_buffer);
+            if bytes_read == 0 {
+                InterruptEvent::ErrorMessage("ERROR USB1 received 0 bytes for setup packet")
+            } else {
+                InterruptEvent::Usb(
+                    Control,
+                    UsbEvent::ReceiveSetupPacket(endpoint_number, setup_packet),
+                )
+            }
         }
 
         // USB2_EP_IN SendComplete / NAK
@@ -177,8 +188,8 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
             usb2.ep_in
                 .ev_pending()
                 .modify(|r, w| w.pending().bit(r.pending().bit()));
-            let endpoint_number = usb2.ep_in.epno().read().bits() as u8;
 
+            let endpoint_number = usb2.ep_in.epno().read().bits() as u8;
             unsafe {
                 usb2.clear_tx_ack_active(endpoint_number);
             }

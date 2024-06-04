@@ -85,10 +85,10 @@ fn main() -> ! {
 struct Firmware<'a> {
     // peripherals
     leds: pac::LEDS,
-    usb1: hal::Usb1,
+    usb2: hal::Usb2,
 
-    // usb1 control endpoint
-    usb1_control: Control<'a, hal::Usb1, LIBGREAT_MAX_COMMAND_SIZE>,
+    // usb2 control endpoint
+    usb2_control: Control<'a, hal::Usb2, LIBGREAT_MAX_COMMAND_SIZE>,
 
     // state
     libgreat_response: Option<GreatResponse>,
@@ -115,9 +115,8 @@ impl<'a> Firmware<'a> {
         let classes = libgreat::gcp::Classes(&CLASSES);
 
         // enable ApolloAdvertiser to disconnect the Cynthion USB2 control port from Apollo
-        // TODO disable for now until we have a fallback strategy for r0.4
-        //let advertiser = peripherals.ADVERTISER;
-        //advertiser.enable().write(|w| w.enable().bit(true));
+        let advertiser = peripherals.ADVERTISER;
+        advertiser.enable().write(|w| w.enable().bit(true));
 
         // get Cynthion hardware revision information from the SoC
         let info = &peripherals.INFO;
@@ -139,12 +138,12 @@ impl<'a> Firmware<'a> {
         // initialize ladybug
         moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
-        // usb1: aux (host on r0.4)
-        let usb1 = hal::Usb1::new(
-            peripherals.USB1,
-            peripherals.USB1_EP_CONTROL,
-            peripherals.USB1_EP_IN,
-            peripherals.USB1_EP_OUT,
+        // usb2: control (host on r0.4)
+        let usb2 = hal::Usb2::new(
+            peripherals.USB2,
+            peripherals.USB2_EP_CONTROL,
+            peripherals.USB2_EP_IN,
+            peripherals.USB2_EP_OUT,
         );
 
         // usb0: target
@@ -158,7 +157,7 @@ impl<'a> Firmware<'a> {
         // format bcdDevice
         let bcd_device: u16 = u16::from_be_bytes([board_major, board_minor]);
 
-        let usb1_control = Control::<_, LIBGREAT_MAX_COMMAND_SIZE>::new(
+        let usb2_control = Control::<_, LIBGREAT_MAX_COMMAND_SIZE>::new(
             0,
             Descriptors {
                 device_speed: DEVICE_SPEED,
@@ -182,8 +181,8 @@ impl<'a> Firmware<'a> {
 
         Self {
             leds: peripherals.LEDS,
-            usb1,
-            usb1_control,
+            usb2,
+            usb2_control,
             libgreat_response: None,
             libgreat_response_last_error: None,
             core,
@@ -198,9 +197,9 @@ impl<'a> Firmware<'a> {
             .output()
             .write(|w| unsafe { w.output().bits(1 << 2) });
 
-        // connect usb1
-        self.usb1.connect(DEVICE_SPEED);
-        info!("Connected usb1 device");
+        // connect usb2
+        self.usb2.connect(DEVICE_SPEED);
+        info!("Connected usb2 device");
 
         // enable interrupts
         unsafe {
@@ -210,14 +209,14 @@ impl<'a> Firmware<'a> {
             // set mie register: machine external interrupts enable
             riscv::register::mie::set_mext();
 
-            // write csr: enable usb1 interrupts
-            interrupt::enable(pac::Interrupt::USB1);
-            interrupt::enable(pac::Interrupt::USB1_EP_CONTROL);
-            interrupt::enable(pac::Interrupt::USB1_EP_IN);
-            interrupt::enable(pac::Interrupt::USB1_EP_OUT);
+            // write csr: enable usb2 interrupts
+            interrupt::enable(pac::Interrupt::USB2);
+            interrupt::enable(pac::Interrupt::USB2_EP_CONTROL);
+            interrupt::enable(pac::Interrupt::USB2_EP_IN);
+            interrupt::enable(pac::Interrupt::USB2_EP_OUT);
 
-            // enable usb1 interrupt events
-            self.usb1.enable_events();
+            // enable usb2 interrupt events
+            self.usb2.enable_events();
         }
 
         Ok(())
@@ -250,7 +249,7 @@ impl<'a> Firmware<'a> {
             while let Some(interrupt_event) = EVENT_QUEUE.dequeue() {
                 use moondancer::{
                     event::InterruptEvent::*,
-                    UsbInterface::{Aux, Target},
+                    UsbInterface::{Control, Target},
                 };
                 use smolusb::event::UsbEvent::*;
 
@@ -268,20 +267,20 @@ impl<'a> Firmware<'a> {
                         error!("MachineExternal Error: {}", message);
                     }
 
-                    // - usb1 Aux event handlers --
+                    // - usb2 Control event handlers --
 
-                    // Usb1 received a control event
+                    // Usb2 received a control event
                     Usb(
-                        Aux,
+                        Control,
                         event @ (BusReset
                         | ReceiveControl(0)
                         | ReceiveSetupPacket(0, _)
                         | ReceivePacket(0)
                         | SendComplete(0)),
                     ) => {
-                        trace!("Usb(Aux, {:?})", event);
+                        trace!("Usb(Control, {:?})", event);
                         if let Some(setup_packet) =
-                            self.usb1_control.dispatch_event(&self.usb1, event)
+                            self.usb2_control.dispatch_event(&self.usb2, event)
                         {
                             // vendor requests are not handled by control
                             self.handle_vendor_request(setup_packet)?;
@@ -303,7 +302,7 @@ impl<'a> Firmware<'a> {
     }
 }
 
-// - usb1 control handler -----------------------------------------------------
+// - usb2 control handler -----------------------------------------------------
 
 impl<'a> Firmware<'a> {
     /// Handle GCP vendor requests
@@ -323,7 +322,7 @@ impl<'a> Firmware<'a> {
                 match (&vendor_value, &direction) {
                     // host is starting a new command sequence
                     (VendorValue::Execute, Direction::HostToDevice) => {
-                        trace!("  GOT COMMAND data:{:?}", self.usb1_control.data());
+                        trace!("  GOT COMMAND data:{:?}", self.usb2_control.data());
                         self.dispatch_libgreat_request()?;
                     }
 
@@ -345,8 +344,8 @@ impl<'a> Firmware<'a> {
                             direction, vendor_request, vendor_value
                         );
                         match direction {
-                            Direction::HostToDevice => self.usb1.stall_endpoint_out(0),
-                            Direction::DeviceToHost => self.usb1.stall_endpoint_in(0),
+                            Direction::HostToDevice => self.usb2.stall_endpoint_out(0),
+                            Direction::DeviceToHost => self.usb2.stall_endpoint_in(0),
                         }
                     }
                 }
@@ -357,8 +356,8 @@ impl<'a> Firmware<'a> {
                     vendor_request
                 );
                 match direction {
-                    Direction::HostToDevice => self.usb1.stall_endpoint_out(0),
-                    Direction::DeviceToHost => self.usb1.stall_endpoint_in(0),
+                    Direction::HostToDevice => self.usb2.stall_endpoint_out(0),
+                    Direction::DeviceToHost => self.usb2.stall_endpoint_in(0),
                 }
             }
             (RequestType::Vendor, _vendor_request) => {
@@ -370,7 +369,7 @@ impl<'a> Firmware<'a> {
 
                 // The greatfet board scan code expects the IN endpoint
                 // to be stalled if this is not a legacy device.
-                self.usb1.stall_endpoint_in(0);
+                self.usb2.stall_endpoint_in(0);
 
                 warn!("handle_vendor_request Legacy libgreat vendor request");
             }
@@ -380,8 +379,8 @@ impl<'a> Firmware<'a> {
                     setup_packet
                 );
                 match direction {
-                    Direction::HostToDevice => self.usb1.stall_endpoint_out(0),
-                    Direction::DeviceToHost => self.usb1.stall_endpoint_in(0),
+                    Direction::HostToDevice => self.usb2.stall_endpoint_out(0),
+                    Direction::DeviceToHost => self.usb2.stall_endpoint_in(0),
                 }
             }
         }
@@ -394,7 +393,7 @@ impl<'a> Firmware<'a> {
 
 impl<'a> Firmware<'a> {
     fn dispatch_libgreat_request(&mut self) -> GreatResult<()> {
-        let command_buffer = self.usb1_control.data();
+        let command_buffer = self.usb2_control.data();
 
         // parse command
         let (class_id, verb_number, arguments) = match libgreat::gcp::Command::parse(command_buffer)
@@ -451,11 +450,11 @@ impl<'a> Firmware<'a> {
                 self.libgreat_response_last_error = Some(e);
 
                 // TODO this is... weird...
-                self.usb1.stall_endpoint_in(0);
+                self.usb2.stall_endpoint_in(0);
                 unsafe {
                     riscv::asm::delay(2000);
                 }
-                self.usb1.ep_in.reset().write(|w| w.reset().bit(true));
+                self.usb2.ep_in.reset().write(|w| w.reset().bit(true));
             }
         }
 
@@ -466,28 +465,28 @@ impl<'a> Firmware<'a> {
         // do we have a response ready?
         if let Some(response) = &mut self.libgreat_response {
             // send response
-            self.usb1.write(0, response);
+            self.usb2.write(0, response);
 
             // clear cached response
             self.libgreat_response = None;
 
             // prime to receive host zlp - aka ep_out_prime_receive() TODO should control do this in send_complete?
-            self.usb1.ep_out_prime_receive(0);
+            self.usb2.ep_out_prime_receive(0);
         } else if let Some(error) = self.libgreat_response_last_error {
             warn!("dispatch_libgreat_response error result: {:?}", error);
 
             // prime to receive host zlp - TODO should control do this in send_complete?
-            self.usb1.ep_out_prime_receive(0);
+            self.usb2.ep_out_prime_receive(0);
 
             // write error
-            self.usb1.write(0, (error as u32).to_le_bytes().into_iter());
+            self.usb2.write(0, (error as u32).to_le_bytes().into_iter());
 
             // clear cached error
             self.libgreat_response_last_error = None;
         } else {
             // TODO figure out what to do if we don't have a response or error
             error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");
-            self.usb1.stall_endpoint_in(0);
+            self.usb2.stall_endpoint_in(0);
         }
 
         Ok(())
@@ -499,10 +498,10 @@ impl<'a> Firmware<'a> {
         // send an arbitrary error code if we're aborting mid-response
         if let Some(_response) = &self.libgreat_response {
             // prime to receive host zlp - TODO should control do this in send_complete?
-            self.usb1.ep_out_prime_receive(0);
+            self.usb2.ep_out_prime_receive(0);
 
             // TODO send last error code?
-            self.usb1.write(0, 0_u32.to_le_bytes().into_iter());
+            self.usb2.write(0, 0_u32.to_le_bytes().into_iter());
         }
 
         // cancel any queued response
