@@ -30,6 +30,7 @@ classifiers = [
 dynamic = ["version"]
 
 dependencies = [
+    "importlib_resources; python_version<'3.9'",
     "future",
     "libusb1",
     "prompt_toolkit",
