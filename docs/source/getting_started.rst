@@ -14,9 +14,9 @@ To use Cynthion you will need to ensure the following software is installed:
 Cynthion Host Software Installation
 -----------------------------------
 
-You can install the Cynthion host software from the `Python Package Index (PyPI) <https://pypi.org/project/cynthion/>`__ or :doc:`directly from source <developer/introduction>`.
+The Cynthion host software distribution can be obtained from the `Python Package Index (PyPI) <https://pypi.org/project/cynthion/>`__ or :doc:`directly from source <developer/introduction>`.
 
-To install the GreatFET host software from PyPI using the `pip <https://pypi.org/project/pip/>`__ tool:
+Using the `pip <https://pypi.org/project/pip/>`__ tool you can install the Cynthion host software by running:
 
 .. code-block :: sh
 
@@ -36,8 +36,11 @@ Configure your system to allow access to Cynthion for logged in users:
 
 .. code-block :: sh
 
+    # download udev rules
+    curl -O https://raw.githubusercontent.com/greatscottgadgets/cynthion/main/util/54-cynthion.rules
+
     # install udev rules
-    sudo cp util/54-cynthion.rules /etc/udev/rules.d
+    sudo cp 54-cynthion.rules /etc/udev/rules.d
 
     # reload udev rules
     sudo udevadm control --reload
@@ -77,3 +80,24 @@ If everything is working you will see the following output:
     Detected a Cynthion device!
         Hardware: Cynthion r1.4
         Serial number: <snip>
+
+
+
+Upgrading Cynthion Host Software
+--------------------------------
+
+To upgrade the Cynthion host software to the latest version run:
+
+.. code-block :: sh
+
+    pip install --upgrade cynthion
+
+
+Upgrading Cynthion Device Firmware
+----------------------------------
+
+To upgrade the Cynthion device firmware to the latest version run:
+
+.. code-block :: sh
+
+    cynthion firmware --autoflash
