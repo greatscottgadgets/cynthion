@@ -7,7 +7,7 @@ use log::{debug, error, info, trace, warn};
 use crate::hal::smolusb;
 use smolusb::control::Control;
 use smolusb::device::{Descriptors, Speed};
-use smolusb::setup::{Direction, RequestType, SetupPacket};
+use smolusb::setup::{Direction, Recipient, RequestType, SetupPacket};
 use smolusb::traits::{ReadEndpoint, UsbDriverOperations, WriteEndpoint};
 
 use libgreat::gcp::{GreatDispatch, GreatResponse, LIBGREAT_MAX_COMMAND_SIZE};
@@ -309,16 +309,29 @@ impl<'a> Firmware<'a> {
     fn handle_vendor_request(&mut self, setup_packet: SetupPacket) -> GreatResult<()> {
         let direction = setup_packet.direction();
         let request_type = setup_packet.request_type();
+        let recipient = setup_packet.recipient();
         let vendor_request = VendorRequest::from(setup_packet.request);
         let vendor_value = VendorValue::from(setup_packet.value);
 
         debug!(
-            "handle_vendor_request: {:?} {:?} {:?}",
-            vendor_request, vendor_value, direction
+            "handle_vendor_request: {:?} {:?} {:?} {:?} {:?}",
+            request_type, recipient, direction, vendor_request, vendor_value
         );
 
-        match (&request_type, &vendor_request) {
-            (RequestType::Vendor, VendorRequest::UsbCommandRequest) => {
+        match (&request_type, &recipient, &vendor_request) {
+            // handle apollo stub interface requests
+            (RequestType::Vendor, Recipient::Interface, VendorRequest::ApolloClaimInterface) => {
+                // send zlp
+                self.usb2.write(0, [].into_iter());
+
+                // allow apollo to claim Cynthion's control port
+                info!("Releasing Cynthion USB Control Port and activating Apollo");
+                let advertiser = unsafe { pac::ADVERTISER::steal() };
+                advertiser.enable().write(|w| w.enable().bit(false));
+            }
+
+            // handle moondancer control requests
+            (RequestType::Vendor, _, VendorRequest::UsbCommandRequest) => {
                 match (&vendor_value, &direction) {
                     // host is starting a new command sequence
                     (VendorValue::Execute, Direction::HostToDevice) => {
@@ -350,7 +363,7 @@ impl<'a> Firmware<'a> {
                     }
                 }
             }
-            (RequestType::Vendor, VendorRequest::Unknown(vendor_request)) => {
+            (RequestType::Vendor, _, VendorRequest::Unknown(vendor_request)) => {
                 error!(
                     "handle_vendor_request Unknown vendor request '{}'",
                     vendor_request
@@ -360,7 +373,7 @@ impl<'a> Firmware<'a> {
                     Direction::DeviceToHost => self.usb2.stall_endpoint_in(0),
                 }
             }
-            (RequestType::Vendor, _vendor_request) => {
+            (RequestType::Vendor, _, _vendor_request) => {
                 // TODO this is from one of the legacy boards which we
                 // need to support to get `greatfet info` to finish
                 // enumerating through the supported devices.
@@ -375,7 +388,7 @@ impl<'a> Firmware<'a> {
             }
             _ => {
                 error!(
-                    "handle_vendor_request Unknown control packet '{:?}'",
+                    "handle_vendor_request Unknown vendor request: '{:?}'",
                     setup_packet
                 );
                 match direction {

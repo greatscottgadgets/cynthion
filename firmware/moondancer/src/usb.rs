@@ -29,6 +29,9 @@ pub mod vendor {
         LegacyReset = 0x16,     // 22
         LegacyReadDmesg = 0x40, // 64
 
+        // apollo stub interface claim request
+        ApolloClaimInterface = 0xf0, // 240
+
         Unknown(u8),
     }
 
@@ -41,6 +44,7 @@ pub mod vendor {
                 0x16 => VendorRequest::LegacyReset,
                 0x40 => VendorRequest::LegacyReadDmesg,
                 0x65 => VendorRequest::UsbCommandRequest,
+                0xf0 => VendorRequest::ApolloClaimInterface,
                 _ => VendorRequest::Unknown(value),
             }
         }
@@ -101,46 +105,8 @@ pub static CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDe
         bMaxPower: 250,     // 250 * 2 mA = 500 mA ?
         ..ConfigurationDescriptorHeader::new()
     },
-    &[InterfaceDescriptor::new(
-        InterfaceDescriptorHeader {
-            iInterfaceNumber: 0,
-            bAlternateSetting: 0,
-            bInterfaceClass: 0xff, // Vendor-specific
-            bInterfaceSubClass: cynthion::shared::usb::bInterfaceSubClass::moondancer,
-            bInterfaceProtocol: cynthion::shared::usb::bInterfaceProtocol::moondancer,
-            iInterface: 5,
-            ..InterfaceDescriptorHeader::new()
-        },
-        &[
-            EndpointDescriptor {
-                bEndpointAddress: cynthion::shared::libgreat::endpoints::bulk_in_address, // IN
-                bmAttributes: 0x02,                                                       // Bulk
-                wMaxPacketSize: 512,
-                bInterval: 0,
-                ..EndpointDescriptor::new()
-            },
-            EndpointDescriptor {
-                bEndpointAddress: cynthion::shared::libgreat::endpoints::bulk_out_address, // OUT
-                bmAttributes: 0x02,                                                        // Bulk
-                wMaxPacketSize: 512,
-                bInterval: 0,
-                ..EndpointDescriptor::new()
-            },
-        ],
-    )],
-);
-
-pub static OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
-    ConfigurationDescriptor::new(
-        ConfigurationDescriptorHeader {
-            bDescriptorType: DescriptorType::OtherSpeedConfiguration as u8,
-            bConfigurationValue: 1,
-            iConfiguration: 7,
-            bmAttributes: 0x80, // 0b1000_0000 = bus-powered
-            bMaxPower: 250,     // 250 * 2 mA = 500 mA ?
-            ..ConfigurationDescriptorHeader::new()
-        },
-        &[InterfaceDescriptor::new(
+    &[
+        InterfaceDescriptor::new(
             InterfaceDescriptorHeader {
                 iInterfaceNumber: 0,
                 bAlternateSetting: 0,
@@ -154,33 +120,115 @@ pub static OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
                 EndpointDescriptor {
                     bEndpointAddress: cynthion::shared::libgreat::endpoints::bulk_in_address, // IN
                     bmAttributes: 0x02, // Bulk
-                    wMaxPacketSize: 64,
+                    wMaxPacketSize: 512,
                     bInterval: 0,
                     ..EndpointDescriptor::new()
                 },
                 EndpointDescriptor {
                     bEndpointAddress: cynthion::shared::libgreat::endpoints::bulk_out_address, // OUT
                     bmAttributes: 0x02, // Bulk
-                    wMaxPacketSize: 64,
+                    wMaxPacketSize: 512,
                     bInterval: 0,
                     ..EndpointDescriptor::new()
                 },
             ],
-        )],
+        ),
+        // Apollo stub interface
+        InterfaceDescriptor::new(
+            InterfaceDescriptorHeader {
+                iInterfaceNumber: 1,
+                bAlternateSetting: 0,
+                bInterfaceClass: 0xff, // Vendor-specific
+                bInterfaceSubClass: 0,
+                bInterfaceProtocol: 0,
+                iInterface: 6,
+                ..InterfaceDescriptorHeader::new()
+            },
+            &[],
+        ),
+    ],
+);
+
+pub static OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
+    ConfigurationDescriptor::new(
+        ConfigurationDescriptorHeader {
+            bDescriptorType: DescriptorType::OtherSpeedConfiguration as u8,
+            bConfigurationValue: 1,
+            iConfiguration: 7,
+            bmAttributes: 0x80, // 0b1000_0000 = bus-powered
+            bMaxPower: 250,     // 250 * 2 mA = 500 mA ?
+            ..ConfigurationDescriptorHeader::new()
+        },
+        &[
+            // Moondancer control interface
+            InterfaceDescriptor::new(
+                InterfaceDescriptorHeader {
+                    iInterfaceNumber: 0,
+                    bAlternateSetting: 0,
+                    bInterfaceClass: 0xff, // Vendor-specific
+                    bInterfaceSubClass: cynthion::shared::usb::bInterfaceSubClass::moondancer,
+                    bInterfaceProtocol: cynthion::shared::usb::bInterfaceProtocol::moondancer,
+                    iInterface: 8,
+                    ..InterfaceDescriptorHeader::new()
+                },
+                &[
+                    EndpointDescriptor {
+                        bEndpointAddress: cynthion::shared::libgreat::endpoints::bulk_in_address, // IN
+                        bmAttributes: 0x02, // Bulk
+                        wMaxPacketSize: 64,
+                        bInterval: 0,
+                        ..EndpointDescriptor::new()
+                    },
+                    EndpointDescriptor {
+                        bEndpointAddress: cynthion::shared::libgreat::endpoints::bulk_out_address, // OUT
+                        bmAttributes: 0x02, // Bulk
+                        wMaxPacketSize: 64,
+                        bInterval: 0,
+                        ..EndpointDescriptor::new()
+                    },
+                ],
+            ),
+            // Apollo stub interface
+            InterfaceDescriptor::new(
+                InterfaceDescriptorHeader {
+                    iInterfaceNumber: 1,
+                    bAlternateSetting: 0,
+                    bInterfaceClass: 0xff, // Vendor-specific
+                    bInterfaceSubClass: 0,
+                    bInterfaceProtocol: 0,
+                    iInterface: 9,
+                    ..InterfaceDescriptorHeader::new()
+                },
+                &[],
+            ),
+        ],
     );
 
 pub static STRING_DESCRIPTOR_0: StringDescriptorZero =
     StringDescriptorZero::new(&[LanguageId::EnglishUnitedStates]);
 
+// manufacturer
 pub static STRING_DESCRIPTOR_1: StringDescriptor =
-    StringDescriptor::new(cynthion::shared::usb::bManufacturerString::cynthion); // manufacturer
+    StringDescriptor::new(cynthion::shared::usb::bManufacturerString::cynthion);
+// product
 pub static STRING_DESCRIPTOR_2: StringDescriptor =
-    StringDescriptor::new(cynthion::shared::usb::bProductString::cynthion); // product
-pub static STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new(DEVICE_SERIAL_STRING); // serial
-pub static STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config0"); // configuration #0
-pub static STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("interface0"); // interface #0
-pub static STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("interface1"); // interface #1
-pub static STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("config1"); // configuration #1
+    StringDescriptor::new(cynthion::shared::usb::bProductString::cynthion);
+// serial
+pub static STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new(DEVICE_SERIAL_STRING);
+
+// configuration #0
+pub static STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config0");
+// interface #0
+pub static STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("Facedancer Control");
+// interface #1
+pub static STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("Apollo Stub");
+
+// other-speed configuration #0
+pub static STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("other config0");
+// interface #0
+pub static STRING_DESCRIPTOR_8: StringDescriptor = StringDescriptor::new("other interface0");
+// interface #1
+pub static STRING_DESCRIPTOR_9: StringDescriptor = StringDescriptor::new("other interface1");
 
 pub static STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &STRING_DESCRIPTOR_1,
@@ -190,4 +238,6 @@ pub static STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &STRING_DESCRIPTOR_5,
     &STRING_DESCRIPTOR_6,
     &STRING_DESCRIPTOR_7,
+    &STRING_DESCRIPTOR_8,
+    &STRING_DESCRIPTOR_9,
 ];
