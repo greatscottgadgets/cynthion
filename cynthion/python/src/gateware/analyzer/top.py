@@ -55,10 +55,10 @@ BULK_ENDPOINT_ADDRESS = 0x80 | BULK_ENDPOINT_NUMBER
 MAX_BULK_PACKET_SIZE  = 512
 
 
-class USBAnalyzerState(Elaboratable):
+class USBAnalyzerRegister(Elaboratable):
 
-    def __init__(self):
-        self.current = Signal(8)
+    def __init__(self, reset=0x00):
+        self.current = Signal(8, reset=reset)
         self.next = Signal(8)
         self.write = Signal()
 
@@ -73,6 +73,7 @@ class USBAnalyzerVendorRequests(IntEnum):
     GET_STATE = 0
     SET_STATE = 1
     GET_SPEEDS = 2
+    SET_TEST_CONFIG = 3
 
 
 class USBAnalyzerSupportedSpeeds(IntFlag):
@@ -84,8 +85,9 @@ class USBAnalyzerSupportedSpeeds(IntFlag):
 
 class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
 
-    def __init__(self, state):
+    def __init__(self, state, test_config):
         self.state = state
+        self.test_config = test_config
         super().__init__()
 
     def elaborate(self, platform):
@@ -109,7 +111,8 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
             m.d.comb += interface.claim.eq(
                 (setup.request == USBAnalyzerVendorRequests.GET_STATE) |
                 (setup.request == USBAnalyzerVendorRequests.SET_STATE) |
-                (setup.request == USBAnalyzerVendorRequests.GET_SPEEDS))
+                (setup.request == USBAnalyzerVendorRequests.GET_SPEEDS)|
+                (setup.request == USBAnalyzerVendorRequests.SET_TEST_CONFIG))
 
             with m.FSM(domain="usb"):
 
@@ -128,6 +131,8 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                                 m.next = 'SET_STATE'
                             with m.Case(USBAnalyzerVendorRequests.GET_SPEEDS):
                                 m.next = 'GET_SPEEDS'
+                            with m.Case(USBAnalyzerVendorRequests.SET_TEST_CONFIG):
+                                m.next = 'SET_TEST_CONFIG'
 
                 # GET_STATE -- Fetch the device's state
                 with m.State('GET_STATE'):
@@ -144,6 +149,10 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                         USBAnalyzerSupportedSpeeds.USB_SPEED_FULL | \
                         USBAnalyzerSupportedSpeeds.USB_SPEED_HIGH
                     self.handle_simple_data_request(m, transmitter, supported_speeds, length=1)
+
+                # SET_TEST_CONFIG -- The host is trying to configure our test device
+                with m.State('SET_TEST_CONFIG'):
+                    self.handle_register_write_request(m, self.test_config.next, self.test_config.write)
 
         return m
 
@@ -207,7 +216,10 @@ class USBAnalyzerApplet(Elaboratable):
         m = Module()
 
         # State register
-        m.submodules.state = state = USBAnalyzerState()
+        m.submodules.state = state = USBAnalyzerRegister()
+
+        # Test config register
+        m.submodules.test_config = test_config = USBAnalyzerRegister(reset=0x01)
 
         # Generate our clock domains.
         clocking = LunaECP5DomainGenerator()
@@ -256,7 +268,7 @@ class USBAnalyzerApplet(Elaboratable):
             phy_name = "control_phy"
 
             # Also set up a test device on the AUX PHY.
-            m.submodules += AnalyzerTestDevice()
+            m.submodules += AnalyzerTestDevice(test_config)
         else:
             phy_name = "host_phy"
 
@@ -295,7 +307,7 @@ class USBAnalyzerApplet(Elaboratable):
         control_endpoint.add_request_handler(msft_handler)
 
         # Add our vendor request handler to the control endpoint.
-        vendor_request_handler = USBAnalyzerVendorRequestHandler(state)
+        vendor_request_handler = USBAnalyzerVendorRequestHandler(state, test_config)
         control_endpoint.add_request_handler(vendor_request_handler)
 
         # If needed, create an advertiser and add its request handler.
@@ -345,6 +357,9 @@ class USBAnalyzerApplet(Elaboratable):
 class AnalyzerTestDevice(Elaboratable):
     """ Built-in example device that can be used to test the analyzer. """
 
+    def __init__(self, config):
+        self.config = config
+
     def elaborate(self, platform):
         m = Module()
 
@@ -352,7 +367,7 @@ class AnalyzerTestDevice(Elaboratable):
 
         # Create a USB device and connect it by default.
         m.submodules.usb = usb = USBDevice(bus=platform.request("aux_phy"))
-        m.d.comb += usb.connect.eq(1)
+        m.d.comb += usb.connect.eq(self.config.current[0])
 
         # Set up descriptors.
         descriptors = DeviceDescriptorCollection()
