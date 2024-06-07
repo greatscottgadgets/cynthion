@@ -31,6 +31,8 @@ from luna.gateware.utils.cdc             import synchronize
 from luna.gateware.architecture.car      import LunaECP5DomainGenerator
 from luna.gateware.architecture.flash_sn import ECP5FlashUIDStringDescriptor
 from luna.gateware.interface.ulpi        import UTMITranslator
+from luna.gateware.usb.usb2.control      import USBControlEndpoint
+from luna.gateware.usb.request.standard  import StandardRequestHandler
 from luna.gateware.usb.request.windows   import MicrosoftOS10DescriptorCollection, MicrosoftOS10RequestHandler
 
 from apollo_fpga.gateware.advertiser     import ApolloAdvertiser, ApolloAdvertiserRequestHandler
@@ -357,19 +359,30 @@ class USBAnalyzerApplet(Elaboratable):
 class AnalyzerTestDevice(Elaboratable):
     """ Built-in example device that can be used to test the analyzer. """
 
+    SPEEDS = (USB_SPEED_HIGH, USB_SPEED_FULL, USB_SPEED_LOW)
+
+    EP0_MAX_SIZE = {
+        USB_SPEED_HIGH: 64,
+        USB_SPEED_FULL: 64,
+        USB_SPEED_LOW: 8,
+    }
+
+    INT_EP_MAX_SIZE = {
+        USB_SPEED_HIGH: 512,
+        USB_SPEED_FULL: 64,
+        USB_SPEED_LOW: 8,
+    }
+
+    INT_EP_NUM = {
+        USB_SPEED_HIGH: 1,
+        USB_SPEED_FULL: 2,
+        USB_SPEED_LOW: 3,
+    }
+
     def __init__(self, config):
         self.config = config
 
-    def elaborate(self, platform):
-        m = Module()
-
-        MAX_PACKET = 512
-
-        # Create a USB device and connect it by default.
-        m.submodules.usb = usb = USBDevice(bus=platform.request("aux_phy"))
-        m.d.comb += usb.connect.eq(self.config.current[0])
-
-        # Set up descriptors.
+    def create_descriptors(self, speed):
         descriptors = DeviceDescriptorCollection()
 
         with descriptors.DeviceDescriptor() as d:
@@ -379,46 +392,76 @@ class AnalyzerTestDevice(Elaboratable):
             d.iProduct           = "USB Analyzer Test Device"
             d.bcdDevice          = 0.01
             d.bNumConfigurations = 1
+            d.bMaxPacketSize0    = self.EP0_MAX_SIZE[speed]
 
         with descriptors.ConfigurationDescriptor() as c:
             with c.InterfaceDescriptor() as i:
                 i.bInterfaceNumber = 0
                 with i.EndpointDescriptor() as e:
-                    e.bEndpointAddress = 0x81
-                    e.wMaxPacketSize   = MAX_PACKET
+                    e.bEndpointAddress = 0x80 | self.INT_EP_NUM[speed]
+                    e.bmAttributes     = 0x03 # Interrupt endpoint
+                    e.wMaxPacketSize   = self.INT_EP_MAX_SIZE[speed]
+                    e.bInterval        = 0x05 # 5ms interval
 
-        # Add Microsoft OS 1.0 descriptors for Windows compatibility.
         descriptors.add_descriptor(
                 get_string_descriptor("MSFT100\xee"), index=0xee)
+
+        return descriptors
+
+    def elaborate(self, platform):
+        m = Module()
+
+        # Create a USB device and connect it as required.
+        m.submodules.usb = usb = USBDevice(bus=platform.request("aux_phy"))
+        current_speed = self.config.current[1:3]
+        m.d.comb += [
+            usb.connect.eq(self.config.current[0]),
+            usb.low_speed_only.eq(current_speed == USB_SPEED_LOW),
+            usb.full_speed_only.eq(current_speed == USB_SPEED_FULL),
+        ]
+
+        # Create control endpoint.
+        control_ep = USBControlEndpoint(utmi=usb.utmi)
+
+        # Add standard request handlers for each speed.
+        for speed in self.SPEEDS:
+            handler = StandardRequestHandler(
+                self.create_descriptors(speed),
+                self.EP0_MAX_SIZE[speed],
+                avoid_blockram=True,
+                blacklist=[lambda setup,speed=speed: current_speed != speed])
+            control_ep.add_request_handler(handler)
+
+        # Add Microsoft descriptors for Windows compatibility.
         msft_descriptors = MicrosoftOS10DescriptorCollection()
         with msft_descriptors.ExtendedCompatIDDescriptor() as c:
             with c.Function() as f:
                 f.bFirstInterfaceNumber = 0
                 f.compatibleID          = 'WINUSB'
 
-        # Add control endpoint.
-        control_ep = usb.add_standard_control_endpoint(
-                descriptors, avoid_blockram=True)
-
         # Add handler for Microsoft descriptors.
         msft_handler = MicrosoftOS10RequestHandler(
                 msft_descriptors, request_code=0xee)
         control_ep.add_request_handler(msft_handler)
 
-        # Add IN endpoint.
-        in_ep = USBStreamInEndpoint(
-            endpoint_number=1,
-            max_packet_size=MAX_PACKET)
-        usb.add_endpoint(in_ep)
+        # Add control endpoint.
+        usb.add_endpoint(control_ep)
 
-        # Output a counter to IN endpoint.
-        counter = Signal(8)
-        m.d.comb += [
-            in_ep.stream.valid.eq(1),
-            in_ep.stream.payload.eq(counter),
-        ]
-        with m.If(in_ep.stream.ready):
-            m.d.usb += counter.eq(counter + 1)
+        # Add IN endpoints for each speed.
+        for speed in self.SPEEDS:
+            in_ep = USBStreamInEndpoint(
+                endpoint_number=self.INT_EP_NUM[speed],
+                max_packet_size=self.INT_EP_MAX_SIZE[speed])
+            usb.add_endpoint(in_ep)
+
+            # Output a counter to the endpoint.
+            counter = Signal(8)
+            m.d.comb += [
+                in_ep.stream.valid.eq(1),
+                in_ep.stream.payload.eq(counter),
+            ]
+            with m.If(in_ep.stream.ready):
+                m.d.usb += counter.eq(counter + 1)
 
         return m
 
