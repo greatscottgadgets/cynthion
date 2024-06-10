@@ -92,7 +92,7 @@ class USBAnalyzer(Elaboratable):
 
         # Memory read and write ports.
         m.submodules.read  = mem_read_port  = self.mem.read_port(domain="usb")
-        m.submodules.write = mem_write_port = self.mem.write_port(domain="usb")
+        m.submodules.write = mem_write_port = self.mem.write_port(domain="sync")
 
         # Store the memory address of our active packet header, which will store
         # packet metadata like the packet size.
@@ -102,10 +102,13 @@ class USBAnalyzer(Elaboratable):
         # Read FIFO status.
         read_location   = Signal.like(mem_read_port.addr)
         fifo_count      = Signal.like(mem_read_port.addr, reset=0)
-        fifo_new_data   = Signal()
 
         # Current receive status.
         packet_size     = Signal(16)
+
+        # Triggers for memory write operations.
+        write_packet    = Signal()
+        write_header    = Signal()
 
         #
         # Read FIFO logic.
@@ -137,12 +140,14 @@ class USBAnalyzer(Elaboratable):
         #
         fifo_full = (fifo_count == self.mem_size)
 
-        data_pop   = Signal()
-        data_push  = Signal()
-        m.d.comb += [
-            data_pop   .eq(self.stream.ready & self.stream.valid),
-            data_push  .eq(fifo_new_data & ~fifo_full)
-        ]
+        # Number of bytes popped from the FIFO this cycle.
+        data_popped = Signal(1)
+
+        # Number of bytes pushed to the FIFO this cycle.
+        data_pushed = Signal(2)
+
+        # One byte is popped if the stream is read.
+        m.d.comb += data_popped.eq(self.stream.ready & self.stream.valid)
 
         # If discarding data, set the count to zero.
         with m.If(self.discarding):
@@ -151,18 +156,9 @@ class USBAnalyzer(Elaboratable):
                 read_location.eq(0),
                 write_location.eq(0),
             ]
-
-        # If we have both a read and a write, don't update the count,
-        # as we've both added one and subtracted one.
-        with m.Elif(data_push & data_pop):
-            pass
-
-        # Otherwise, add when data's added, and subtract when data's removed.
-        with m.Elif(data_push):
-            m.d.usb += fifo_count.eq(fifo_count + 1)
-        with m.Elif(data_pop):
-            m.d.usb += fifo_count.eq(fifo_count - 1)
-
+        # Otherwise, update the count acording to bytes pushed and popped.
+        with m.Else():
+            m.d.usb += fifo_count.eq(fifo_count + data_pushed - data_popped)
 
         #
         # Core analysis FSM.
@@ -202,10 +198,8 @@ class USBAnalyzer(Elaboratable):
 
                 # Capture data whenever RxValid is asserted.
                 m.d.comb += [
-                    mem_write_port.addr  .eq(write_location),
-                    mem_write_port.data  .eq(self.utmi.rx_data),
-                    mem_write_port.en    .eq(byte_received),
-                    fifo_new_data        .eq(byte_received),
+                    write_packet    .eq(byte_received),
+                    data_pushed     .eq(byte_received)
                 ]
 
                 # Advance the write pointer each time we receive a bit.
@@ -220,47 +214,13 @@ class USBAnalyzer(Elaboratable):
                     with m.If(fifo_count == self.mem_size - 1 - self.HEADER_SIZE_BYTES):
                         m.next = "OVERRUN"
 
-                # If we've stopped receiving, move to the "finalize" state.
+                # If we've stopped receiving, write header.
                 with m.If(~self.utmi.rx_active):
-                    m.next = "EOP_1"
-
-                    # Optimization: if we didn't receive any data, there's no need
-                    # to create a packet. Clear our header from the FIFO and disarm.
-                    with m.If(packet_size == 0):
-                        m.next = "AWAIT_PACKET"
-                        m.d.usb += [
-                            write_location.eq(header_location)
-                        ]
-                    with m.Else():
-                        m.next = "EOP_1"
-
-            # EOP: handle the end of the relevant packet.
-            with m.State("EOP_1"):
-
-                # Now that we're done, add the header to the start of our packet.
-                # This will take two cycles, currently, as we're using a 2-byte header,
-                # but we only have an 8-bit write port.
-                m.d.comb += [
-                    mem_write_port.addr  .eq(header_location),
-                    mem_write_port.data  .eq(packet_size[8:16]),
-                    mem_write_port.en    .eq(1),
-                    fifo_new_data        .eq(1)
-                ]
-                m.next = "EOP_2"
-
-
-            with m.State("EOP_2"):
-
-                # Add the second byte of our header.
-                # Note that, if this is an adjacent read, we should have
-                # just captured our packet header _during_ the stop turnaround.
-                m.d.comb += [
-                    mem_write_port.addr  .eq(header_location + 1),
-                    mem_write_port.data  .eq(packet_size[0:8]),
-                    mem_write_port.en    .eq(1),
-                    fifo_new_data        .eq(1)
-                ]
-                m.next = "AWAIT_PACKET"
+                    m.d.comb += [
+                        write_header .eq(1),
+                        data_pushed  .eq(2)
+                    ]
+                    m.next = "AWAIT_PACKET"
 
 
             # BABBLE -- handles the case in which we've received a packet beyond
@@ -279,13 +239,50 @@ class USBAnalyzer(Elaboratable):
                     m.next = "AWAIT_START"
 
 
+        #
+        # Buffer write FSM.
+        #
+        with m.FSM(domain="sync"):
+            # START: Begin write operation when requested.
+            with m.State("START"):
+                with m.If(write_packet):
+                    # Write packet byte.
+                    m.d.comb += [
+                        mem_write_port.addr  .eq(write_location),
+                        mem_write_port.data  .eq(self.utmi.rx_data),
+                        mem_write_port.en    .eq(1)
+                    ]
+                    m.next = "IDLE"
+                with m.Elif(write_header):
+                    # Write first word of header.
+                    m.d.comb += [
+                        mem_write_port.addr  .eq(header_location),
+                        mem_write_port.data  .eq(packet_size[8:16]),
+                        mem_write_port.en    .eq(1)
+                    ]
+                    m.next = "FINISH_HEADER"
+
+            # FINISH_HEADER: Write second word of header.
+            with m.State("FINISH_HEADER"):
+                m.d.comb += [
+                    mem_write_port.addr  .eq(header_location + 1),
+                    mem_write_port.data  .eq(packet_size[0:8]),
+                    mem_write_port.en    .eq(1)
+                ]
+                m.next = "START"
+
+            # IDLE: Nothing to do this cycle.
+            with m.State("IDLE"):
+                m.next = "START"
+
+
         return m
 
 
 
 class USBAnalyzerTest(LunaGatewareTestCase):
 
-    SYNC_CLOCK_FREQUENCY = None
+    SYNC_CLOCK_FREQUENCY = 120e6
     USB_CLOCK_FREQUENCY = 60e6
 
     def instantiate_dut(self):
@@ -406,7 +403,7 @@ class USBAnalyzerTest(LunaGatewareTestCase):
 class USBAnalyzerStackTest(LunaGatewareTestCase):
     """ Test that evaluates a full-stack USB analyzer setup. """
 
-    SYNC_CLOCK_FREQUENCY = None
+    SYNC_CLOCK_FREQUENCY = 120e6
     USB_CLOCK_FREQUENCY = 60e6
 
 
