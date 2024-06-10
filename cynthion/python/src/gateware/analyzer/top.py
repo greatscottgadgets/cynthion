@@ -31,6 +31,8 @@ from luna.gateware.utils.cdc             import synchronize
 from luna.gateware.architecture.car      import LunaECP5DomainGenerator
 from luna.gateware.architecture.flash_sn import ECP5FlashUIDStringDescriptor
 from luna.gateware.interface.ulpi        import UTMITranslator
+from luna.gateware.usb.usb2.control      import USBControlEndpoint
+from luna.gateware.usb.request.standard  import StandardRequestHandler
 from luna.gateware.usb.request.windows   import MicrosoftOS10DescriptorCollection, MicrosoftOS10RequestHandler
 
 from apollo_fpga.gateware.advertiser     import ApolloAdvertiser, ApolloAdvertiserRequestHandler
@@ -55,10 +57,10 @@ BULK_ENDPOINT_ADDRESS = 0x80 | BULK_ENDPOINT_NUMBER
 MAX_BULK_PACKET_SIZE  = 512
 
 
-class USBAnalyzerState(Elaboratable):
+class USBAnalyzerRegister(Elaboratable):
 
-    def __init__(self):
-        self.current = Signal(8)
+    def __init__(self, reset=0x00):
+        self.current = Signal(8, reset=reset)
         self.next = Signal(8)
         self.write = Signal()
 
@@ -73,6 +75,7 @@ class USBAnalyzerVendorRequests(IntEnum):
     GET_STATE = 0
     SET_STATE = 1
     GET_SPEEDS = 2
+    SET_TEST_CONFIG = 3
 
 
 class USBAnalyzerSupportedSpeeds(IntFlag):
@@ -84,8 +87,9 @@ class USBAnalyzerSupportedSpeeds(IntFlag):
 
 class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
 
-    def __init__(self, state):
+    def __init__(self, state, test_config):
         self.state = state
+        self.test_config = test_config
         super().__init__()
 
     def elaborate(self, platform):
@@ -109,7 +113,8 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
             m.d.comb += interface.claim.eq(
                 (setup.request == USBAnalyzerVendorRequests.GET_STATE) |
                 (setup.request == USBAnalyzerVendorRequests.SET_STATE) |
-                (setup.request == USBAnalyzerVendorRequests.GET_SPEEDS))
+                (setup.request == USBAnalyzerVendorRequests.GET_SPEEDS)|
+                (setup.request == USBAnalyzerVendorRequests.SET_TEST_CONFIG))
 
             with m.FSM(domain="usb"):
 
@@ -128,6 +133,8 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                                 m.next = 'SET_STATE'
                             with m.Case(USBAnalyzerVendorRequests.GET_SPEEDS):
                                 m.next = 'GET_SPEEDS'
+                            with m.Case(USBAnalyzerVendorRequests.SET_TEST_CONFIG):
+                                m.next = 'SET_TEST_CONFIG'
 
                 # GET_STATE -- Fetch the device's state
                 with m.State('GET_STATE'):
@@ -144,6 +151,10 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                         USBAnalyzerSupportedSpeeds.USB_SPEED_FULL | \
                         USBAnalyzerSupportedSpeeds.USB_SPEED_HIGH
                     self.handle_simple_data_request(m, transmitter, supported_speeds, length=1)
+
+                # SET_TEST_CONFIG -- The host is trying to configure our test device
+                with m.State('SET_TEST_CONFIG'):
+                    self.handle_register_write_request(m, self.test_config.next, self.test_config.write)
 
         return m
 
@@ -207,7 +218,10 @@ class USBAnalyzerApplet(Elaboratable):
         m = Module()
 
         # State register
-        m.submodules.state = state = USBAnalyzerState()
+        m.submodules.state = state = USBAnalyzerRegister()
+
+        # Test config register
+        m.submodules.test_config = test_config = USBAnalyzerRegister(reset=0x01)
 
         # Generate our clock domains.
         clocking = LunaECP5DomainGenerator()
@@ -254,6 +268,9 @@ class USBAnalyzerApplet(Elaboratable):
         # Select the appropriate PHY according to platform version.
         if platform.version >= (0, 6):
             phy_name = "control_phy"
+
+            # Also set up a test device on the AUX PHY.
+            m.submodules += AnalyzerTestDevice(test_config)
         else:
             phy_name = "host_phy"
 
@@ -292,7 +309,7 @@ class USBAnalyzerApplet(Elaboratable):
         control_endpoint.add_request_handler(msft_handler)
 
         # Add our vendor request handler to the control endpoint.
-        vendor_request_handler = USBAnalyzerVendorRequestHandler(state)
+        vendor_request_handler = USBAnalyzerVendorRequestHandler(state, test_config)
         control_endpoint.add_request_handler(vendor_request_handler)
 
         # If needed, create an advertiser and add its request handler.
@@ -336,6 +353,116 @@ class USBAnalyzerApplet(Elaboratable):
         ]
 
         # Return our elaborated module.
+        return m
+
+
+class AnalyzerTestDevice(Elaboratable):
+    """ Built-in example device that can be used to test the analyzer. """
+
+    SPEEDS = (USB_SPEED_HIGH, USB_SPEED_FULL, USB_SPEED_LOW)
+
+    EP0_MAX_SIZE = {
+        USB_SPEED_HIGH: 64,
+        USB_SPEED_FULL: 64,
+        USB_SPEED_LOW: 8,
+    }
+
+    INT_EP_MAX_SIZE = {
+        USB_SPEED_HIGH: 512,
+        USB_SPEED_FULL: 64,
+        USB_SPEED_LOW: 8,
+    }
+
+    INT_EP_NUM = {
+        USB_SPEED_HIGH: 1,
+        USB_SPEED_FULL: 2,
+        USB_SPEED_LOW: 3,
+    }
+
+    def __init__(self, config):
+        self.config = config
+
+    def create_descriptors(self, speed):
+        descriptors = DeviceDescriptorCollection()
+
+        with descriptors.DeviceDescriptor() as d:
+            d.idVendor           = cynthion.shared.usb.bVendorId.example
+            d.idProduct          = cynthion.shared.usb.bProductId.analyzer_test
+            d.iManufacturer      = "Cynthion Project"
+            d.iProduct           = "USB Analyzer Test Device"
+            d.bcdDevice          = 0.01
+            d.bNumConfigurations = 1
+            d.bMaxPacketSize0    = self.EP0_MAX_SIZE[speed]
+
+        with descriptors.ConfigurationDescriptor() as c:
+            with c.InterfaceDescriptor() as i:
+                i.bInterfaceNumber = 0
+                with i.EndpointDescriptor() as e:
+                    e.bEndpointAddress = 0x80 | self.INT_EP_NUM[speed]
+                    e.bmAttributes     = 0x03 # Interrupt endpoint
+                    e.wMaxPacketSize   = self.INT_EP_MAX_SIZE[speed]
+                    e.bInterval        = 0x05 # 5ms interval
+
+        descriptors.add_descriptor(
+                get_string_descriptor("MSFT100\xee"), index=0xee)
+
+        return descriptors
+
+    def elaborate(self, platform):
+        m = Module()
+
+        # Create a USB device and connect it as required.
+        m.submodules.usb = usb = USBDevice(bus=platform.request("aux_phy"))
+        current_speed = self.config.current[1:3]
+        m.d.comb += [
+            usb.connect.eq(self.config.current[0]),
+            usb.low_speed_only.eq(current_speed == USB_SPEED_LOW),
+            usb.full_speed_only.eq(current_speed == USB_SPEED_FULL),
+        ]
+
+        # Create control endpoint.
+        control_ep = USBControlEndpoint(utmi=usb.utmi)
+
+        # Add standard request handlers for each speed.
+        for speed in self.SPEEDS:
+            handler = StandardRequestHandler(
+                self.create_descriptors(speed),
+                self.EP0_MAX_SIZE[speed],
+                avoid_blockram=True,
+                blacklist=[lambda setup,speed=speed: current_speed != speed])
+            control_ep.add_request_handler(handler)
+
+        # Add Microsoft descriptors for Windows compatibility.
+        msft_descriptors = MicrosoftOS10DescriptorCollection()
+        with msft_descriptors.ExtendedCompatIDDescriptor() as c:
+            with c.Function() as f:
+                f.bFirstInterfaceNumber = 0
+                f.compatibleID          = 'WINUSB'
+
+        # Add handler for Microsoft descriptors.
+        msft_handler = MicrosoftOS10RequestHandler(
+                msft_descriptors, request_code=0xee)
+        control_ep.add_request_handler(msft_handler)
+
+        # Add control endpoint.
+        usb.add_endpoint(control_ep)
+
+        # Add IN endpoints for each speed.
+        for speed in self.SPEEDS:
+            in_ep = USBStreamInEndpoint(
+                endpoint_number=self.INT_EP_NUM[speed],
+                max_packet_size=self.INT_EP_MAX_SIZE[speed])
+            usb.add_endpoint(in_ep)
+
+            # Output a counter to the endpoint.
+            counter = Signal(8)
+            m.d.comb += [
+                in_ep.stream.valid.eq(1),
+                in_ep.stream.payload.eq(counter),
+            ]
+            with m.If(in_ep.stream.ready):
+                m.d.usb += counter.eq(counter + 1)
+
         return m
 
 

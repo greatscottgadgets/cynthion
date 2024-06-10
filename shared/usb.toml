@@ -25,6 +25,7 @@ example_2       = 0x0002 # pid.codes Test PID 2
 example_3       = 0x0003 # pid.codes Test PID 3
 example_4       = 0x0004 # pid.codes Test PID 4
 example_5       = 0x0005 # pid.codes Test PID 5
+analyzer_test   = 0x000a # pid.codes Test PID 10
 
 # iManufacturer
 #
