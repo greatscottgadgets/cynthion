@@ -50,9 +50,8 @@ class USBAnalyzer(Elaboratable):
         Must be a power of 2.
     """
 
-    # Current, we'll provide a packet header of 16 bits.
-    HEADER_SIZE_BITS = 16
-    HEADER_SIZE_BYTES = HEADER_SIZE_BITS // 8
+    # Header is 16-bit length and 16-bit timestamp.
+    HEADER_SIZE_BYTES = 4
 
     # Support a maximum payload size of 1024B, plus a 1-byte PID and a 2-byte CRC16.
     MAX_PACKET_SIZE_BYTES = 1024 + 1 + 2
@@ -115,6 +114,7 @@ class USBAnalyzer(Elaboratable):
 
         # Current receive status.
         packet_size     = Signal(16)
+        packet_time     = Signal(16)
 
         # Triggers for memory write operations.
         write_packet    = Signal()
@@ -171,6 +171,10 @@ class USBAnalyzer(Elaboratable):
             with m.Else():
                 m.d.usb += fifo_count.eq(fifo_count - data_popped)
 
+        # Timestamp counter.
+        current_time = Signal(16)
+        m.d.usb += current_time.eq(current_time + 1)
+
         #
         # Core analysis FSM.
         #
@@ -187,6 +191,7 @@ class USBAnalyzer(Elaboratable):
             with m.State("AWAIT_START"):
                 with m.If(self.capture_enable & ~self.utmi.rx_active):
                     m.next = "AWAIT_PACKET"
+                    m.d.usb += current_time.eq(0)
 
 
             # AWAIT_PACKET: capture is enabled, wait for a packet to start.
@@ -199,7 +204,9 @@ class USBAnalyzer(Elaboratable):
                         header_location  .eq((write_location + write_odd)[1:]),
                         write_location   .eq(write_location + write_odd + self.HEADER_SIZE_BYTES),
                         packet_size      .eq(0),
+                        packet_time      .eq(current_time),
                         data_pending     .eq(self.HEADER_SIZE_BYTES),
+                        current_time     .eq(0),
                     ]
 
 
@@ -272,7 +279,16 @@ class USBAnalyzer(Elaboratable):
                         mem_write_port.data  .eq(packet_size),
                         mem_write_port.en    .eq(0b11)
                     ]
-                    m.next = "IDLE"
+                    m.next = "FINISH_HEADER"
+
+            # FINISH_HEADER: Write second word of header.
+            with m.State("FINISH_HEADER"):
+                m.d.comb += [
+                        mem_write_port.addr  .eq(header_location + 1),
+                        mem_write_port.data  .eq(packet_time),
+                        mem_write_port.en    .eq(0b11)
+                ]
+                m.next = "START"
 
             # IDLE: Nothing to do this cycle.
             with m.State("IDLE"):
@@ -344,13 +360,15 @@ class USBAnalyzerTest(LunaGatewareTestCase):
         self.assertEqual((yield self.dut.stream.valid), 1)
 
         # First, we should get a header with the total data length.
-        # This should be 0x00, 0x0B; as we captured 11 bytes.
+        # This should be 0x00, 0x0a; as we captured 10 bytes.
+        # Next, we should get a timestamp with the cycle count at which
+        # the packet started. This should be 0x00, 0x02.
         self.assertEqual((yield self.dut.stream.payload), 0)
         yield self.dut.stream.ready.eq(1)
         yield
 
         # Validate that we get all of the bytes of the packet we expected.
-        expected_data = [0x00, 0x0a] + list(range(0, 10))
+        expected_data = [0x00, 0x0a, 0x00, 0x00] + list(range(0, 10))
         for datum in expected_data:
             self.assertEqual((yield self.dut.stream.payload), datum)
             yield
@@ -387,12 +405,14 @@ class USBAnalyzerTest(LunaGatewareTestCase):
 
         # First, we should get a header with the total data length.
         # This should be 0x00, 0x01; as we captured 1 byte.
+        # Next, we should get a timestamp with the cycle count at which
+        # the packet started. This should be 0x00, 0x00.
         self.assertEqual((yield self.dut.stream.payload), 0)
         yield self.dut.stream.ready.eq(1)
         yield
 
         # Validate that we get all of the bytes of the packet we expected.
-        expected_data = [0x00, 0x01, 0xab]
+        expected_data = [0x00, 0x01, 0x00, 0x00, 0xab]
         for datum in expected_data:
             self.assertEqual((yield self.dut.stream.payload), datum)
             yield
@@ -481,7 +501,9 @@ class USBAnalyzerStackTest(LunaGatewareTestCase):
         yield
 
         # Validate that we got the correct packet out; plus headers.
-        for i in [0x00, 0x03, 0x2d, 0x00, 0x10]:
+        # We waited 10 cycles before starting the packet, so the
+        # timestamp should be 0x00, 0x0a.
+        for i in [0x00, 0x03, 0x00, 0x0a, 0x2d, 0x00, 0x10]:
             self.assertEqual((yield self.analyzer.stream.payload), i)
             yield
 
