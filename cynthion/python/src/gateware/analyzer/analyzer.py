@@ -8,7 +8,7 @@
 
 import unittest
 
-from amaranth          import Signal, Module, Elaboratable, Memory, Record
+from amaranth          import Signal, Module, Elaboratable, Memory, Record, Mux, Cat
 
 from luna.gateware.stream import StreamInterface
 from luna.gateware.test   import LunaGatewareTestCase, usb_domain_test_case
@@ -57,7 +57,7 @@ class USBAnalyzer(Elaboratable):
     # Support a maximum payload size of 1024B, plus a 1-byte PID and a 2-byte CRC16.
     MAX_PACKET_SIZE_BYTES = 1024 + 1 + 2
 
-    def __init__(self, *, utmi_interface, mem_depth=65536):
+    def __init__(self, *, utmi_interface, mem_depth=32768):
         """
         Parameters:
             utmi_interface -- A record or elaboratable that presents a UTMI interface.
@@ -68,8 +68,8 @@ class USBAnalyzer(Elaboratable):
         assert (mem_depth % 2) == 0, "mem_depth must be a power of 2"
 
         # Internal storage memory.
-        self.mem = Memory(width=8, depth=mem_depth, name="analysis_ringbuffer")
-        self.mem_size = mem_depth
+        self.mem = Memory(width=16, depth=mem_depth, name="analysis_ringbuffer")
+        self.mem_size = 2 * mem_depth
 
         #
         # I/O port
@@ -92,16 +92,26 @@ class USBAnalyzer(Elaboratable):
 
         # Memory read and write ports.
         m.submodules.read  = mem_read_port  = self.mem.read_port(domain="usb")
-        m.submodules.write = mem_write_port = self.mem.write_port(domain="sync")
+        m.submodules.write = mem_write_port = self.mem.write_port(domain="sync", granularity=8)
 
         # Store the memory address of our active packet header, which will store
         # packet metadata like the packet size.
         header_location = Signal.like(mem_write_port.addr)
-        write_location  = Signal.like(mem_write_port.addr)
+        write_location  = Signal(range(self.mem_size))
 
         # Read FIFO status.
-        read_location   = Signal.like(mem_read_port.addr)
-        fifo_count      = Signal.like(mem_read_port.addr, reset=0)
+        read_location   = Signal(range(self.mem_size))
+        fifo_count      = Signal(range(self.mem_size), reset=0)
+
+        # Memory addresses point to words
+        write_pointer = Signal.like(mem_write_port.addr)
+        read_pointer  = Signal.like(mem_read_port.addr)
+        read_odd      = Signal()
+        write_odd     = Signal()
+        m.d.comb += [
+            Cat(read_odd, read_pointer)   .eq(read_location),
+            Cat(write_odd, write_pointer) .eq(write_location),
+        ]
 
         # Current receive status.
         packet_size     = Signal(16)
@@ -119,21 +129,17 @@ class USBAnalyzer(Elaboratable):
             self.stream.valid    .eq((fifo_count != 0) & (self.idle | self.overrun)),
 
             # Our data_out is always the output of our read port...
-            self.stream.payload  .eq(mem_read_port.data),
+            self.stream.payload  .eq(mem_read_port.data.word_select(~read_odd, 8)),
 
-
-            self.sampling       .eq(mem_write_port.en)
+            self.sampling        .eq(write_packet | write_header)
         ]
 
         # Once our consumer has accepted our current data, move to the next address.
         with m.If(self.stream.ready & self.stream.valid):
-            m.d.usb += read_location.eq(read_location + 1)
-            m.d.comb += mem_read_port.addr.eq(read_location + 1)
-
+            m.d.usb  += read_location      .eq(read_location + 1)
+            m.d.comb += mem_read_port.addr .eq(read_pointer + read_odd)
         with m.Else():
-            m.d.comb += mem_read_port.addr   .eq(read_location),
-
-
+            m.d.comb += mem_read_port.addr .eq(read_pointer),
 
         #
         # FIFO count handling.
@@ -185,8 +191,8 @@ class USBAnalyzer(Elaboratable):
                 with m.Elif(self.utmi.rx_active):
                     m.next = "CAPTURE_PACKET"
                     m.d.usb += [
-                        header_location  .eq(write_location),
-                        write_location   .eq(write_location + self.HEADER_SIZE_BYTES),
+                        header_location  .eq((write_location + write_odd)[1:]),
+                        write_location   .eq(write_location + write_odd + self.HEADER_SIZE_BYTES),
                         packet_size      .eq(0),
                     ]
 
@@ -218,7 +224,7 @@ class USBAnalyzer(Elaboratable):
                 with m.If(~self.utmi.rx_active):
                     m.d.comb += [
                         write_header .eq(1),
-                        data_pushed  .eq(2)
+                        data_pushed  .eq(2 + (packet_size & 1))  # add padding length
                     ]
                     m.next = "AWAIT_PACKET"
 
@@ -248,28 +254,19 @@ class USBAnalyzer(Elaboratable):
                 with m.If(write_packet):
                     # Write packet byte.
                     m.d.comb += [
-                        mem_write_port.addr  .eq(write_location),
-                        mem_write_port.data  .eq(self.utmi.rx_data),
-                        mem_write_port.en    .eq(1)
+                        mem_write_port.addr  .eq(write_pointer),
+                        mem_write_port.data  .eq(self.utmi.rx_data.replicate(2)),
+                        mem_write_port.en    .eq(Mux(write_odd, 0b01, 0b10)),
                     ]
                     m.next = "IDLE"
                 with m.Elif(write_header):
                     # Write first word of header.
                     m.d.comb += [
                         mem_write_port.addr  .eq(header_location),
-                        mem_write_port.data  .eq(packet_size[8:16]),
-                        mem_write_port.en    .eq(1)
+                        mem_write_port.data  .eq(packet_size),
+                        mem_write_port.en    .eq(0b11)
                     ]
-                    m.next = "FINISH_HEADER"
-
-            # FINISH_HEADER: Write second word of header.
-            with m.State("FINISH_HEADER"):
-                m.d.comb += [
-                    mem_write_port.addr  .eq(header_location + 1),
-                    mem_write_port.data  .eq(packet_size[0:8]),
-                    mem_write_port.en    .eq(1)
-                ]
-                m.next = "START"
+                    m.next = "IDLE"
 
             # IDLE: Nothing to do this cycle.
             with m.State("IDLE"):
@@ -393,6 +390,10 @@ class USBAnalyzerTest(LunaGatewareTestCase):
         for datum in expected_data:
             self.assertEqual((yield self.dut.stream.payload), datum)
             yield
+
+        # There should then be one padding byte.
+        self.assertEqual((yield self.dut.stream.valid), 1)
+        yield
 
         # We should now be out of data -- verify that there's no longer data available.
         self.assertEqual((yield self.dut.stream.valid), 0)
