@@ -126,7 +126,7 @@ class USBAnalyzer(Elaboratable):
         m.d.comb += [
 
             # We have data ready whenever there's data in the FIFO.
-            self.stream.valid    .eq((fifo_count != 0) & (self.idle | self.overrun)),
+            self.stream.valid    .eq((fifo_count != 0)),
 
             # Our data_out is always the output of our read port...
             self.stream.payload  .eq(mem_read_port.data.word_select(~read_odd, 8)),
@@ -149,8 +149,9 @@ class USBAnalyzer(Elaboratable):
         # Number of bytes popped from the FIFO this cycle.
         data_popped = Signal(1)
 
-        # Number of bytes pushed to the FIFO this cycle.
-        data_pushed = Signal(2)
+        # Number of uncommitted bytes and its push trigger.
+        data_pending = Signal(12)
+        data_commit  = Signal()
 
         # One byte is popped if the stream is read.
         m.d.comb += data_popped.eq(self.stream.ready & self.stream.valid)
@@ -161,10 +162,14 @@ class USBAnalyzer(Elaboratable):
                 fifo_count.eq(0),
                 read_location.eq(0),
                 write_location.eq(0),
+                data_pending.eq(0),
             ]
         # Otherwise, update the count acording to bytes pushed and popped.
         with m.Else():
-            m.d.usb += fifo_count.eq(fifo_count + data_pushed - data_popped)
+            with m.If(data_commit):
+                m.d.usb += fifo_count.eq(fifo_count - data_popped + data_pending + (data_pending & 1))  # force alignment
+            with m.Else():
+                m.d.usb += fifo_count.eq(fifo_count - data_popped)
 
         #
         # Core analysis FSM.
@@ -194,6 +199,7 @@ class USBAnalyzer(Elaboratable):
                         header_location  .eq((write_location + write_odd)[1:]),
                         write_location   .eq(write_location + write_odd + self.HEADER_SIZE_BYTES),
                         packet_size      .eq(0),
+                        data_pending     .eq(self.HEADER_SIZE_BYTES),
                     ]
 
 
@@ -205,26 +211,26 @@ class USBAnalyzer(Elaboratable):
                 # Capture data whenever RxValid is asserted.
                 m.d.comb += [
                     write_packet    .eq(byte_received),
-                    data_pushed     .eq(byte_received)
                 ]
 
                 # Advance the write pointer each time we receive a bit.
                 with m.If(byte_received):
                     m.d.usb += [
                         write_location  .eq(write_location + 1),
-                        packet_size     .eq(packet_size + 1)
+                        packet_size     .eq(packet_size + 1),
+                        data_pending    .eq(data_pending + 1)
                     ]
 
                     # If this would be filling up our data memory,
                     # move to the OVERRUN state.
-                    with m.If(fifo_count == self.mem_size - 1 - self.HEADER_SIZE_BYTES):
+                    with m.If(fifo_count + data_pending == self.mem_size - 1):
                         m.next = "OVERRUN"
 
                 # If we've stopped receiving, write header.
                 with m.If(~self.utmi.rx_active):
                     m.d.comb += [
                         write_header .eq(1),
-                        data_pushed  .eq(2 + (packet_size & 1))  # add padding length
+                        data_commit  .eq(1),
                     ]
                     m.next = "AWAIT_PACKET"
 
