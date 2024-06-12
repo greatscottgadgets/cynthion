@@ -68,7 +68,7 @@ class USBAnalyzer(Elaboratable):
 
         # Internal storage memory.
         self.mem = Memory(width=16, depth=mem_depth, name="analysis_ringbuffer")
-        self.mem_size = 2 * mem_depth
+        self.mem_size_bytes = 2 * mem_depth
 
         #
         # I/O port
@@ -93,24 +93,22 @@ class USBAnalyzer(Elaboratable):
         m.submodules.read  = mem_read_port  = self.mem.read_port(domain="usb")
         m.submodules.write = mem_write_port = self.mem.write_port(domain="sync", granularity=8)
 
-        # Store the memory address of our active packet header, which will store
-        # packet metadata like the packet size.
-        header_location = Signal.like(mem_write_port.addr)
-        write_location  = Signal(range(self.mem_size))
-
-        # Read FIFO status.
-        read_location   = Signal(range(self.mem_size))
-        fifo_count      = Signal(range(self.mem_size), reset=0)
+        # FIFO addresses point to bytes.
+        write_byte_addr  = Signal(range(self.mem_size_bytes))
+        read_byte_addr   = Signal(range(self.mem_size_bytes))
+        fifo_byte_count  = Signal(range(self.mem_size_bytes), reset=0)
 
         # Memory addresses point to words
-        write_pointer = Signal.like(mem_write_port.addr)
-        read_pointer  = Signal.like(mem_read_port.addr)
-        read_odd      = Signal()
-        write_odd     = Signal()
+        header_word_addr = Signal.like(mem_write_port.addr)
+        write_word_addr  = Signal.like(mem_write_port.addr)
+        read_word_addr   = Signal.like(mem_read_port.addr)
+        read_odd         = Signal()
+        write_odd        = Signal()
         m.d.comb += [
-            Cat(read_odd, read_pointer)   .eq(read_location),
-            Cat(write_odd, write_pointer) .eq(write_location),
+            Cat(read_odd, read_word_addr)   .eq(read_byte_addr),
+            Cat(write_odd, write_word_addr) .eq(write_byte_addr),
         ]
+        next_word_addr   = (write_byte_addr + write_odd)[1:]
 
         # Current receive status.
         packet_size     = Signal(16)
@@ -126,7 +124,7 @@ class USBAnalyzer(Elaboratable):
         m.d.comb += [
 
             # We have data ready whenever there's data in the FIFO.
-            self.stream.valid    .eq((fifo_count != 0)),
+            self.stream.valid    .eq((fifo_byte_count != 0)),
 
             # Our data_out is always the output of our read port...
             self.stream.payload  .eq(mem_read_port.data.word_select(~read_odd, 8)),
@@ -136,40 +134,42 @@ class USBAnalyzer(Elaboratable):
 
         # Once our consumer has accepted our current data, move to the next address.
         with m.If(self.stream.ready & self.stream.valid):
-            m.d.usb  += read_location      .eq(read_location + 1)
-            m.d.comb += mem_read_port.addr .eq(read_pointer + read_odd)
+            m.d.usb  += read_byte_addr      .eq(read_byte_addr + 1)
+            m.d.comb += mem_read_port.addr  .eq(read_word_addr + read_odd)
         with m.Else():
-            m.d.comb += mem_read_port.addr .eq(read_pointer),
+            m.d.comb += mem_read_port.addr  .eq(read_word_addr),
 
         #
         # FIFO count handling.
         #
-        fifo_full = (fifo_count == self.mem_size)
+        fifo_full = (fifo_byte_count == self.mem_size_bytes)
 
         # Number of bytes popped from the FIFO this cycle.
-        data_popped = Signal(1)
+        fifo_bytes_popped = Signal(1)
 
         # Number of uncommitted bytes and its push trigger.
-        data_pending = Signal(12)
+        fifo_bytes_pending = Signal(12)
         data_commit  = Signal()
 
         # One byte is popped if the stream is read.
-        m.d.comb += data_popped.eq(self.stream.ready & self.stream.valid)
+        m.d.comb += fifo_bytes_popped.eq(self.stream.ready & self.stream.valid)
 
         # If discarding data, set the count to zero.
         with m.If(self.discarding):
             m.d.usb += [
-                fifo_count.eq(0),
-                read_location.eq(0),
-                write_location.eq(0),
-                data_pending.eq(0),
+                fifo_byte_count.eq(0),
+                read_byte_addr.eq(0),
+                write_byte_addr.eq(0),
+                fifo_bytes_pending.eq(0),
             ]
         # Otherwise, update the count acording to bytes pushed and popped.
         with m.Else():
+            fifo_next_count = fifo_byte_count - fifo_bytes_popped
+            padding = fifo_bytes_pending & 1
             with m.If(data_commit):
-                m.d.usb += fifo_count.eq(fifo_count - data_popped + data_pending + (data_pending & 1))  # force alignment
+                m.d.usb += fifo_byte_count.eq(fifo_next_count + fifo_bytes_pending + padding)
             with m.Else():
-                m.d.usb += fifo_count.eq(fifo_count - data_popped)
+                m.d.usb += fifo_byte_count.eq(fifo_next_count)
 
         # Timestamp counter.
         current_time = Signal(16)
@@ -201,12 +201,12 @@ class USBAnalyzer(Elaboratable):
                 with m.Elif(self.utmi.rx_active):
                     m.next = "CAPTURE_PACKET"
                     m.d.usb += [
-                        header_location  .eq((write_location + write_odd)[1:]),
-                        write_location   .eq(write_location + write_odd + self.HEADER_SIZE_BYTES),
-                        packet_size      .eq(0),
-                        packet_time      .eq(current_time),
-                        data_pending     .eq(self.HEADER_SIZE_BYTES),
-                        current_time     .eq(0),
+                        header_word_addr   .eq(next_word_addr),
+                        write_byte_addr    .eq(write_byte_addr + write_odd + self.HEADER_SIZE_BYTES),
+                        fifo_bytes_pending .eq(self.HEADER_SIZE_BYTES),
+                        packet_size        .eq(0),
+                        packet_time        .eq(current_time),
+                        current_time       .eq(0),
                     ]
 
 
@@ -223,14 +223,14 @@ class USBAnalyzer(Elaboratable):
                 # Advance the write pointer each time we receive a bit.
                 with m.If(byte_received):
                     m.d.usb += [
-                        write_location  .eq(write_location + 1),
-                        packet_size     .eq(packet_size + 1),
-                        data_pending    .eq(data_pending + 1)
+                        write_byte_addr    .eq(write_byte_addr + 1),
+                        packet_size        .eq(packet_size + 1),
+                        fifo_bytes_pending .eq(fifo_bytes_pending + 1)
                     ]
 
                     # If this would be filling up our data memory,
                     # move to the OVERRUN state.
-                    with m.If(fifo_count + data_pending == self.mem_size - 1):
+                    with m.If(fifo_byte_count + fifo_bytes_pending == self.mem_size_bytes - 1):
                         m.next = "OVERRUN"
 
                 # If we've stopped receiving, write header.
@@ -267,7 +267,7 @@ class USBAnalyzer(Elaboratable):
                 with m.If(write_packet):
                     # Write packet byte.
                     m.d.comb += [
-                        mem_write_port.addr  .eq(write_pointer),
+                        mem_write_port.addr  .eq(write_word_addr),
                         mem_write_port.data  .eq(self.utmi.rx_data.replicate(2)),
                         mem_write_port.en    .eq(Mux(write_odd, 0b01, 0b10)),
                     ]
@@ -275,7 +275,7 @@ class USBAnalyzer(Elaboratable):
                 with m.Elif(write_header):
                     # Write first word of header.
                     m.d.comb += [
-                        mem_write_port.addr  .eq(header_location),
+                        mem_write_port.addr  .eq(header_word_addr),
                         mem_write_port.data  .eq(packet_size),
                         mem_write_port.en    .eq(0b11)
                     ]
@@ -284,7 +284,7 @@ class USBAnalyzer(Elaboratable):
             # FINISH_HEADER: Write second word of header.
             with m.State("FINISH_HEADER"):
                 m.d.comb += [
-                        mem_write_port.addr  .eq(header_location + 1),
+                        mem_write_port.addr  .eq(header_word_addr + 1),
                         mem_write_port.data  .eq(packet_time),
                         mem_write_port.en    .eq(0b11)
                 ]
