@@ -48,10 +48,8 @@ dependencies = [
 [project.optional-dependencies]
 gateware = [
     "amaranth==0.4.1",
-    "luna-usb @ git+https://github.com/greatscottgadgets/luna@main",
-    #"luna-usb~=0.1"
-    "luna-soc @ git+https://github.com/greatscottgadgets/luna-soc@main",
-    #"luna-soc~=0.1"
+    "luna-usb~=0.1",
+    "luna-soc~=0.1",
 ]
 
 [project.scripts]
