@@ -30,6 +30,7 @@ from luna_soc.gateware.csr           import SetupFIFOInterface, InFIFOInterface,
 from luna_soc.gateware.wishbone      import ECP5ConfigurationFlashInterface, WishboneSPIFlashReader
 
 from .advertiser import ApolloAdvertiserPeripheral
+from .info       import CynthionInformationPeripheral
 
 
 # - MoondancerSoc ---------------------------------------------------------------
@@ -150,6 +151,9 @@ class MoondancerSoc(Elaboratable):
         self.advertiser = ApolloAdvertiserPeripheral(clk_freq_hz=clock_frequency)
         self.soc.add_peripheral(self.advertiser, addr=0xf0007000)
 
+        # ... add a CynthionInformation peripheral ...
+        self.info = CynthionInformationPeripheral()
+        self.soc.add_peripheral(self.info, addr=0xf0007100)
 
     def elaborate(self, platform):
         m = Module()

@@ -15,21 +15,33 @@ from apollo_fpga import ApolloDebugger
 from apollo_fpga.commands.cli import Command, COMMANDS as APOLLO_COMMANDS
 
 
+def cynthion_info(device, args):
+    # just call the Apollo implementation for now
+    command = next((c for c in APOLLO_COMMANDS if c.name == "info"), None)
+    command.handler(device, args)
+
 def cynthion_selftest(device, args):
     from .cynthion_selftest import main as main_selftest
     sys.argv = [sys.argv[0]]
     main_selftest()
 
 
-COMMANDS = [
+CYNTHION_COMMANDS = [
+    # Apollo commands can be intercepted by simply supplying a new Command with the same name
+    Command("info",     handler=cynthion_info,
+            help="Print Cynthion device info."),
     Command("selftest", handler=cynthion_selftest,
-            help="Run a hardware self-test on a connected Cynthion.", ),
+            help="Run a hardware self-test on a connected Cynthion."),
 ]
 
 
 def main():
-    # combine apollo and cynthion commands
-    commands = APOLLO_COMMANDS + COMMANDS
+    # combine apollo and cynthion commands, overwriting apollo implementations
+    # with cynthion implementations, where defined.
+    apollo_commands   = dict(zip([c.name for c in APOLLO_COMMANDS],   APOLLO_COMMANDS))
+    cynthion_commands = dict(zip([c.name for c in CYNTHION_COMMANDS], CYNTHION_COMMANDS))
+    apollo_commands.update(cynthion_commands)
+    commands = apollo_commands.values()
 
     # Set up a simple argument parser.
     parser = argparse.ArgumentParser(description="Apollo FPGA Configuration / Debug tool",

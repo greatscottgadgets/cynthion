@@ -380,62 +380,61 @@ const OTHER_DESCRIPTOR_MAX_PACKET_SIZE: u16 = if matches!(DEVICE_SPEED, Speed::H
 };
 
 static USB_DEVICE_DESCRIPTOR: DeviceDescriptor = DeviceDescriptor {
-    descriptor_version: 0x0200,
-    device_class: 0x00,
-    device_subclass: 0x00,
-    device_protocol: 0x00,
-    max_packet_size: 64,
-    vendor_id: cynthion::shared::usb::bVendorId::example,
-    product_id: cynthion::shared::usb::bProductId::example,
-    device_version_number: moondancer::usb::DEVICE_VERSION_NUMBER,
-    manufacturer_string_index: 1,
-    product_string_index: 2,
-    serial_string_index: 3,
-    num_configurations: 1,
+    bcdUSB: 0x0200,
+    bDeviceClass: 0x00,
+    bDeviceSubClass: 0x00,
+    bDeviceProtocol: 0x00,
+    bMaxPacketSize: 64,
+    idVendor: cynthion::shared::usb::bVendorId::example,
+    idProduct: cynthion::shared::usb::bProductId::example,
+    iManufacturer: 1,
+    iProduct: 2,
+    iSerialNumber: 3,
+    bNumConfigurations: 1,
     ..DeviceDescriptor::new()
 };
 
 static USB_DEVICE_QUALIFIER_DESCRIPTOR: DeviceQualifierDescriptor = DeviceQualifierDescriptor {
-    descriptor_version: 0x0200,
-    device_class: 0x00,
-    device_subclass: 0x00,
-    device_protocol: 0x00,
-    max_packet_size: 64,
-    num_configurations: 1,
+    bcdUSB: 0x0200,
+    bDeviceClass: 0x00,
+    bDeviceSubClass: 0x00,
+    bDeviceProtocol: 0x00,
+    bMaxPacketSize0: 64,
+    bNumConfigurations: 1,
     ..DeviceQualifierDescriptor::new()
 };
 
 static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDescriptor::new(
     ConfigurationDescriptorHeader {
-        configuration_value: 1,
-        configuration_string_index: 4,
-        attributes: 0x80, // 0b1000_0000 = bus-powered
-        max_power: 50,    // 50 * 2 mA = 100 mA
+        bConfigurationValue: 1,
+        iConfiguration: 4,
+        bmAttributes: 0x80, // 0b1000_0000 = bus-powered
+        bMaxPower: 50,      // 50 * 2 mA = 100 mA
         ..ConfigurationDescriptorHeader::new()
     },
     &[InterfaceDescriptor::new(
         InterfaceDescriptorHeader {
-            interface_number: 0,
-            alternate_setting: 0,
-            interface_class: 0x00,
-            interface_subclass: 0x00,
-            interface_protocol: 0x00,
-            interface_string_index: 5,
+            iInterfaceNumber: 0,
+            bAlternateSetting: 0,
+            bInterfaceClass: 0x00,
+            bInterfaceSubClass: 0x00,
+            bInterfaceProtocol: 0x00,
+            iInterface: 5,
             ..InterfaceDescriptorHeader::new()
         },
         &[
             EndpointDescriptor {
-                endpoint_address: ENDPOINT_BULK_OUT,
-                attributes: 0x02, // Bulk
-                max_packet_size: DESCRIPTOR_MAX_PACKET_SIZE,
-                interval: 0,
+                bEndpointAddress: ENDPOINT_BULK_OUT,
+                bmAttributes: 0x02, // Bulk
+                wMaxPacketSize: DESCRIPTOR_MAX_PACKET_SIZE,
+                bInterval: 0,
                 ..EndpointDescriptor::new()
             },
             EndpointDescriptor {
-                endpoint_address: ENDPOINT_BULK_IN,
-                attributes: 0x02, // Bulk
-                max_packet_size: DESCRIPTOR_MAX_PACKET_SIZE,
-                interval: 0,
+                bEndpointAddress: ENDPOINT_BULK_IN,
+                bmAttributes: 0x02, // Bulk
+                wMaxPacketSize: DESCRIPTOR_MAX_PACKET_SIZE,
+                bInterval: 0,
                 ..EndpointDescriptor::new()
             },
         ],
@@ -445,36 +444,36 @@ static USB_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor = ConfigurationDe
 static USB_OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
     ConfigurationDescriptor::new(
         ConfigurationDescriptorHeader {
-            descriptor_type: DescriptorType::OtherSpeedConfiguration as u8,
-            configuration_value: 1,
-            configuration_string_index: 6,
-            attributes: 0x80, // 0b1000_0000 = bus-powered
-            max_power: 50,    // 50 * 2 mA = 100 mA
+            bDescriptorType: DescriptorType::OtherSpeedConfiguration as u8,
+            bConfigurationValue: 1,
+            iConfiguration: 6,
+            bmAttributes: 0x80, // 0b1000_0000 = bus-powered
+            bMaxPower: 50,      // 50 * 2 mA = 100 mA
             ..ConfigurationDescriptorHeader::new()
         },
         &[InterfaceDescriptor::new(
             InterfaceDescriptorHeader {
-                interface_number: 0,
-                alternate_setting: 0,
-                interface_class: 0x00,
-                interface_subclass: 0x00,
-                interface_protocol: 0x00,
-                interface_string_index: 7,
+                iInterfaceNumber: 0,
+                bAlternateSetting: 0,
+                bInterfaceClass: 0x00,
+                bInterfaceSubClass: 0x00,
+                bInterfaceProtocol: 0x00,
+                iInterface: 7,
                 ..InterfaceDescriptorHeader::new()
             },
             &[
                 EndpointDescriptor {
-                    endpoint_address: ENDPOINT_BULK_OUT,
-                    attributes: 0x02, // Bulk
-                    max_packet_size: OTHER_DESCRIPTOR_MAX_PACKET_SIZE,
-                    interval: 0,
+                    bEndpointAddress: ENDPOINT_BULK_OUT,
+                    bmAttributes: 0x02, // Bulk
+                    wMaxPacketSize: OTHER_DESCRIPTOR_MAX_PACKET_SIZE,
+                    bInterval: 0,
                     ..EndpointDescriptor::new()
                 },
                 EndpointDescriptor {
-                    endpoint_address: ENDPOINT_BULK_IN,
-                    attributes: 0x02, // Bulk
-                    max_packet_size: OTHER_DESCRIPTOR_MAX_PACKET_SIZE,
-                    interval: 0,
+                    bEndpointAddress: ENDPOINT_BULK_IN,
+                    bmAttributes: 0x02, // Bulk
+                    wMaxPacketSize: OTHER_DESCRIPTOR_MAX_PACKET_SIZE,
+                    bInterval: 0,
                     ..EndpointDescriptor::new()
                 },
             ],

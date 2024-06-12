@@ -1,5 +1,7 @@
 //! USB Descriptors
 
+#![allow(non_snake_case)]
+
 use core::iter;
 use core::marker::PhantomData;
 use core::mem::size_of;
@@ -63,24 +65,23 @@ impl From<u8> for DescriptorType {
 // - DeviceDescriptor ---------------------------------------------------------
 
 /// USB device descriptor
-#[allow(clippy::pub_underscore_fields)]
 #[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct DeviceDescriptor {
-    pub _length: u8,             // 18
-    pub _descriptor_type: u8,    // 1 = Device
-    pub descriptor_version: u16, // aka bcdUSB
-    pub device_class: u8,
-    pub device_subclass: u8,
-    pub device_protocol: u8,
-    pub max_packet_size: u8,
-    pub vendor_id: u16,
-    pub product_id: u16,
-    pub device_version_number: u16,
-    pub manufacturer_string_index: u8,
-    pub product_string_index: u8,
-    pub serial_string_index: u8,
-    pub num_configurations: u8,
+    pub bLength: u8,         // 18
+    pub bDescriptorType: u8, // 1 = Device
+    pub bcdUSB: u16,
+    pub bDeviceClass: u8,
+    pub bDeviceSubClass: u8,
+    pub bDeviceProtocol: u8,
+    pub bMaxPacketSize: u8,
+    pub idVendor: u16,
+    pub idProduct: u16,
+    pub bcdDevice: u16,
+    pub iManufacturer: u8,
+    pub iProduct: u8,
+    pub iSerialNumber: u8,
+    pub bNumConfigurations: u8,
 }
 
 impl AsByteSliceIterator for DeviceDescriptor {}
@@ -90,20 +91,20 @@ impl DeviceDescriptor {
     #[allow(clippy::cast_possible_truncation)]
     pub const fn new() -> Self {
         Self {
-            _length: size_of::<Self>() as u8,
-            _descriptor_type: DescriptorType::Device as u8,
-            descriptor_version: 0x0200,
-            device_class: 0,
-            device_subclass: 0,
-            device_protocol: 0,
-            max_packet_size: 0,
-            vendor_id: 0,
-            product_id: 0,
-            device_version_number: 0,
-            manufacturer_string_index: 0,
-            product_string_index: 0,
-            serial_string_index: 0,
-            num_configurations: 0,
+            bLength: size_of::<Self>() as u8,
+            bDescriptorType: DescriptorType::Device as u8,
+            bcdUSB: 0x0200,
+            bDeviceClass: 0,
+            bDeviceSubClass: 0,
+            bDeviceProtocol: 0,
+            bMaxPacketSize: 0,
+            idVendor: 0,
+            idProduct: 0,
+            bcdDevice: 0,
+            iManufacturer: 0,
+            iProduct: 0,
+            iSerialNumber: 0,
+            bNumConfigurations: 0,
         }
     }
 }
@@ -117,19 +118,18 @@ impl Default for DeviceDescriptor {
 // - DeviceQualifierDescriptor ------------------------------------------------
 
 /// USB device qualifier descriptor
-#[allow(clippy::pub_underscore_fields)]
 #[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct DeviceQualifierDescriptor {
-    pub _length: u8,          // 10
-    pub _descriptor_type: u8, // 6 = DeviceQualifier
-    pub descriptor_version: u16,
-    pub device_class: u8,
-    pub device_subclass: u8,
-    pub device_protocol: u8,
-    pub max_packet_size: u8,
-    pub num_configurations: u8,
-    pub reserved: u8,
+    pub bLength: u8,         // 10
+    pub bDescriptorType: u8, // 6 = DeviceQualifier
+    pub bcdUSB: u16,
+    pub bDeviceClass: u8,
+    pub bDeviceSubClass: u8,
+    pub bDeviceProtocol: u8,
+    pub bMaxPacketSize0: u8,
+    pub bNumConfigurations: u8,
+    pub bReserved: u8,
 }
 
 impl AsByteSliceIterator for DeviceQualifierDescriptor {}
@@ -139,15 +139,15 @@ impl DeviceQualifierDescriptor {
     #[allow(clippy::cast_possible_truncation)]
     pub const fn new() -> Self {
         Self {
-            _length: size_of::<Self>() as u8,
-            _descriptor_type: DescriptorType::DeviceQualifier as u8,
-            descriptor_version: 0,
-            device_class: 0,
-            device_subclass: 0,
-            device_protocol: 0,
-            max_packet_size: 0,
-            num_configurations: 0,
-            reserved: 0,
+            bLength: size_of::<Self>() as u8,
+            bDescriptorType: DescriptorType::DeviceQualifier as u8,
+            bcdUSB: 0,
+            bDeviceClass: 0,
+            bDeviceSubClass: 0,
+            bDeviceProtocol: 0,
+            bMaxPacketSize0: 0,
+            bNumConfigurations: 0,
+            bReserved: 0,
         }
     }
 }
@@ -161,18 +161,17 @@ impl Default for DeviceQualifierDescriptor {
 // - ConfigurationDescriptor --------------------------------------------------
 
 /// USB configuration descriptor header
-#[allow(clippy::pub_underscore_fields)]
 #[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct ConfigurationDescriptorHeader {
-    pub _length: u8,         // 9
-    pub descriptor_type: u8, // 2 = Configuration, 3 = OtherSpeedConfiguration TODO
-    pub _total_length: u16,
-    pub _num_interfaces: u8,
-    pub configuration_value: u8,
-    pub configuration_string_index: u8,
-    pub attributes: u8,
-    pub max_power: u8,
+    pub bLength: u8,         // 9
+    pub bDescriptorType: u8, // 2 = Configuration, 3 = OtherSpeedConfiguration TODO
+    pub wTotalLength: u16,
+    pub bNumInterfaces: u8,
+    pub bConfigurationValue: u8,
+    pub iConfiguration: u8,
+    pub bmAttributes: u8,
+    pub bMaxPower: u8,
 }
 
 impl AsByteSliceIterator for ConfigurationDescriptorHeader {}
@@ -182,14 +181,14 @@ impl ConfigurationDescriptorHeader {
     #[allow(clippy::cast_possible_truncation)]
     pub const fn new() -> Self {
         Self {
-            _length: size_of::<Self>() as u8,
-            descriptor_type: DescriptorType::Configuration as u8,
-            _total_length: 0,
-            _num_interfaces: 0,
-            configuration_value: 0,
-            configuration_string_index: 0,
-            attributes: 0,
-            max_power: 0,
+            bLength: size_of::<Self>() as u8,
+            bDescriptorType: DescriptorType::Configuration as u8,
+            wTotalLength: 0,
+            bNumInterfaces: 0,
+            bConfigurationValue: 0,
+            iConfiguration: 0,
+            bmAttributes: 0,
+            bMaxPower: 0,
         }
     }
 }
@@ -208,8 +207,8 @@ impl<'a> ConfigurationDescriptor<'a> {
         mut head: ConfigurationDescriptorHeader,
         tail: &'a [InterfaceDescriptor],
     ) -> Self {
-        head._length = size_of::<ConfigurationDescriptorHeader>() as u8;
-        head._num_interfaces = tail.len() as u8;
+        head.bLength = size_of::<ConfigurationDescriptorHeader>() as u8;
+        head.bNumInterfaces = tail.len() as u8;
 
         Self { head, tail }
     }
@@ -218,13 +217,13 @@ impl<'a> ConfigurationDescriptor<'a> {
     pub fn set_total_length(&mut self) -> usize {
         let total_length = self.iter().count();
         if let Ok(total_length) = u16::try_from(total_length) {
-            self.head._total_length = total_length;
+            self.head.wTotalLength = total_length;
         } else {
             log::warn!(
                 "Configuration descriptor is too long. Truncating to {} bytes.",
                 u16::MAX
             );
-            self.head._total_length = u16::MAX;
+            self.head.wTotalLength = u16::MAX;
         }
 
         total_length
@@ -276,19 +275,18 @@ pub type ConfigurationDescriptorTailIterator<'a> = iter::FlatMap<
 // - InterfaceDescriptor ------------------------------------------------------
 
 /// USB interface descriptor header
-#[allow(clippy::pub_underscore_fields)]
 #[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct InterfaceDescriptorHeader {
-    pub _length: u8,          // 9
-    pub _descriptor_type: u8, // 4 = Interface
-    pub interface_number: u8,
-    pub alternate_setting: u8,
-    pub _num_endpoints: u8,
-    pub interface_class: u8,
-    pub interface_subclass: u8,
-    pub interface_protocol: u8,
-    pub interface_string_index: u8,
+    pub bLength: u8,         // 9
+    pub bDescriptorType: u8, // 4 = Interface
+    pub iInterfaceNumber: u8,
+    pub bAlternateSetting: u8,
+    pub bNumEndpoints: u8,
+    pub bInterfaceClass: u8,
+    pub bInterfaceSubClass: u8,
+    pub bInterfaceProtocol: u8,
+    pub iInterface: u8,
 }
 
 impl AsByteSliceIterator for InterfaceDescriptorHeader {}
@@ -298,15 +296,15 @@ impl InterfaceDescriptorHeader {
     #[allow(clippy::cast_possible_truncation)]
     pub const fn new() -> Self {
         Self {
-            _length: size_of::<Self>() as u8,
-            _descriptor_type: DescriptorType::Interface as u8,
-            interface_number: 0,
-            alternate_setting: 0,
-            _num_endpoints: 0,
-            interface_class: 0,
-            interface_subclass: 0,
-            interface_protocol: 0,
-            interface_string_index: 0,
+            bLength: size_of::<Self>() as u8,
+            bDescriptorType: DescriptorType::Interface as u8,
+            iInterfaceNumber: 0,
+            bAlternateSetting: 0,
+            bNumEndpoints: 0,
+            bInterfaceClass: 0,
+            bInterfaceSubClass: 0,
+            bInterfaceProtocol: 0,
+            iInterface: 0,
         }
     }
 }
@@ -321,8 +319,8 @@ impl<'a> InterfaceDescriptor<'a> {
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub const fn new(mut head: InterfaceDescriptorHeader, tail: &'a [EndpointDescriptor]) -> Self {
-        head._length = size_of::<InterfaceDescriptorHeader>() as u8;
-        head._num_endpoints = tail.len() as u8;
+        head.bLength = size_of::<InterfaceDescriptorHeader>() as u8;
+        head.bNumEndpoints = tail.len() as u8;
         Self { head, tail }
     }
 
@@ -337,16 +335,15 @@ impl<'a> InterfaceDescriptor<'a> {
 // - EndpointDescriptor -------------------------------------------------------
 
 /// USB endpoint descriptor
-#[allow(clippy::pub_underscore_fields)]
 #[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
 #[repr(C, packed)]
 pub struct EndpointDescriptor {
-    pub _length: u8,          // 7
-    pub _descriptor_type: u8, // 5 = Endpoint
-    pub endpoint_address: u8,
-    pub attributes: u8,
-    pub max_packet_size: u16,
-    pub interval: u8,
+    pub bLength: u8,         // 7
+    pub bDescriptorType: u8, // 5 = Endpoint
+    pub bEndpointAddress: u8,
+    pub bmAttributes: u8,
+    pub wMaxPacketSize: u16,
+    pub bInterval: u8,
 }
 
 impl AsByteSliceIterator for EndpointDescriptor {}
@@ -356,12 +353,12 @@ impl EndpointDescriptor {
     #[allow(clippy::cast_possible_truncation)]
     pub const fn new() -> Self {
         Self {
-            _length: size_of::<Self>() as u8,
-            _descriptor_type: DescriptorType::Endpoint as u8,
-            endpoint_address: 0,
-            attributes: 0,
-            max_packet_size: 0,
-            interval: 0,
+            bLength: size_of::<Self>() as u8,
+            bDescriptorType: DescriptorType::Endpoint as u8,
+            bEndpointAddress: 0,
+            bmAttributes: 0,
+            wMaxPacketSize: 0,
+            bInterval: 0,
         }
     }
 }
@@ -401,8 +398,8 @@ impl<'a> StringDescriptorZero<'a> {
         let tail_length = language_ids.len() * size_of::<LanguageId>();
         Self {
             head: StringDescriptorHeader {
-                _length: (head_length + tail_length) as u8,
-                _descriptor_type: DescriptorType::String as u8,
+                bLength: (head_length + tail_length) as u8,
+                bDescriptorType: DescriptorType::String as u8,
             },
             tail: language_ids,
         }
@@ -419,20 +416,19 @@ impl<'a> StringDescriptorZero<'a> {
 // - StringDescriptor ---------------------------------------------------------
 
 /// USB string zero descriptor header
-#[allow(clippy::pub_underscore_fields)]
 #[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy, Debug)]
 #[repr(C, packed)]
 pub struct StringDescriptorHeader {
-    pub _length: u8,
-    pub _descriptor_type: u8, // 3 = String
+    pub bLength: u8,
+    pub bDescriptorType: u8, // 3 = String
 }
 
 impl StringDescriptorHeader {
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            _length: 0,
-            _descriptor_type: DescriptorType::String as u8,
+            bLength: 0,
+            bDescriptorType: DescriptorType::String as u8,
         }
     }
 }
@@ -456,8 +452,8 @@ impl<'a> StringDescriptor<'a> {
 
         Self {
             head: StringDescriptorHeader {
-                _length: (head_length + tail_length) as u8,
-                _descriptor_type: DescriptorType::String as u8,
+                bLength: (head_length + tail_length) as u8,
+                bDescriptorType: DescriptorType::String as u8,
             },
             tail: string,
         }
