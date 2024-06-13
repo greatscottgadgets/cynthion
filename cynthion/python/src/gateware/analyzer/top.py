@@ -16,7 +16,7 @@ import usb
 from datetime import datetime
 from enum import IntEnum, IntFlag
 
-from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter
+from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter, Mux
 from amaranth.build.res                  import ResourceError
 from usb_protocol.emitters               import DeviceDescriptorCollection
 from usb_protocol.types                  import USBRequestType, USBRequestRecipient
@@ -42,6 +42,7 @@ from usb_protocol.types.descriptors.microsoft10 import RegistryTypes
 
 from .analyzer                           import USBAnalyzer
 from .fifo                               import Stream16to8, StreamFIFO, AsyncFIFOReadReset, HyperRAMPacketFIFO
+from .speed_detection                    import USBAnalyzerSpeedDetector
 
 import cynthion
 
@@ -49,6 +50,7 @@ import cynthion
 USB_SPEED_HIGH       = 0b00
 USB_SPEED_FULL       = 0b01
 USB_SPEED_LOW        = 0b10
+USB_SPEED_AUTO       = 0b11
 
 USB_VENDOR_ID        = cynthion.shared.usb.bVendorId.cynthion
 USB_PRODUCT_ID       = cynthion.shared.usb.bProductId.cynthion
@@ -151,6 +153,12 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                         USBAnalyzerSupportedSpeeds.USB_SPEED_LOW | \
                         USBAnalyzerSupportedSpeeds.USB_SPEED_FULL | \
                         USBAnalyzerSupportedSpeeds.USB_SPEED_HIGH
+
+                    # Automatic speed detection is only supported on Cynthion r0.6+.
+                    if platform.version >= (0, 6):
+                        supported_speeds |= \
+                            USBAnalyzerSupportedSpeeds.USB_SPEED_AUTO
+
                     self.handle_simple_data_request(m, transmitter, supported_speeds, length=1)
 
                 # SET_TEST_CONFIG -- The host is trying to configure our test device
@@ -244,6 +252,26 @@ class USBAnalyzerApplet(Elaboratable):
             # On Cynthion r0.6 - r1.3 this passthrough is enabled by
             # default, even with the hardware unpowered, but it does no
             # harm to explicitly set it here.
+
+            # Tap the D+/D- signals for speed detection.
+            usb_diff_input = platform.request("target_usb_diff").i
+            usb_diff = Signal()
+            m.d.usb += usb_diff.eq(usb_diff_input)
+
+            # Add a speed detector and use it when selected.
+            m.submodules.speed = speed_detector = USBAnalyzerSpeedDetector()
+            current_speed = Mux(
+                speed_selection == USB_SPEED_AUTO,
+                speed_detector.current_speed,
+                speed_selection)
+
+            # Provide the necessary signals for speed detection.
+            m.d.comb += [
+                speed_detector.reset.eq(state.write),
+                speed_detector.line_state.eq(utmi.line_state),
+                speed_detector.usb_diff.eq(usb_diff),
+                speed_detector.vbus_connected.eq(utmi.session_valid),
+            ]
         else:
             # On Cynthion r0.1 - r0.5, there is no `target_c_vbus_en`
             # signal. The following two signals are needed to have
@@ -253,18 +281,20 @@ class USBAnalyzerApplet(Elaboratable):
                 platform.request("pass_through_vbus").o .eq(1),
             ]
 
+            # Speed selection is manual only.
+            current_speed = speed_selection
+
         # Set up our parameters.
         m.d.comb += [
-
             # Set our mode to non-driving and to the desired speed.
             utmi.op_mode     .eq(0b01),
-            utmi.xcvr_select .eq(speed_selection),
+            utmi.xcvr_select .eq(current_speed),
 
             # Disable all of our terminations, as we want to participate in
             # passive observation.
             utmi.dm_pulldown .eq(0),
             utmi.dm_pulldown .eq(0),
-            utmi.term_select .eq(0)
+            utmi.term_select .eq(0),
         ]
 
         # Select the appropriate PHY according to platform version.
@@ -327,7 +357,7 @@ class USBAnalyzerApplet(Elaboratable):
         usb.add_endpoint(stream_ep)
 
         # Create a USB analyzer.
-        m.submodules.analyzer = analyzer = USBAnalyzer(utmi, speed_selection)
+        m.submodules.analyzer = analyzer = USBAnalyzer(utmi, current_speed)
 
         # Follow this with a HyperRAM FIFO for additional buffering.
         reset_on_start = ResetInserter(analyzer.starting)
