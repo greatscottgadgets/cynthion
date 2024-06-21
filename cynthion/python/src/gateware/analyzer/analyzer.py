@@ -173,6 +173,12 @@ class USBAnalyzer(Elaboratable):
             with m.Else():
                 m.d.sync += fifo_word_count.eq(fifo_next_count)
 
+            # When an event is written, update pending words and write pointer.
+            with m.If(write_event):
+                m.d.sync += fifo_words_pending.eq(self.EVENT_SIZE_WORDS)
+                m.d.usb += write_byte_addr.eq(
+                    write_byte_addr + write_odd + self.EVENT_SIZE_BYTES)
+
         # Timestamp counter.
         current_time = Signal(16)
         m.d.usb += current_time.eq(current_time + 1)
@@ -217,12 +223,6 @@ class USBAnalyzer(Elaboratable):
                     m.d.comb += [
                         write_event        .eq(1),
                         event_code         .eq(USBAnalyzerEvent.NONE),
-                    ]
-                    m.d.usb += [
-                        write_byte_addr    .eq(write_byte_addr + write_odd + self.EVENT_SIZE_BYTES),
-                    ]
-                    m.d.sync += [
-                        fifo_words_pending .eq(self.EVENT_SIZE_WORDS),
                     ]
 
 
