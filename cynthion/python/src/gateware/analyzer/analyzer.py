@@ -9,12 +9,12 @@
 import unittest
 
 from amaranth          import Signal, Module, Elaboratable, Memory, Record, Mux, Cat, C
-from enum              import IntEnum
 
 from luna.gateware.stream import StreamInterface
 from luna.gateware.test   import LunaGatewareTestCase, usb_domain_test_case
 
 from .fifo import Stream16to8, StreamFIFO, AsyncFIFOReadReset
+from .events import USBAnalyzerEvent
 
 
 class USBAnalyzer(Elaboratable):
@@ -332,10 +332,6 @@ class USBAnalyzer(Elaboratable):
 
 
         return m
-
-
-class USBAnalyzerEvent(IntEnum):
-    NONE = 0
 
 
 class USBAnalyzerTestBase(LunaGatewareTestCase):
