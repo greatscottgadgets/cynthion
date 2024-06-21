@@ -220,6 +220,7 @@ class USBAnalyzerApplet(Elaboratable):
 
         # State register
         m.submodules.state = state = USBAnalyzerRegister()
+        speed_selection = state.current[1:3]
 
         # Test config register
         m.submodules.test_config = test_config = USBAnalyzerRegister(reset=0x01)
@@ -257,7 +258,7 @@ class USBAnalyzerApplet(Elaboratable):
 
             # Set our mode to non-driving and to the desired speed.
             utmi.op_mode     .eq(0b01),
-            utmi.xcvr_select .eq(state.current[1:3]),
+            utmi.xcvr_select .eq(speed_selection),
 
             # Disable all of our terminations, as we want to participate in
             # passive observation.
@@ -326,7 +327,7 @@ class USBAnalyzerApplet(Elaboratable):
         usb.add_endpoint(stream_ep)
 
         # Create a USB analyzer.
-        m.submodules.analyzer = analyzer = USBAnalyzer(utmi_interface=utmi)
+        m.submodules.analyzer = analyzer = USBAnalyzer(utmi, speed_selection)
 
         # Follow this with a HyperRAM FIFO for additional buffering.
         reset_on_start = ResetInserter(analyzer.discarding)

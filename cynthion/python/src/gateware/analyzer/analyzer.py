@@ -64,13 +64,14 @@ class USBAnalyzer(Elaboratable):
     # Support a maximum payload size of 1024B, plus a 1-byte PID and a 2-byte CRC16.
     MAX_PACKET_SIZE_BYTES = 1024 + 1 + 2
 
-    def __init__(self, *, utmi_interface, mem_depth=4096):
+    def __init__(self, utmi_interface, speed_selection, mem_depth=4096):
         """
         Parameters:
             utmi_interface -- A record or elaboratable that presents a UTMI interface.
         """
 
         self.utmi = utmi_interface
+        self.speed_selection = speed_selection
 
         assert (mem_depth % 2) == 0, "mem_depth must be a power of 2"
 
@@ -385,9 +386,11 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
             ('rx_error',    1),
             ('rx_complete', 1),
         ])
-        m = Module()
-        m.submodules.analyzer = self.analyzer = USBAnalyzer(utmi_interface=self.utmi, mem_depth=128)
 
+        speed = C(0x00, 2)
+
+        m = Module()
+        m.submodules.analyzer = self.analyzer = USBAnalyzer(self.utmi, speed, mem_depth=128)
         reset_on_start = ResetInserter(self.analyzer.discarding)
         m.submodules.s16to8 = s16to8 = reset_on_start(Stream16to8())
         m.submodules.clk_conv = clk_conv = StreamFIFO(
@@ -559,11 +562,13 @@ class USBAnalyzerStackTest(USBAnalyzerTestBase):
             ('rst', [('o', 1)]),
         ])
 
+        speed = C(0x00, 2)
+
         # Create a stack of our UTMITranslator and our USBAnalyzer.
         # We'll wrap the both in a module to establish a synthetic hierarchy.
         m = Module()
         m.submodules.translator = self.translator = UTMITranslator(ulpi=self.ulpi, handle_clocking=False)
-        m.submodules.analyzer   = self.analyzer   = USBAnalyzer(utmi_interface=self.translator, mem_depth=128)
+        m.submodules.analyzer   = self.analyzer = USBAnalyzer(self.translator, speed, mem_depth=128)
         reset_on_start = ResetInserter(self.analyzer.discarding)
         m.submodules.s16to8 = s16to8 = reset_on_start(Stream16to8())
         m.submodules.clk_conv = clk_conv = StreamFIFO(
