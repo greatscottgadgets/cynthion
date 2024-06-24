@@ -420,11 +420,11 @@ class USBAnalyzerStackTest(LunaGatewareTestCase):
                 ('o',  8),
                 ('oe', 8),
             ]),
-            ('nxt', 1),
-            ('stp', 1),
+            ('nxt', [('i', 1)]),
+            ('stp', [('o', 1)]),
             ('dir', [('i', 1)]),
-            ('clk', 1),
-            ('rst', 1)
+            ('clk', [('o', 1)]),
+            ('rst', [('o', 1)]),
         ])
 
         # Create a stack of our UTMITranslator and our USBAnalyzer.
@@ -452,8 +452,8 @@ class USBAnalyzerStackTest(LunaGatewareTestCase):
         yield from self.advance_cycles(10)
 
         # Start a new packet.
-        yield self.ulpi.dir.eq(1)
-        yield self.ulpi.nxt.eq(1)
+        yield self.ulpi.dir.i.eq(1)
+        yield self.ulpi.nxt.i.eq(1)
 
         # Bus turnaround packet.
         yield self.ulpi.data.i.eq(0x80)
@@ -465,8 +465,8 @@ class USBAnalyzerStackTest(LunaGatewareTestCase):
             yield
 
         # Mark our packet as complete.
-        yield self.ulpi.dir.eq(0)
-        yield self.ulpi.nxt.eq(0)
+        yield self.ulpi.dir.i.eq(0)
+        yield self.ulpi.nxt.i.eq(0)
         yield
 
         # Wait for a few cycles, for realism.
