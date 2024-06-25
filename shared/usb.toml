@@ -81,5 +81,5 @@ moondancer = 0x20
 #   0xff = unused
 #
 [bInterfaceProtocol]
-analyzer   = 0x00
+analyzer   = 0x01
 moondancer = 0x00
