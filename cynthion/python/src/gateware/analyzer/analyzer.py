@@ -40,8 +40,8 @@ class USBAnalyzer(Elaboratable):
         Occurs if :attr:``stream`` is not being read quickly enough.
     capturing: Signal(), output
         Asserted iff the analyzer is currently capturing a packet.
-    discarding: Signal(), output
-        Asserted iff the analyzer is discarding the contents of its internal buffer.
+    starting: Signal(), output
+        Asserted iff the analyzer is starting capture on this cycle.
 
 
     Parameters
@@ -90,7 +90,7 @@ class USBAnalyzer(Elaboratable):
         self.stopped        = Signal()
         self.overrun        = Signal()
         self.capturing      = Signal()
-        self.discarding     = Signal()
+        self.starting       = Signal()
 
 
     def elaborate(self, platform):
@@ -155,8 +155,8 @@ class USBAnalyzer(Elaboratable):
         # One word is popped if the FIFO stream is read.
         m.d.comb += fifo_words_popped.eq(mem_read_port.en)
 
-        # If discarding data, set the count to zero.
-        with m.If(self.discarding):
+        # On startup, set counts to zero.
+        with m.If(self.starting):
             m.d.usb += [
                 write_byte_addr.eq(0),
             ]
@@ -193,7 +193,7 @@ class USBAnalyzer(Elaboratable):
                 self.stopped   .eq(f.ongoing("AWAIT_START")),
                 self.overrun   .eq(f.ongoing("OVERRUN")),
                 self.capturing .eq(f.ongoing("CAPTURE_PACKET")),
-                self.discarding.eq(self.stopped & self.capture_enable),
+                self.starting  .eq(self.stopped & self.capture_enable),
             ]
 
             # AWAIT_START: wait for capture to be enabled, but don't start mid-packet.
@@ -391,14 +391,14 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
 
         m = Module()
         m.submodules.analyzer = self.analyzer = USBAnalyzer(self.utmi, speed, mem_depth=128)
-        reset_on_start = ResetInserter(self.analyzer.discarding)
+        reset_on_start = ResetInserter(self.analyzer.starting)
         m.submodules.s16to8 = s16to8 = reset_on_start(Stream16to8())
         m.submodules.clk_conv = clk_conv = StreamFIFO(
             AsyncFIFOReadReset(width=8, depth=4, r_domain="usb", w_domain="sync"))
         m.d.comb += [
             s16to8.input.stream_eq(self.analyzer.stream),
             clk_conv.input.stream_eq(s16to8.output),
-            clk_conv.fifo.ext_rst.eq(self.analyzer.discarding),
+            clk_conv.fifo.ext_rst.eq(self.analyzer.starting),
         ]
         self.stream = clk_conv.output
         return m
@@ -569,14 +569,14 @@ class USBAnalyzerStackTest(USBAnalyzerTestBase):
         m = Module()
         m.submodules.translator = self.translator = UTMITranslator(ulpi=self.ulpi, handle_clocking=False)
         m.submodules.analyzer   = self.analyzer = USBAnalyzer(self.translator, speed, mem_depth=128)
-        reset_on_start = ResetInserter(self.analyzer.discarding)
+        reset_on_start = ResetInserter(self.analyzer.starting)
         m.submodules.s16to8 = s16to8 = reset_on_start(Stream16to8())
         m.submodules.clk_conv = clk_conv = StreamFIFO(
             AsyncFIFOReadReset(width=8, depth=4, r_domain="usb", w_domain="sync"))
         m.d.comb += [
             s16to8.input.stream_eq(self.analyzer.stream),
             clk_conv.input.stream_eq(s16to8.output),
-            clk_conv.fifo.ext_rst.eq(self.analyzer.discarding),
+            clk_conv.fifo.ext_rst.eq(self.analyzer.starting),
         ]
         self.stream = clk_conv.output
         return m
