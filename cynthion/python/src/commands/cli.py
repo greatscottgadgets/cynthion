@@ -51,7 +51,10 @@ def main():
         cmd_parser = sub_parsers.add_parser(command.name, aliases=command.alias, help=command.help)
         cmd_parser.set_defaults(func=command.handler)
         for arg in command.args:
-            cmd_parser.add_argument(arg)
+            if isinstance(arg, tuple):
+                cmd_parser.add_argument(*arg[0], **arg[1])
+            else:
+                cmd_parser.add_argument(arg)
 
     args = parser.parse_args()
     if not args.command:
