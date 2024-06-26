@@ -86,9 +86,6 @@ class USBAnalyzer(Elaboratable):
         self.capturing      = Signal()
         self.discarding     = Signal()
 
-        # Diagnostic I/O.
-        self.sampling       = Signal()
-
 
     def elaborate(self, platform):
         m = Module()
@@ -134,8 +131,6 @@ class USBAnalyzer(Elaboratable):
 
             # Our data_out is always the output of our read port...
             self.stream.payload  .eq(mem_read_port.data.word_select(~read_odd, 8)),
-
-            self.sampling        .eq(write_packet | write_header)
         ]
 
         # Once our consumer has accepted our current data, move to the next address.
