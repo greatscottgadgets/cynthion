@@ -27,9 +27,9 @@ def cynthion_selftest(device, args):
 
 
 CYNTHION_COMMANDS = [
-    # Apollo commands can be intercepted by simply supplying a new Command with the same name
-    Command("info",     handler=cynthion_info,
-            help="Print Cynthion device info."),
+    # Apollo commands can be intercepted by simply supplying a new Command with the same name and (optionally) options
+    Command("info",     handler=cynthion_info, args=[(("--force-offline",), dict(action='store_true'))],
+            help="Print device info.", ),
     Command("selftest", handler=cynthion_selftest,
             help="Run a hardware self-test on a connected Cynthion."),
 ]
@@ -61,7 +61,9 @@ def main():
         parser.print_help()
         return
 
-    device = ApolloDebugger()
+    # Force the FPGA offline by default in most commands to force Apollo mode if needed.
+    force_offline = args.force_offline if "force_offline" in args else True
+    device = ApolloDebugger(force_offline=force_offline)
 
     # Set up python's logging to act as a simple print, for now.
     logging.basicConfig(level=logging.INFO, format="%(message)-s")
