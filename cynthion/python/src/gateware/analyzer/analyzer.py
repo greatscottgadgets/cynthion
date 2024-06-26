@@ -333,15 +333,48 @@ class USBAnalyzerEvent(IntEnum):
     NONE = 0
 
 
-class USBAnalyzerTest(LunaGatewareTestCase):
+class USBAnalyzerTestBase(LunaGatewareTestCase):
 
     SYNC_CLOCK_FREQUENCY = 120e6
     USB_CLOCK_FREQUENCY = 60e6
 
+    def expect_data(self, expected_data):
+        # Check the stream reports data available.
+        self.assertEqual((yield self.dut.stream.valid), 1)
+
+        # Check that the expected data is set up.
+        self.assertEqual((yield self.dut.stream.payload), expected_data[0])
+
+        # Signal that we are ready to receive data.
+        yield self.dut.stream.ready.eq(1)
+        yield
+
+        # Validate that we get all of the bytes we expected.
+        received_data = []
+        for datum in expected_data:
+            if (yield self.dut.stream.valid):
+                received_data.append((yield self.dut.stream.payload))
+                yield
+            else:
+                # Data ended early.
+                break
+        self.assertEqual(received_data, expected_data)
+
+        if len(expected_data) % 2 == 1:
+            # There should then be one padding byte.
+            self.assertEqual((yield self.dut.stream.valid), 1)
+            yield
+
+        # There should then be no data left.
+        self.assertEqual((yield self.dut.stream.valid), 0)
+
+
+class USBAnalyzerTest(USBAnalyzerTestBase):
+
     def instantiate_dut(self):
         self.utmi = Record([
             ('tx_data',     8),
-            ('rx_data',    8),
+            ('rx_data',     8),
 
             ('rx_valid',    1),
             ('rx_active',   1),
@@ -390,25 +423,14 @@ class USBAnalyzerTest(LunaGatewareTestCase):
         yield from self.advance_cycles(5)
         self.assertEqual((yield self.dut.capturing), 0)
 
-        # Try to read back the capture data, byte by byte.
-        self.assertEqual((yield self.dut.stream.valid), 1)
-
         # First, we should get a header with the total data length.
         # This should be 0x00, 0x0a; as we captured 10 bytes.
+        #
         # Next, we should get a timestamp with the cycle count at which
-        # the packet started. This should be 0x00, 0x02.
-        self.assertEqual((yield self.dut.stream.payload), 0)
-        yield self.dut.stream.ready.eq(1)
-        yield
-
-        # Validate that we get all of the bytes of the packet we expected.
-        expected_data = [0x00, 0x0a, 0x00, 0x00] + list(range(0, 10))
-        for datum in expected_data:
-            self.assertEqual((yield self.dut.stream.payload), datum)
-            yield
-
-        # We should now be out of data -- verify that there's no longer data available.
-        self.assertEqual((yield self.dut.stream.valid), 0)
+        # the packet started. This should be zero.
+        #
+        # Finally, there should be the 10 packet bytes.
+        yield from self.expect_data([0x00, 0x0a, 0x00, 0x00] + list(range(0, 10)))
 
 
     @usb_domain_test_case
@@ -434,29 +456,11 @@ class USBAnalyzerTest(LunaGatewareTestCase):
         yield from self.advance_cycles(5)
         self.assertEqual((yield self.dut.capturing), 0)
 
-        # Try to read back the capture data, byte by byte.
-        self.assertEqual((yield self.dut.stream.valid), 1)
-
         # First, we should get a header with the total data length.
         # This should be 0x00, 0x01; as we captured 1 byte.
         # Next, we should get a timestamp with the cycle count at which
         # the packet started. This should be 0x00, 0x00.
-        self.assertEqual((yield self.dut.stream.payload), 0)
-        yield self.dut.stream.ready.eq(1)
-        yield
-
-        # Validate that we get all of the bytes of the packet we expected.
-        expected_data = [0x00, 0x01, 0x00, 0x00, 0xab]
-        for datum in expected_data:
-            self.assertEqual((yield self.dut.stream.payload), datum)
-            yield
-
-        # There should then be one padding byte.
-        self.assertEqual((yield self.dut.stream.valid), 1)
-        yield
-
-        # We should now be out of data -- verify that there's no longer data available.
-        self.assertEqual((yield self.dut.stream.valid), 0)
+        yield from self.expect_data([0x00, 0x01, 0x00, 0x00, 0xab])
 
 
     @usb_domain_test_case
@@ -477,37 +481,15 @@ class USBAnalyzerTest(LunaGatewareTestCase):
         yield self.utmi.rx_active.eq(0)
         yield from self.advance_stream(10)
 
-        # Try to read back the capture data, byte by byte.
-        self.assertEqual((yield self.dut.stream.valid), 1)
-        yield self.dut.stream.ready.eq(1)
-        yield
-
         # First, we should get an event with code zero, timestamp 0xFFFF.
-        rollover_event = [0xFF, 0x00, 0xFF, 0xFF]
-
         # Next we should get the packet, with length 1 and timestamp 0x0123.
+        rollover_event = [0xFF, 0x00, 0xFF, 0xFF]
         packet = [0x00, 0x01, 0x01, 0x23, 0xAB]
-
-        # Validate that we get all of the expected bytes.
-        expected_data = rollover_event + packet
-        for datum in expected_data:
-            self.assertEqual((yield self.dut.stream.payload), datum)
-            yield
-
-        # There should then be one padding byte.
-        self.assertEqual((yield self.dut.stream.valid), 1)
-        yield
-
-        # We should now be out of data.
-        self.assertEqual((yield self.dut.stream.valid), 0)
+        yield from self.expect_data(rollover_event + packet)
 
 
-class USBAnalyzerStackTest(LunaGatewareTestCase):
+class USBAnalyzerStackTest(USBAnalyzerTestBase):
     """ Test that evaluates a full-stack USB analyzer setup. """
-
-    SYNC_CLOCK_FREQUENCY = 120e6
-    USB_CLOCK_FREQUENCY = 60e6
-
 
     def instantiate_dut(self):
 
@@ -531,6 +513,7 @@ class USBAnalyzerStackTest(LunaGatewareTestCase):
         m = Module()
         m.submodules.translator = self.translator = UTMITranslator(ulpi=self.ulpi, handle_clocking=False)
         m.submodules.analyzer   = self.analyzer   = USBAnalyzer(utmi_interface=self.translator, mem_depth=128)
+        m.stream = self.analyzer.stream
         return m
 
 
@@ -571,17 +554,10 @@ class USBAnalyzerStackTest(LunaGatewareTestCase):
         # Wait for a few cycles, for realism.
         yield from self.advance_cycles(10)
 
-        # Read our data out of the PHY.
-        yield self.analyzer.stream.ready.eq(1)
-        yield
-
         # Validate that we got the correct packet out; plus headers.
         # We waited 10 cycles before starting the packet, so the
         # timestamp should be 0x00, 0x0a.
-        for i in [0x00, 0x03, 0x00, 0x0a, 0x2d, 0x00, 0x10]:
-            self.assertEqual((yield self.analyzer.stream.payload), i)
-            yield
-
+        yield from self.expect_data([0x00, 0x03, 0x00, 0x0a, 0x2d, 0x00, 0x10])
 
 
 if __name__ == "__main__":
