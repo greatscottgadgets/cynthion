@@ -8,11 +8,13 @@
 
 import unittest
 
-from amaranth          import Signal, Module, Elaboratable, Memory, Record, Mux, Cat, C
+from amaranth          import Signal, Module, Elaboratable, Memory, Record, Mux, Cat, C, DomainRenamer
 from enum              import IntEnum
 
 from luna.gateware.stream import StreamInterface
 from luna.gateware.test   import LunaGatewareTestCase, usb_domain_test_case
+
+from .fifo import Stream16to8
 
 
 class USBAnalyzer(Elaboratable):
@@ -53,9 +55,11 @@ class USBAnalyzer(Elaboratable):
 
     # Header is 16-bit length and 16-bit timestamp.
     HEADER_SIZE_BYTES = 4
+    HEADER_SIZE_WORDS = HEADER_SIZE_BYTES // 2
 
     # Event is 0xFF marker, 8-bit event code and 16-bit timestamp.
     EVENT_SIZE_BYTES = 4
+    EVENT_SIZE_WORDS = HEADER_SIZE_BYTES // 2
 
     # Support a maximum payload size of 1024B, plus a 1-byte PID and a 2-byte CRC16.
     MAX_PACKET_SIZE_BYTES = 1024 + 1 + 2
@@ -72,6 +76,7 @@ class USBAnalyzer(Elaboratable):
 
         # Internal storage memory.
         self.mem = Memory(width=16, depth=mem_depth, name="analysis_ringbuffer")
+        self.mem_size_words = mem_depth
         self.mem_size_bytes = 2 * mem_depth
 
         #
@@ -94,21 +99,16 @@ class USBAnalyzer(Elaboratable):
         m.submodules.read  = mem_read_port  = self.mem.read_port(domain="usb")
         m.submodules.write = mem_write_port = self.mem.write_port(domain="sync", granularity=8)
 
-        # FIFO addresses point to bytes.
+        # FIFO write addresses point to bytes.
         write_byte_addr  = Signal(range(self.mem_size_bytes))
-        read_byte_addr   = Signal(range(self.mem_size_bytes))
-        fifo_byte_count  = Signal(range(self.mem_size_bytes), reset=0)
 
         # Memory addresses point to words
         header_word_addr = Signal.like(mem_write_port.addr)
         write_word_addr  = Signal.like(mem_write_port.addr)
         read_word_addr   = Signal.like(mem_read_port.addr)
-        read_odd         = Signal()
+        fifo_word_count  = Signal.like(mem_read_port.addr)
         write_odd        = Signal()
-        m.d.comb += [
-            Cat(read_odd, read_word_addr)   .eq(read_byte_addr),
-            Cat(write_odd, write_word_addr) .eq(write_byte_addr),
-        ]
+        m.d.comb += Cat(write_odd, write_word_addr).eq(write_byte_addr)
         next_word_addr   = (write_byte_addr + write_odd)[1:]
 
         # Current receive status.
@@ -121,58 +121,64 @@ class USBAnalyzer(Elaboratable):
         write_header    = Signal()
         write_event     = Signal()
 
-        #
-        # Read FIFO logic.
-        #
+        # Use the FIFO as a stream source.
+        fifo_output     = StreamInterface(payload_width=16)
         m.d.comb += [
+            # Connect the read port address bus to our current read pointer.
+            mem_read_port.addr  .eq(read_word_addr),
 
-            # We have data ready whenever there's data in the FIFO.
-            self.stream.valid    .eq((fifo_byte_count != 0)),
-
-            # Our data_out is always the output of our read port...
-            self.stream.payload  .eq(mem_read_port.data.word_select(~read_odd, 8)),
+            # The stream produces the next word when there is data in the FIFO.
+            fifo_output.payload .eq(mem_read_port.data),
+            fifo_output.valid   .eq(fifo_word_count != 0),
+            fifo_output.last    .eq(fifo_word_count == 1),
         ]
 
-        # Once our consumer has accepted our current data, move to the next address.
-        with m.If(self.stream.ready & self.stream.valid):
-            m.d.usb  += read_byte_addr      .eq(read_byte_addr + 1)
-            m.d.comb += mem_read_port.addr  .eq(read_word_addr + read_odd)
-        with m.Else():
-            m.d.comb += mem_read_port.addr  .eq(read_word_addr),
+        # When a word is read from the FIFO, move to the next address.
+        with m.If(fifo_output.ready & fifo_output.valid):
+            m.d.usb += read_word_addr.eq(read_word_addr + 1)
+
+        # Convert the 16-bit stream to an 8-bit one for output.
+        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(Stream16to8())
+        m.d.comb += [
+            # The converter input is the FIFO output.
+            s16to8.input  .stream_eq(fifo_output),
+
+            # Our main output is the result of the conversion.
+            self.stream   .stream_eq(s16to8.output),
+        ]
 
         #
         # FIFO count handling.
         #
 
-        # Number of bytes pushed to the FIFO this cycle.
-        fifo_bytes_pushed = Signal(3)
+        # Number of words pushed to the FIFO this cycle.
+        fifo_words_pushed = Signal(2)
 
-        # Number of bytes popped from the FIFO this cycle.
-        fifo_bytes_popped = Signal(1)
+        # Number of words popped from the FIFO this cycle.
+        fifo_words_popped = Signal(1)
 
-        # Number of uncommitted bytes and its push trigger.
-        fifo_bytes_pending = Signal(12)
+        # Number of uncommitted words and its push trigger.
+        fifo_words_pending = Signal(11)
         data_commit  = Signal()
 
-        # One byte is popped if the stream is read.
-        m.d.comb += fifo_bytes_popped.eq(self.stream.ready & self.stream.valid)
+        # One word is popped if the FIFO stream is read.
+        m.d.comb += fifo_words_popped.eq(fifo_output.ready & fifo_output.valid)
 
         # If discarding data, set the count to zero.
         with m.If(self.discarding):
             m.d.usb += [
-                fifo_byte_count.eq(0),
-                read_byte_addr.eq(0),
+                fifo_word_count.eq(0),
+                read_word_addr.eq(0),
                 write_byte_addr.eq(0),
-                fifo_bytes_pending.eq(0),
+                fifo_words_pending.eq(0),
             ]
-        # Otherwise, update the count acording to bytes pushed and popped.
+        # Otherwise, update the count acording to words pushed and popped.
         with m.Else():
-            fifo_next_count = fifo_byte_count + fifo_bytes_pushed - fifo_bytes_popped
-            padding = fifo_bytes_pending & 1
+            fifo_next_count = fifo_word_count + fifo_words_pushed - fifo_words_popped
             with m.If(data_commit):
-                m.d.usb += fifo_byte_count.eq(fifo_next_count + fifo_bytes_pending + padding)
+                m.d.usb += fifo_word_count.eq(fifo_next_count + fifo_words_pending)
             with m.Else():
-                m.d.usb += fifo_byte_count.eq(fifo_next_count)
+                m.d.usb += fifo_word_count.eq(fifo_next_count)
 
         # Timestamp counter.
         current_time = Signal(16)
@@ -206,7 +212,7 @@ class USBAnalyzer(Elaboratable):
                     m.d.usb += [
                         header_word_addr   .eq(next_word_addr),
                         write_byte_addr    .eq(write_byte_addr + write_odd + self.HEADER_SIZE_BYTES),
-                        fifo_bytes_pending .eq(self.HEADER_SIZE_BYTES),
+                        fifo_words_pending .eq(self.HEADER_SIZE_WORDS),
                         packet_size        .eq(0),
                         packet_time        .eq(current_time),
                         current_time       .eq(0),
@@ -216,7 +222,7 @@ class USBAnalyzer(Elaboratable):
                     m.d.comb += [
                         write_event        .eq(1),
                         event_code         .eq(USBAnalyzerEvent.NONE),
-                        fifo_bytes_pushed  .eq(self.EVENT_SIZE_BYTES),
+                        fifo_words_pushed  .eq(self.EVENT_SIZE_WORDS),
                     ]
                     m.d.usb += [
                         write_byte_addr    .eq(write_byte_addr + write_odd + self.EVENT_SIZE_BYTES),
@@ -239,12 +245,12 @@ class USBAnalyzer(Elaboratable):
                     m.d.usb += [
                         write_byte_addr    .eq(write_byte_addr + 1),
                         packet_size        .eq(packet_size + 1),
-                        fifo_bytes_pending .eq(fifo_bytes_pending + 1)
+                        fifo_words_pending .eq(fifo_words_pending + ~write_odd)
                     ]
 
                     # If this would be filling up our data memory,
                     # move to the OVERRUN state.
-                    with m.If(fifo_byte_count + fifo_bytes_pending == self.mem_size_bytes - 1):
+                    with m.If(fifo_word_count + fifo_words_pending == self.mem_size_words - 1):
                         m.next = "OVERRUN"
 
                 # If we've stopped receiving, write header.
