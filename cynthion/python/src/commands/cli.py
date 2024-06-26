@@ -25,6 +25,10 @@ def cynthion_selftest(device, args):
     sys.argv = [sys.argv[0]]
     main_selftest()
 
+def cynthion_mcu_firmware(device, args):
+    from .cynthion_mcu_firmware import main as main_mcu_firmware
+    sys.argv = [sys.argv[0]]
+    main_mcu_firmware(args.file)
 
 CYNTHION_COMMANDS = [
     # Apollo commands can be intercepted by simply supplying a new Command with the same name
@@ -32,6 +36,8 @@ CYNTHION_COMMANDS = [
             help="Print Cynthion device info."),
     Command("selftest", handler=cynthion_selftest,
             help="Run a hardware self-test on a connected Cynthion."),
+    Command("mcu-firmware", handler=cynthion_mcu_firmware, args=[(("file",), dict(nargs="?"))],
+            help="Update Apollo firmware version.")
 ]
 
 
