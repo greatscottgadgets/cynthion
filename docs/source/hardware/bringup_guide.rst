@@ -180,28 +180,29 @@ You can clone the bootloader using `git`:
 
 .. code:: sh
 
-   $ git clone https://github.com/greatscottgadgets/apollo
+   $ git clone --recurse-submodules https://github.com/greatscottgadgets/apollo
 
 
 
-You can build and run the firmware in one step by invoking ``make``. In
-order to ensure your firmware matches the hardware it’s running on,
-you’ll need to provide the hardware revision using the
-``BOARD_REVISION_MAJOR`` and ``BOARD_REVISION_MINOR`` make variables.
+You can build and run the firmware in one step by invoking
+``make``. In order to ensure your firmware matches the hardware it’s
+running on, you’ll need to provide board type and hardware revision
+using the ``APOLLO_BOARD``, ``BOARD_REVISION_MAJOR`` and
+``BOARD_REVISION_MINOR`` make variables.
 
 The board’s hardware revision is printed on its silkscreen in a
-``r(MAJOR).(MINOR)`` format. Board ``r0.2`` would have a
-``BOARD_REVISION_MAJOR=0`` and a ``BOARD_REVISION_MINOR=2``. If your
+``r(MAJOR).(MINOR)`` format. Board ``r1.4`` would have a
+``BOARD_REVISION_MAJOR=1`` and a ``BOARD_REVISION_MINOR=4``. If your
 board’s revision ends in a ``+``, do not include it in the revision
 number.
 
-An example invocation for a ``r0.2`` board might be:
+An example invocation for a ``r1.4`` board might be:
 
 .. code:: sh
 
-   $ make BOARD_REVISION_MAJOR=0 BOARD_REVISION_MINOR=2 dfu
+   $ make APOLLO_BOARD=cynthion BOARD_REVISION_MAJOR=1 BOARD_REVISION_MINOR=4 dfu
 
-Once programming is complete, only LED ``E`` should be blinking;
+Once programming is complete, LED's ``A``, ``B``, ``C``, ``D`` and ``E`` should all be on;
 indicating that the Apollo firmware is idle.
 
 Running Self-Tests

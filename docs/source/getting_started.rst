@@ -100,4 +100,4 @@ To upgrade the Cynthion device firmware to the latest version run:
 
 .. code-block :: sh
 
-    cynthion firmware --autoflash
+    cynthion mcu-firmware --autoflash
