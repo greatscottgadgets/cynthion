@@ -76,36 +76,26 @@ Connect Hardware
   :width: 800
   :alt: Connection diagram for using Cynthion with Facedancer.
 
+Make sure that the target device is running a program that can receive keyboard input such as a terminal or text editor and that it has focus.
 
 Run a Facedancer example
 ------------------------
 
 Create a new Python file called ``rubber-ducky.py`` with the following content:
 
-.. code-block :: python
-
-    import asyncio
-    import logging
-
-    from facedancer import main
-    from facedancer.devices.keyboard     import USBKeyboardDevice
-    from facedancer.classes.hid.keyboard import KeyboardModifiers
-
-    device = USBKeyboardDevice()
-
-    async def type_letters():
-        # Wait for device to connect
-        await asyncio.sleep(2)
-
-        # Type a string with the device
-        await device.type_string("echo hello, facedancer\n")
-
-    main(device, type_letters())
-
+.. literalinclude:: ../../cynthion/python/examples/facedancer-rubber-ducky.py
+   :language: python
+   :linenos:
 
 Open a terminal and run:
 
 .. code-block :: sh
 
-    cd facedancer/examples
     python ./rubber-ducky.py
+
+If all goes well, you should see the string ``hello, facedancer`` typed into the target device.
+
+More Information
+----------------
+
+For further information, see the `Facedancer documentation <https://facedancer.readthedocs.io/>`_.
