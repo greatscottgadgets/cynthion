@@ -23,7 +23,7 @@ class CynthionPlatformRev0D6(CynthionPlatform):
     speed       = os.getenv("ECP5_SPEED_GRADE", "8")
 
     # By default, assume we'll be connecting via our control PHY.
-    default_usb_connection = "control_phy"
+    default_usb_connection = "aux_phy"
 
     #
     # Preferred DRAM bus I/O (de)-skewing constants.
