@@ -26,8 +26,7 @@ from luna_soc.gateware.lunasoc       import LunaSoC
 from luna_soc.gateware.csr           import GpioPeripheral, LedPeripheral
 from luna_soc.gateware.csr           import USBDeviceController
 from luna_soc.gateware.csr           import SetupFIFOInterface, InFIFOInterface, OutFIFOInterface
-
-from luna_soc.gateware.wishbone      import ECP5ConfigurationFlashInterface, WishboneSPIFlashReader
+from luna_soc.gateware.wishbone      import ECP5ConfigurationFlashInterface, SPIPHYController, SPIFlashPeripheral
 
 from .advertiser import ApolloAdvertiserPeripheral
 from .info       import CynthionInformationPeripheral
@@ -44,6 +43,13 @@ class MoondancerSoc(Elaboratable):
             Attrs(IO_TYPE="LVCMOS33")
         ),
 
+        # PMOD B: DEBUG
+        Resource("debug", 0,
+            Subsignal("a",  Pins("3", conn=("pmod", 1), dir="o")),
+            Subsignal("b",  Pins("4", conn=("pmod", 1), dir="o")),
+            Attrs(IO_TYPE="LVCMOS33")
+        ),
+
         # PMOD B: JTAG
         Resource("jtag", 0,
             Subsignal("tms",  Pins("7",  conn=("pmod", 1), dir="i")),
@@ -56,15 +62,16 @@ class MoondancerSoc(Elaboratable):
 
     def __init__(self, clock_frequency, uart_baud_rate=115200):
         # qspi flash configuration
-        qspi_flash_size = 0x00400000
-        qspi_flash_addr = 0x10000000
-        firmware_start  = 0x000b0000
+        spi0_flash_size  = 0x00400000
+        spi0_flash_addr  = 0x10000000
+        spi0_csr_addr    = 0xf0008000
+        firmware_start   = 0x000b0000
 
         # Create our SoC...
         self.soc = LunaSoC(
             cpu=VexRiscv(
                 variant="cynthion+jtag",
-                reset_addr=qspi_flash_addr + firmware_start,
+                reset_addr=spi0_flash_addr + firmware_start,
             ),
             clock_frequency=clock_frequency,
         )
@@ -79,8 +86,8 @@ class MoondancerSoc(Elaboratable):
             ('tx', [('o', 1)])
         ])
         self.qspi0_pins = Record([
-            ('dq', [('i', 4), ('o', 4), ('oe', 1)]),
-            ('cs', [('o', 1)])
+            ('dq',  [('i', 4), ('o', 4), ('oe', 1)]),
+            ('cs',  [('o', 1)]),
         ])
 
         # ... add core peripherals: memory, timer, uart ...
@@ -91,15 +98,24 @@ class MoondancerSoc(Elaboratable):
             internal_sram_addr=0x40000000,
         )
 
-        # ... add a qspi flash reader peripheral ...
-        self.qspi_bus = ECP5ConfigurationFlashInterface(bus=self.qspi0_pins)
-        self.qspi_reader = WishboneSPIFlashReader(
-            pads=self.qspi_bus,
-            size=qspi_flash_size,
-            name="spiflash",
-            domain="usb"
+        # ... add a spi flash peripheral ...
+        self.spi0_bus        = ECP5ConfigurationFlashInterface(bus=self.qspi0_pins)
+        self.spi0_phy        = SPIPHYController(pads=self.spi0_bus, domain="usb", divisor=0)
+        self.spi0 = SPIFlashPeripheral(
+            self.spi0_phy,
+            with_controller=True,
+            controller_name="spi0",
+            with_mmap=True,
+            mmap_size=spi0_flash_size,
+            mmap_name="spiflash",
+            domain="usb",
         )
-        self.soc.add_peripheral(self.qspi_reader, addr=qspi_flash_addr)
+        self.soc.add_peripheral(self.spi0, addr=spi0_flash_addr)
+        self.soc.add_peripheral(
+            self.spi0.spi_controller,
+            addr=spi0_csr_addr,
+            as_submodule=False,
+        )
 
         # ... add our LED peripheral, for simple output ...
         self.leds = LedPeripheral()
@@ -178,12 +194,12 @@ class MoondancerSoc(Elaboratable):
         # connect QSPI0 to Cynthion's qspi flash port
         qspi0_io = platform.request("qspi_flash", 0)
         m.d.comb += [
-            self.qspi0_pins.dq.i.eq(qspi0_io.dq.i),
-            qspi0_io.dq.o.eq(self.qspi0_pins.dq.o),
             qspi0_io.dq.oe.eq(self.qspi0_pins.dq.oe),
+            qspi0_io.dq.o.eq(self.qspi0_pins.dq.o),
             qspi0_io.cs.o.eq(self.qspi0_pins.cs.o),
+            self.qspi0_pins.dq.i.eq(qspi0_io.dq.i),
         ]
-        m.submodules.qspi_bus = self.qspi_bus
+        m.submodules += [self.spi0_bus, self.spi0_phy]
 
         # connect GPIOA to Cynthion's PMOD A port
         pmoda_io = platform.request("user_pmod", 0)
@@ -216,12 +232,6 @@ class MoondancerSoc(Elaboratable):
             self.soc.cpu.jtag_tck  .eq(jtag0_io.tck.i),
             self.soc.cpu.dbg_reset .eq(self.soc.cpu.ext_reset),
         ]
-
-        # workaround: disable platform usb device hooks to take care
-        # of the fact that USBDevice is under firmware control
-        #
-        # TODO 2024/04/17 remove this once the platform files are updated
-        platform.usb_device_hooks = {}
 
         # create our USB devices, connect device controllers and add eptri endpoint handlers
 
