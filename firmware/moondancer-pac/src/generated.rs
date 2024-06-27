@@ -167,6 +167,52 @@ impl core::fmt::Debug for UART {
 }
 #[doc = "UART"]
 pub mod uart;
+#[doc = "SPI0"]
+pub struct SPI0 {
+    _marker: PhantomData<*const ()>,
+}
+unsafe impl Send for SPI0 {}
+impl SPI0 {
+    #[doc = r"Pointer to the register block"]
+    pub const PTR: *const spi0::RegisterBlock = 0xf000_8000 as *const _;
+    #[doc = r"Return the pointer to the register block"]
+    #[inline(always)]
+    pub const fn ptr() -> *const spi0::RegisterBlock {
+        Self::PTR
+    }
+    #[doc = r" Steal an instance of this peripheral"]
+    #[doc = r""]
+    #[doc = r" # Safety"]
+    #[doc = r""]
+    #[doc = r" Ensure that the new instance of the peripheral cannot be used in a way"]
+    #[doc = r" that may race with any existing instances, for example by only"]
+    #[doc = r" accessing read-only or write-only registers, or by consuming the"]
+    #[doc = r" original peripheral and using critical sections to coordinate"]
+    #[doc = r" access between multiple new instances."]
+    #[doc = r""]
+    #[doc = r" Additionally, other software such as HALs may rely on only one"]
+    #[doc = r" peripheral instance existing to ensure memory safety; ensure"]
+    #[doc = r" no stolen instances are passed to such software."]
+    pub unsafe fn steal() -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
+}
+impl Deref for SPI0 {
+    type Target = spi0::RegisterBlock;
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*Self::PTR }
+    }
+}
+impl core::fmt::Debug for SPI0 {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("SPI0").finish()
+    }
+}
+#[doc = "SPI0"]
+pub mod spi0;
 #[doc = "LEDS"]
 pub struct LEDS {
     _marker: PhantomData<*const ()>,
@@ -1004,6 +1050,8 @@ pub struct Peripherals {
     pub TIMER: TIMER,
     #[doc = "UART"]
     pub UART: UART,
+    #[doc = "SPI0"]
+    pub SPI0: SPI0,
     #[doc = "LEDS"]
     pub LEDS: LEDS,
     #[doc = "GPIOA"]
@@ -1066,6 +1114,9 @@ impl Peripherals {
                 _marker: PhantomData,
             },
             UART: UART {
+                _marker: PhantomData,
+            },
+            SPI0: SPI0 {
                 _marker: PhantomData,
             },
             LEDS: LEDS {
