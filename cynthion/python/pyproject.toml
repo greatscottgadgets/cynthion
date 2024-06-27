@@ -56,9 +56,9 @@ gateware = [
 cynthion = "cynthion.commands.cli:main"
 
 [project.urls]
-Documentation = "https://luna-soc.readthedocs.io"
-Repository    = "https://github.com/greatscottgadgets/luna-soc"
-Issues        = "https://github.com/greatscottgadgets/luna-soc/issues"
+Documentation = "https://cynthion.readthedocs.io"
+Repository    = "https://github.com/greatscottgadgets/cynthion"
+Issues        = "https://github.com/greatscottgadgets/cynthion/issues"
 
 [tool.setuptools]
 include-package-data = true
