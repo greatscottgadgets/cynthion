@@ -16,7 +16,7 @@ import usb
 from datetime import datetime
 from enum import IntEnum, IntFlag
 
-from amaranth                            import Signal, Elaboratable, Module
+from amaranth                            import Signal, Elaboratable, Module, DomainRenamer
 from amaranth.build.res                  import ResourceError
 from usb_protocol.emitters               import DeviceDescriptorCollection
 from usb_protocol.types                  import USBRequestType, USBRequestRecipient
@@ -41,6 +41,7 @@ from usb_protocol.emitters.descriptors.standard import get_string_descriptor
 from usb_protocol.types.descriptors.microsoft10 import RegistryTypes
 
 from .analyzer                           import USBAnalyzer
+from .fifo                               import Stream16to8
 
 import cynthion
 
@@ -327,6 +328,11 @@ class USBAnalyzerApplet(Elaboratable):
         # Create a USB analyzer, and connect a register up to its output.
         m.submodules.analyzer = analyzer = USBAnalyzer(utmi_interface=utmi)
 
+        # Convert the 16-bit stream to an 8-bit one for output.
+        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(Stream16to8())
+        # The converter input is the analyzer output.
+        m.d.comb += s16to8.input.stream_eq(analyzer.stream)
+
         m.d.comb += [
             # Connect enable signal to host-controlled state register.
             analyzer.capture_enable     .eq(state.current[0]),
@@ -338,7 +344,7 @@ class USBAnalyzerApplet(Elaboratable):
             stream_ep.discard           .eq(analyzer.discarding),
 
             # USB stream uplink.
-            stream_ep.stream            .stream_eq(analyzer.stream),
+            stream_ep.stream            .stream_eq(s16to8.output),
 
             usb.connect                 .eq(1),
 

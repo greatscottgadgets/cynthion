@@ -82,7 +82,7 @@ class USBAnalyzer(Elaboratable):
         #
         # I/O port
         #
-        self.stream         = StreamInterface()
+        self.stream         = StreamInterface(payload_width=16)
 
         self.capture_enable = Signal()
         self.idle           = Signal()
@@ -121,31 +121,20 @@ class USBAnalyzer(Elaboratable):
         write_header    = Signal()
         write_event     = Signal()
 
-        # Use the FIFO as a stream source.
-        fifo_output     = StreamInterface(payload_width=16)
+        # Use the FIFO as our stream source.
         m.d.comb += [
             # Connect the read port address bus to our current read pointer.
             mem_read_port.addr  .eq(read_word_addr),
 
             # The stream produces the next word when there is data in the FIFO.
-            fifo_output.payload .eq(mem_read_port.data),
-            fifo_output.valid   .eq(fifo_word_count != 0),
-            fifo_output.last    .eq(fifo_word_count == 1),
+            self.stream.payload .eq(mem_read_port.data),
+            self.stream.valid   .eq(fifo_word_count != 0),
+            self.stream.last    .eq(fifo_word_count == 1),
         ]
 
         # When a word is read from the FIFO, move to the next address.
-        with m.If(fifo_output.ready & fifo_output.valid):
+        with m.If(self.stream.ready & self.stream.valid):
             m.d.usb += read_word_addr.eq(read_word_addr + 1)
-
-        # Convert the 16-bit stream to an 8-bit one for output.
-        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(Stream16to8())
-        m.d.comb += [
-            # The converter input is the FIFO output.
-            s16to8.input  .stream_eq(fifo_output),
-
-            # Our main output is the result of the conversion.
-            self.stream   .stream_eq(s16to8.output),
-        ]
 
         #
         # FIFO count handling.
@@ -162,7 +151,7 @@ class USBAnalyzer(Elaboratable):
         data_commit  = Signal()
 
         # One word is popped if the FIFO stream is read.
-        m.d.comb += fifo_words_popped.eq(fifo_output.ready & fifo_output.valid)
+        m.d.comb += fifo_words_popped.eq(self.stream.ready & self.stream.valid)
 
         # If discarding data, set the count to zero.
         with m.If(self.discarding):
@@ -346,20 +335,20 @@ class USBAnalyzerTestBase(LunaGatewareTestCase):
 
     def expect_data(self, expected_data):
         # Check the stream reports data available.
-        self.assertEqual((yield self.dut.stream.valid), 1)
+        self.assertEqual((yield self.stream.valid), 1)
 
         # Check that the expected data is set up.
-        self.assertEqual((yield self.dut.stream.payload), expected_data[0])
+        self.assertEqual((yield self.stream.payload), expected_data[0])
 
         # Signal that we are ready to receive data.
-        yield self.dut.stream.ready.eq(1)
+        yield self.stream.ready.eq(1)
         yield
 
         # Validate that we get all of the bytes we expected.
         received_data = []
         for datum in expected_data:
-            if (yield self.dut.stream.valid):
-                received_data.append((yield self.dut.stream.payload))
+            if (yield self.stream.valid):
+                received_data.append((yield self.stream.payload))
                 yield
             else:
                 # Data ended early.
@@ -368,11 +357,11 @@ class USBAnalyzerTestBase(LunaGatewareTestCase):
 
         if len(expected_data) % 2 == 1:
             # There should then be one padding byte.
-            self.assertEqual((yield self.dut.stream.valid), 1)
+            self.assertEqual((yield self.stream.valid), 1)
             yield
 
         # There should then be no data left.
-        self.assertEqual((yield self.dut.stream.valid), 0)
+        self.assertEqual((yield self.stream.valid), 0)
 
 
 class USBAnalyzerTest(USBAnalyzerTestBase):
@@ -387,8 +376,12 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
             ('rx_error',    1),
             ('rx_complete', 1),
         ])
-        self.analyzer = USBAnalyzer(utmi_interface=self.utmi, mem_depth=128)
-        return self.analyzer
+        m = Module()
+        m.submodules.analyzer = self.analyzer = USBAnalyzer(utmi_interface=self.utmi, mem_depth=128)
+        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(Stream16to8())
+        m.d.comb += s16to8.input.stream_eq(self.analyzer.stream)
+        self.stream = s16to8.output
+        return m
 
 
     def advance_stream(self, value):
@@ -403,7 +396,7 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
         yield
 
         # Ensure we're not capturing until a transaction starts.
-        self.assertEqual((yield self.dut.capturing), 0)
+        self.assertEqual((yield self.analyzer.capturing), 0)
 
         # Apply our first input, and validate that we start capturing.
         yield self.utmi.rx_active.eq(1)
@@ -415,11 +408,11 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
         # Provide some data.
         for i in range(1, 10):
             yield from self.advance_stream(i)
-            self.assertEqual((yield self.dut.capturing), 1)
+            self.assertEqual((yield self.analyzer.capturing), 1)
 
         # Ensure we're still capturing, _and_ that we have
         # data available.
-        self.assertEqual((yield self.dut.capturing), 1)
+        self.assertEqual((yield self.analyzer.capturing), 1)
 
         # End our packet.
         yield self.utmi.rx_active.eq(0)
@@ -427,7 +420,7 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
 
         # Idle for several cycles.
         yield from self.advance_cycles(5)
-        self.assertEqual((yield self.dut.capturing), 0)
+        self.assertEqual((yield self.analyzer.capturing), 0)
 
         # First, we should get a header with the total data length.
         # This should be 0x00, 0x0a; as we captured 10 bytes.
@@ -460,7 +453,7 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
 
         # Idle for several cycles.
         yield from self.advance_cycles(5)
-        self.assertEqual((yield self.dut.capturing), 0)
+        self.assertEqual((yield self.analyzer.capturing), 0)
 
         # First, we should get a header with the total data length.
         # This should be 0x00, 0x01; as we captured 1 byte.
@@ -519,7 +512,9 @@ class USBAnalyzerStackTest(USBAnalyzerTestBase):
         m = Module()
         m.submodules.translator = self.translator = UTMITranslator(ulpi=self.ulpi, handle_clocking=False)
         m.submodules.analyzer   = self.analyzer   = USBAnalyzer(utmi_interface=self.translator, mem_depth=128)
-        m.stream = self.analyzer.stream
+        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(Stream16to8())
+        m.d.comb += s16to8.input.stream_eq(self.analyzer.stream)
+        self.stream = s16to8.output
         return m
 
 
