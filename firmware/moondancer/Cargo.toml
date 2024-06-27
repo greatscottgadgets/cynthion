@@ -92,4 +92,7 @@ name = "hello"
 name = "interrupts"
 
 [[example]]
+name = "spiflash"
+
+[[example]]
 name = "usb_hal"

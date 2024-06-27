@@ -24,6 +24,9 @@ clean:
 console:
 	pyserial-miniterm $(UART) 115200
 
+load:
+	cynthion configure build/soc.bit
+
 tests:
 	python3 -m unittest
 
