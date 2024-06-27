@@ -9,6 +9,28 @@ from amaranth import Elaboratable, Module, Signal, Cat
 from luna.gateware.stream import StreamInterface
 
 
+class StreamSyncUsbConverter(Elaboratable):
+    def __init__(self):
+        self.input     = StreamInterface(payload_width=16)
+        self.output    = StreamInterface(payload_width=16)
+
+    def elaborate(self, platform):
+        m = Module()
+
+        cycle_count = Signal()
+        m.d.sync += cycle_count.eq(cycle_count + 1)
+
+        with m.If(~self.output.valid | self.output.ready):
+            m.d.usb += [
+                self.output.payload .eq(self.input.payload),
+                self.output.valid   .eq(self.input.valid),
+                self.output.last    .eq(self.input.last),
+            ]
+            m.d.comb += self.input.ready.eq(cycle_count)
+
+        return m
+
+
 class Stream16to8(Elaboratable):
     def __init__(self, msb_first=True):
         self.msb_first = msb_first

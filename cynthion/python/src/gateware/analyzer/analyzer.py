@@ -8,13 +8,13 @@
 
 import unittest
 
-from amaranth          import Signal, Module, Elaboratable, Memory, Record, Mux, Cat, C, DomainRenamer
+from amaranth          import Signal, Module, Elaboratable, Memory, Record, Mux, Cat, C
 from enum              import IntEnum
 
 from luna.gateware.stream import StreamInterface
 from luna.gateware.test   import LunaGatewareTestCase, usb_domain_test_case
 
-from .fifo import Stream16to8
+from .fifo import Stream16to8, StreamSyncUsbConverter
 
 
 class USBAnalyzer(Elaboratable):
@@ -96,7 +96,7 @@ class USBAnalyzer(Elaboratable):
         m = Module()
 
         # Memory read and write ports.
-        m.submodules.read  = mem_read_port  = self.mem.read_port(domain="usb")
+        m.submodules.read  = mem_read_port  = self.mem.read_port(domain="sync")
         m.submodules.write = mem_write_port = self.mem.write_port(domain="sync", granularity=8)
 
         # FIFO write addresses point to bytes.
@@ -123,9 +123,6 @@ class USBAnalyzer(Elaboratable):
 
         # Use the FIFO as our stream source.
         m.d.comb += [
-            # Connect the read port address bus to our current read pointer.
-            mem_read_port.addr  .eq(read_word_addr),
-
             # The stream produces the next word when there is data in the FIFO.
             self.stream.payload .eq(mem_read_port.data),
             self.stream.valid   .eq(fifo_word_count != 0),
@@ -134,14 +131,14 @@ class USBAnalyzer(Elaboratable):
 
         # When a word is read from the FIFO, move to the next address.
         with m.If(self.stream.ready & self.stream.valid):
-            m.d.usb += read_word_addr.eq(read_word_addr + 1)
+            m.d.sync += read_word_addr     .eq(read_word_addr + 1)
+            m.d.comb += mem_read_port.addr .eq(read_word_addr + 1)
+        with m.Else():
+            m.d.comb += mem_read_port.addr .eq(read_word_addr)
 
         #
         # FIFO count handling.
         #
-
-        # Number of words pushed to the FIFO this cycle.
-        fifo_words_pushed = Signal(2)
 
         # Number of words popped from the FIFO this cycle.
         fifo_words_popped = Signal(1)
@@ -156,18 +153,20 @@ class USBAnalyzer(Elaboratable):
         # If discarding data, set the count to zero.
         with m.If(self.discarding):
             m.d.usb += [
+                write_byte_addr.eq(0),
+            ]
+            m.d.sync += [
                 fifo_word_count.eq(0),
                 read_word_addr.eq(0),
-                write_byte_addr.eq(0),
                 fifo_words_pending.eq(0),
             ]
         # Otherwise, update the count acording to words pushed and popped.
         with m.Else():
-            fifo_next_count = fifo_word_count + fifo_words_pushed - fifo_words_popped
+            fifo_next_count = fifo_word_count - fifo_words_popped
             with m.If(data_commit):
-                m.d.usb += fifo_word_count.eq(fifo_next_count + fifo_words_pending)
+                m.d.sync += fifo_word_count.eq(fifo_next_count + fifo_words_pending)
             with m.Else():
-                m.d.usb += fifo_word_count.eq(fifo_next_count)
+                m.d.sync += fifo_word_count.eq(fifo_next_count)
 
         # Timestamp counter.
         current_time = Signal(16)
@@ -201,22 +200,25 @@ class USBAnalyzer(Elaboratable):
                     m.d.usb += [
                         header_word_addr   .eq(next_word_addr),
                         write_byte_addr    .eq(write_byte_addr + write_odd + self.HEADER_SIZE_BYTES),
-                        fifo_words_pending .eq(self.HEADER_SIZE_WORDS),
                         packet_size        .eq(0),
                         packet_time        .eq(current_time),
                         current_time       .eq(0),
+                    ]
+                    m.d.sync += [
+                        fifo_words_pending .eq(self.HEADER_SIZE_WORDS),
                     ]
                 with m.Elif(current_time == 0xFFFF):
                     # The timestamp is about to wrap. Write a dummy event.
                     m.d.comb += [
                         write_event        .eq(1),
                         event_code         .eq(USBAnalyzerEvent.NONE),
-                        fifo_words_pushed  .eq(self.EVENT_SIZE_WORDS),
                     ]
                     m.d.usb += [
                         write_byte_addr    .eq(write_byte_addr + write_odd + self.EVENT_SIZE_BYTES),
                     ]
-
+                    m.d.sync += [
+                        fifo_words_pending .eq(self.EVENT_SIZE_WORDS),
+                    ]
 
 
             # Capture data until the packet is complete.
@@ -234,7 +236,6 @@ class USBAnalyzer(Elaboratable):
                     m.d.usb += [
                         write_byte_addr    .eq(write_byte_addr + 1),
                         packet_size        .eq(packet_size + 1),
-                        fifo_words_pending .eq(fifo_words_pending + ~write_odd)
                     ]
 
                     # If this would be filling up our data memory,
@@ -246,7 +247,6 @@ class USBAnalyzer(Elaboratable):
                 with m.If(~self.utmi.rx_active):
                     m.d.comb += [
                         write_header .eq(1),
-                        data_commit  .eq(1),
                     ]
                     m.next = "AWAIT_PACKET"
 
@@ -280,6 +280,9 @@ class USBAnalyzer(Elaboratable):
                         mem_write_port.data  .eq(self.utmi.rx_data.replicate(2)),
                         mem_write_port.en    .eq(Mux(write_odd, 0b01, 0b10)),
                     ]
+                    m.d.sync += [
+                        fifo_words_pending   .eq(fifo_words_pending + ~write_odd),
+                    ]
                     m.next = "IDLE"
                 with m.Elif(write_header):
                     # Write first word of header.
@@ -303,7 +306,8 @@ class USBAnalyzer(Elaboratable):
                 m.d.comb += [
                         mem_write_port.addr  .eq(header_word_addr + 1),
                         mem_write_port.data  .eq(packet_time),
-                        mem_write_port.en    .eq(0b11)
+                        mem_write_port.en    .eq(0b11),
+                        data_commit          .eq(1),
                 ]
                 m.next = "START"
 
@@ -312,7 +316,8 @@ class USBAnalyzer(Elaboratable):
                 m.d.comb += [
                         mem_write_port.addr  .eq(next_word_addr + 1),
                         mem_write_port.data  .eq(current_time),
-                        mem_write_port.en    .eq(0b11)
+                        mem_write_port.en    .eq(0b11),
+                        data_commit          .eq(1),
                 ]
                 m.next = "START"
 
@@ -367,6 +372,9 @@ class USBAnalyzerTestBase(LunaGatewareTestCase):
 class USBAnalyzerTest(USBAnalyzerTestBase):
 
     def instantiate_dut(self):
+
+        from amaranth import DomainRenamer, ResetInserter
+
         self.utmi = Record([
             ('tx_data',     8),
             ('rx_data',     8),
@@ -378,8 +386,14 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
         ])
         m = Module()
         m.submodules.analyzer = self.analyzer = USBAnalyzer(utmi_interface=self.utmi, mem_depth=128)
-        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(Stream16to8())
-        m.d.comb += s16to8.input.stream_eq(self.analyzer.stream)
+
+        reset_on_start = ResetInserter(self.analyzer.discarding)
+        m.submodules.clk_conv = clk_conv = reset_on_start(StreamSyncUsbConverter())
+        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(reset_on_start(Stream16to8()))
+        m.d.comb += [
+            clk_conv.input.stream_eq(self.analyzer.stream),
+            s16to8.input.stream_eq(clk_conv.output),
+        ]
         self.stream = s16to8.output
         return m
 
@@ -527,6 +541,7 @@ class USBAnalyzerStackTest(USBAnalyzerTestBase):
     def instantiate_dut(self):
 
         from luna.gateware.interface.ulpi import UTMITranslator
+        from amaranth import DomainRenamer, ResetInserter
 
         self.ulpi = Record([
             ('data', [
@@ -546,8 +561,13 @@ class USBAnalyzerStackTest(USBAnalyzerTestBase):
         m = Module()
         m.submodules.translator = self.translator = UTMITranslator(ulpi=self.ulpi, handle_clocking=False)
         m.submodules.analyzer   = self.analyzer   = USBAnalyzer(utmi_interface=self.translator, mem_depth=128)
-        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(Stream16to8())
-        m.d.comb += s16to8.input.stream_eq(self.analyzer.stream)
+        reset_on_start = ResetInserter(self.analyzer.discarding)
+        m.submodules.clk_conv = clk_conv = reset_on_start(StreamSyncUsbConverter())
+        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(reset_on_start(Stream16to8()))
+        m.d.comb += [
+            clk_conv.input.stream_eq(self.analyzer.stream),
+            s16to8.input.stream_eq(clk_conv.output),
+        ]
         self.stream = s16to8.output
         return m
 
