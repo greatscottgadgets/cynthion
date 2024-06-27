@@ -41,8 +41,7 @@ dependencies = [
     "tomli",
     "tqdm",
     "pygreat~=2024.0",
-    "apollo_fpga @ git+https://github.com/greatscottgadgets/apollo.git",  # temporarily pull from git until apollo release
-    #"apollo~=???",
+    "apollo_fpga~=1.0",
 ]
 
 [project.optional-dependencies]
