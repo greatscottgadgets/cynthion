@@ -1,6 +1,8 @@
 use crate::hal::smolusb;
 use pac::csr::interrupt;
 
+use libgreat::GreatError;
+
 use smolusb::event::UsbEvent;
 use smolusb::setup::SetupPacket;
 use smolusb::traits::{ReadControl, UnsafeUsbDriverOperations, UsbDriverOperations};
@@ -335,4 +337,94 @@ impl MultiEventQueue {
 
         Ok(())
     }
+}
+
+/// Reads Cynthion's SPI Flash UUID
+pub fn read_flash_uuid(spi0: &pac::SPI0) -> Result<[u8; 8], GreatError> {
+    // FIXME wait for things to settle
+    unsafe {
+        riscv::asm::delay(80_000_000);
+    }
+
+    // configure spi0 phy
+    spi0.phy_len().write(|w| unsafe { w.phy_len().bits(8) });
+    spi0.phy_width().write(|w| unsafe { w.phy_width().bits(1) });
+    spi0.phy_mask().write(|w| unsafe { w.phy_mask().bits(1) });
+    spi0.cs().write(|w| w.cs().bit(false));
+
+    // check if we can write to spi0
+    if !spi_ready(&|| spi0.tx_rdy().read().tx_rdy().bit()) {
+        log::error!("spi write timeout");
+        return Err(GreatError::StreamIoctlTimeout);
+    }
+
+    // write flash id command to spi0
+    let command: [u8; 13] = [0x4b, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+    for byte in command {
+        spi0.rxtx()
+            .write(|w| unsafe { w.rxtx().bits(u32::from(byte)) });
+    }
+
+    // check if we can read from spi0
+    if !spi_ready(&|| spi0.rx_rdy().read().rx_rdy().bit()) {
+        log::error!("read_flash_uuid spi read timeout");
+        return Err(GreatError::StreamIoctlTimeout);
+    }
+
+    // read response
+    let mut response = [0_u8; 32];
+    let mut n = 0;
+    while spi0.rx_rdy().read().rx_rdy().bit() {
+        response[n] = spi0.rxtx().read().bits() as u8;
+        n += 1;
+        if n >= response.len() {
+            log::error!("read_flash_uuid read overflow");
+            return Err(GreatError::BadMessage);
+        }
+    }
+
+    // check response
+    if n != 13 {
+        log::error!(
+            "read_flash_uuid invalid response length: {} - {:02x?}",
+            n,
+            &response[..n]
+        );
+        return Err(GreatError::BadMessage);
+    }
+
+    let mut ret = [0_u8; 8];
+    ret[..].copy_from_slice(&response[5..13]);
+
+    Ok(ret)
+}
+
+/// Formats a buffer containing a flash uuid into a String
+#[must_use]
+pub fn format_flash_uuid(uuid: [u8; 8]) -> heapless::String<16> {
+    use core::fmt::Write;
+
+    let mut ret = heapless::String::<16>::new();
+
+    for n in (0..8).rev() {
+        let mut byte = heapless::String::<2>::new();
+        write!(&mut byte, "{}", format_args!("{:01x}", uuid[n])).unwrap_or(());
+        ret.push_str(byte.as_str()).unwrap_or(());
+    }
+
+    ret
+}
+
+/// Retries the provided closure until it either returns true or times out.
+fn spi_ready(f: &dyn Fn() -> bool) -> bool {
+    let mut timeout = 0;
+
+    while !f() {
+        timeout += 1;
+        if timeout > 1000 {
+            return false;
+        }
+    }
+
+    true
 }

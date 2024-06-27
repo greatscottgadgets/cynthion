@@ -6,6 +6,7 @@ use log::{debug, error, info, trace, warn};
 
 use crate::hal::smolusb;
 use smolusb::control::Control;
+use smolusb::descriptor::StringDescriptor;
 use smolusb::device::{Descriptors, Speed};
 use smolusb::setup::{Direction, Recipient, RequestType, SetupPacket};
 use smolusb::traits::{ReadEndpoint, UsbDriverOperations, WriteEndpoint};
@@ -15,7 +16,7 @@ use libgreat::{GreatError, GreatResult};
 
 use moondancer::event::InterruptEvent;
 use moondancer::usb::vendor::{VendorRequest, VendorValue};
-use moondancer::{hal, pac};
+use moondancer::{hal, pac, util};
 
 use pac::csr::interrupt;
 
@@ -138,6 +139,35 @@ impl<'a> Firmware<'a> {
         // initialize ladybug
         moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
 
+        // get Cynthion SPI Flash uuid from the SoC
+        let uuid = util::read_flash_uuid(&peripherals.SPI0).unwrap_or([0_u8; 8]);
+        let uuid = util::format_flash_uuid(uuid);
+
+        // build string descriptor table
+        //
+        // FIXME crimes should not have to be committed in order to provide smolusb with a dynamic string table!
+        #[allow(clippy::items_after_statements)]
+        let string_descriptors = {
+            static mut UUID: heapless::String<16> = heapless::String::new();
+            static mut ISERIALNUMBER: StringDescriptor = StringDescriptor::new("UNKNOWN ");
+            unsafe {
+                UUID = uuid.clone();
+                ISERIALNUMBER = StringDescriptor::new(UUID.as_str());
+            }
+            static mut STRING_DESCRIPTORS: [&StringDescriptor; 9] = [
+                &moondancer::usb::STRING_DESCRIPTOR_1,
+                &moondancer::usb::STRING_DESCRIPTOR_2,
+                unsafe { &*core::ptr::addr_of!(ISERIALNUMBER) },
+                &moondancer::usb::STRING_DESCRIPTOR_4,
+                &moondancer::usb::STRING_DESCRIPTOR_5,
+                &moondancer::usb::STRING_DESCRIPTOR_6,
+                &moondancer::usb::STRING_DESCRIPTOR_7,
+                &moondancer::usb::STRING_DESCRIPTOR_8,
+                &moondancer::usb::STRING_DESCRIPTOR_9,
+            ];
+            unsafe { &*core::ptr::addr_of!(STRING_DESCRIPTORS) }
+        };
+
         // usb2: control (host on r0.4)
         let usb2 = hal::Usb2::new(
             peripherals.USB2,
@@ -171,7 +201,8 @@ impl<'a> Firmware<'a> {
                 ),
                 device_qualifier_descriptor: Some(moondancer::usb::DEVICE_QUALIFIER_DESCRIPTOR),
                 string_descriptor_zero: moondancer::usb::STRING_DESCRIPTOR_0,
-                string_descriptors: moondancer::usb::STRING_DESCRIPTORS,
+                //string_descriptors: unsafe { &*core::ptr::addr_of!(STRING_DESCRIPTORS) },
+                string_descriptors,
             },
         );
 
