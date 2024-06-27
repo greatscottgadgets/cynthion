@@ -139,17 +139,14 @@ impl log::Log for CynthionLogger {
 
 #[cfg(not(feature = "alloc"))]
 pub mod format_nostd {
-    pub const SIZE: usize = 128;
-
     #[macro_export]
     macro_rules! _format {
         ($($arg:tt)*) => {
             {
                 use core::fmt::Write;
                 use moondancer::log::format_nostd::BufferWriter;
-                use moondancer::log::format_nostd::SIZE;
-                let mut buffer = [0u8; SIZE];
-                let mut writer = BufferWriter::new(buffer);
+                let mut buffer = [0u8; 128];
+                let mut writer = BufferWriter::new(buffer, 128);
                 write!(&mut writer, $($arg)*).unwrap();
                 writer
             }
@@ -157,12 +154,12 @@ pub mod format_nostd {
     }
     pub use _format as format;
 
-    pub struct BufferWriter {
+    pub struct BufferWriter<const SIZE: usize> {
         buffer: [u8; SIZE],
         cursor: usize,
     }
 
-    impl BufferWriter {
+    impl<const SIZE: usize> BufferWriter<SIZE> {
         #[must_use]
         pub fn new(buffer: [u8; SIZE]) -> Self {
             BufferWriter { buffer, cursor: 0 }
@@ -183,7 +180,7 @@ pub mod format_nostd {
         }
     }
 
-    impl core::fmt::Write for BufferWriter {
+    impl<const SIZE: usize> core::fmt::Write for BufferWriter<SIZE> {
         fn write_str(&mut self, s: &str) -> core::fmt::Result {
             let len = self.buffer.len();
             for (i, &b) in self.buffer[self.cursor..len]

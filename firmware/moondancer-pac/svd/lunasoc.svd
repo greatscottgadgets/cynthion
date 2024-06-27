@@ -268,6 +268,123 @@
       </registers>
     </peripheral>
     <peripheral>
+      <name>SPI0</name>
+      <groupName>SPI0</groupName>
+      <baseAddress>0xf0008000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x20</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>phy_len</name>
+          <description>spi0 phy_len register</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>phy_len</name>
+              <description>spi0 phy_len register field</description>
+              <bitRange>[5:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>phy_width</name>
+          <description>spi0 phy_width register</description>
+          <addressOffset>0x0001</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>phy_width</name>
+              <description>spi0 phy_width register field</description>
+              <bitRange>[3:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>phy_mask</name>
+          <description>spi0 phy_mask register</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>phy_mask</name>
+              <description>spi0 phy_mask register field</description>
+              <bitRange>[7:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>cs</name>
+          <description>spi0 cs register</description>
+          <addressOffset>0x0003</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>cs</name>
+              <description>spi0 cs register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rxtx</name>
+          <description>spi0 rxtx register</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>rxtx</name>
+              <description>spi0 rxtx register field</description>
+              <bitRange>[31:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>tx_rdy</name>
+          <description>spi0 tx_rdy register</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>tx_rdy</name>
+              <description>spi0 tx_rdy register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx_rdy</name>
+          <description>spi0 rx_rdy register</description>
+          <addressOffset>0x0009</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-only</access>
+          <fields>
+            <field>
+              <name>rx_rdy</name>
+              <description>spi0 rx_rdy register field</description>
+              <bitRange>[0:0]</bitRange>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
       <name>LEDS</name>
       <groupName>LEDS</groupName>
       <baseAddress>0xf0001000</baseAddress>
