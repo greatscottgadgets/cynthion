@@ -143,7 +143,6 @@ class USBAnalyzer(Elaboratable):
         #
         # FIFO count handling.
         #
-        fifo_full = (fifo_byte_count == self.mem_size_bytes)
 
         # Number of bytes pushed to the FIFO this cycle.
         fifo_bytes_pushed = Signal(3)
