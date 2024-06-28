@@ -205,6 +205,13 @@ An example invocation for a ``r1.4`` board might be:
 Once programming is complete, LED's ``A``, ``B``, ``C``, ``D`` and ``E`` should all be on;
 indicating that the Apollo firmware is idle.
 
+You can also upload a firmware binary using `dfu-util` with:
+
+.. code:: sh
+
+    $ dfu-util -d 1d50:615c -D firmware.bin
+
+
 Running Self-Tests
 ------------------
 
