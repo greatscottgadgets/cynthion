@@ -433,6 +433,40 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
 
 
     @usb_domain_test_case
+    def test_slow_packet(self):
+        # Enable capture
+        yield self.analyzer.capture_enable.eq(1)
+        yield
+
+        # Start a packet.
+        yield self.utmi.rx_active.eq(1)
+        yield
+
+        # Provide a byte every 40 cycles, as in full speed capture.
+        for byte in range(0, 10):
+            yield from self.advance_cycles(39)
+            yield self.utmi.rx_data.eq(byte)
+            yield self.utmi.rx_valid.eq(1)
+            yield
+            yield self.utmi.rx_valid.eq(0)
+
+        # End our packet.
+        yield self.utmi.rx_active.eq(0)
+
+        # Idle for several cycles.
+        yield from self.advance_cycles(5)
+
+        # First, we should get a header with the total data length.
+        # This should be 0x00, 0x0a; as we captured 10 bytes.
+        #
+        # Next, we should get a timestamp with the cycle count at which
+        # the packet started. This should be zero.
+        #
+        # Finally, there should be the 10 packet bytes.
+        yield from self.expect_data([0x00, 0x0a, 0x00, 0x00] + list(range(0, 10)))
+
+
+    @usb_domain_test_case
     def test_short_packet(self):
         # Enable capture
         yield self.analyzer.capture_enable.eq(1)
