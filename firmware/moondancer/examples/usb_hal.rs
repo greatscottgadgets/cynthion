@@ -487,7 +487,7 @@ static USB_STRING_DESCRIPTOR_1: StringDescriptor =
 static USB_STRING_DESCRIPTOR_2: StringDescriptor =
     StringDescriptor::new(cynthion::shared::usb::bProductString::example);
 static USB_STRING_DESCRIPTOR_3: StringDescriptor =
-    StringDescriptor::new(moondancer::usb::DEVICE_SERIAL_STRING);
+    StringDescriptor::new("0000000000000000");
 pub static USB_STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config 1");
 pub static USB_STRING_DESCRIPTOR_5: StringDescriptor = StringDescriptor::new("interface 0");
 pub static USB_STRING_DESCRIPTOR_6: StringDescriptor = StringDescriptor::new("other config 1");

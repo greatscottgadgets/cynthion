@@ -58,7 +58,8 @@ pub mod usb {
         use super::TOML;
         pub static apollo: &str = TOML.b_manufacturer_string.apollo;
         pub static bulk_speed_test: &str = TOML.b_manufacturer_string.bulk_speed_test;
-        pub static cynthion: &str = TOML.b_manufacturer_string.cynthion;
+        pub static analyzer: &str = TOML.b_manufacturer_string.analyzer;
+        pub static moondancer: &str = TOML.b_manufacturer_string.moondancer;
         pub static example: &str = TOML.b_manufacturer_string.example;
     }
 
@@ -66,7 +67,8 @@ pub mod usb {
         use super::TOML;
         pub static apollo: &str = TOML.b_product_string.apollo;
         pub static bulk_speed_test: &str = TOML.b_product_string.bulk_speed_test;
-        pub static cynthion: &str = TOML.b_product_string.cynthion;
+        pub static analyzer: &str = TOML.b_product_string.analyzer;
+        pub static moondancer: &str = TOML.b_product_string.moondancer;
         pub static example: &str = TOML.b_product_string.example;
         pub static example_2: &str = TOML.b_product_string.example_2;
         pub static example_3: &str = TOML.b_product_string.example_3;
