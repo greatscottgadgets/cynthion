@@ -50,7 +50,7 @@ def main():
     commands = apollo_commands.values()
 
     # Set up a simple argument parser.
-    parser = argparse.ArgumentParser(description="Apollo FPGA Configuration / Debug tool",
+    parser = argparse.ArgumentParser(description="Cynthion FPGA Configuration / Debug tool",
             formatter_class=argparse.RawTextHelpFormatter)
     sub_parsers = parser.add_subparsers(dest="command", metavar="command")
     for command in commands:
