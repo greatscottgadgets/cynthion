@@ -1,12 +1,19 @@
+====================
 Bitstream Generation
---------------------
+====================
+
+Before proceeding, please ensure you have followed the prerequisites in the :doc:`Setting up a Development Environment <introduction>` section.
+
+
+Cynthion Gateware
+-----------------
 
 The Cynthion repository contains gateware for two designs:
 
 - ``analyzer`` -- USB analyzer for using Cynthion with Packetry.
 - ``soc``      -- System-on-Chip for using Cynthion with Facedancer.
 
-Bitstreams can be generated from the ``cynthion/python/`` sub-directory as follows:
+Bitstreams can be generated from the cynthion python package sub-directory as follows:
 
 Analyzer Gateware
 ^^^^^^^^^^^^^^^^^
@@ -21,8 +28,6 @@ Analyzer Gateware
 
 SoC Gateware
 ^^^^^^^^^^^^
-
-In the ``cynthion/cynthion/python/`` directory run the following command:
 
 .. code-block:: sh
 

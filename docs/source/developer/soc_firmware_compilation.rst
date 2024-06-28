@@ -1,5 +1,11 @@
+========================
 SoC Firmware Compilation
-------------------------
+========================
+
+Before proceeding, please ensure you have followed the prerequisites in the :doc:`Setting up a Development Environment <introduction>` section.
+
+Building and Running
+--------------------
 
 Firmware for the Cynthion SoC can be found in the ``firmware/moondancer/`` sub-directory.
 
@@ -44,7 +50,7 @@ To upload the firmware binary to Cynthion and flash the SoC bitstream you can ru
 
 
 Running Firmware Unit Tests
-^^^^^^^^^^^^^^^^^^^^^^^^^^^
+---------------------------
 
 Once the firmware is running on the SoC you can execute some unittests to exercise the firmware.
 
@@ -61,7 +67,7 @@ In order to do this you will need to connect both the ``control`` and
 
 
 Firmware Examples
-^^^^^^^^^^^^^^^^^
+-----------------
 
 There are a number of firmware examples in the ``firmware/moondancer/examples/`` sub-directory.
 

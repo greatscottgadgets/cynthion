@@ -34,7 +34,6 @@ For development you'll need a local copy of the cynthion repository:
 .. code-block:: sh
 
     git clone https://github.com/greatscottgadgets/cynthion.git
-    cd cynthion/
 
 To install the ``cynthion`` python package to allow for in-place editing of the sources you can use the ``pip --editable`` command:
 

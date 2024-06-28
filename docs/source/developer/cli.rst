@@ -5,7 +5,7 @@ The ``cynthion`` Utility
 The ``cynthion`` distribution provides the ``cynthion`` command-line utility,
 that can be used to perform various simple functions useful in development;
 including simple JTAG operations, SVF playback, manipulating the board’s flash,
-and debug comms.
+and debug communications.
 
 .. code:: text
 
@@ -20,9 +20,8 @@ and debug comms.
         jtag-scan           Prints information about devices on the onboard JTAG chain.
         flash-info          Prints information about the FPGA's attached configuration flash.
         flash-erase         Erases the contents of the FPGA's flash memory.
-        flash-program (flash)
-                            Programs the target bitstream onto the FPGA's configuration flash.
-        flash-fast          Programs a bitstream onto the FPGA's configuration flash using a SPI bridge
+        flash-program       Programs the target bitstream onto the FPGA's configuration flash.
+        flash-fast          Programs a bitstream onto the FPGA's configuration flash using a SPI bridge.
         flash-read          Reads the contents of the attached FPGA's configuration flash.
         svf                 Plays a given SVF file over JTAG.
         configure           Uploads a bitstream to the device's FPGA over JTAG.
@@ -35,6 +34,7 @@ and debug comms.
         jtag-reg            Reads or writes to a provided register of JTAG-tunneled debug SPI.
         leds                Sets the specified pattern for the Debug LEDs.
         selftest            Run a hardware self-test on a connected Cynthion.
+        mcu-firmware        Update Apollo firmware version.
 
     optional arguments:
       -h, --help            show this help message and exit
