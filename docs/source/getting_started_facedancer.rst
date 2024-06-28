@@ -54,8 +54,6 @@ To put Cynthion back into analyzer mode you can run:
 
     `cynthion program TODO`
 
-TODO above may not be needed if we have unified gateware by release
-
 You can verify that everything is working by running:
 
 .. code-block :: sh
@@ -76,7 +74,7 @@ Connect Hardware
   :width: 800
   :alt: Connection diagram for using Cynthion with Facedancer.
 
-Make sure that the target device is running a program that can receive keyboard input such as a terminal or text editor and that it has focus.
+Make sure that the target host is running a program that can receive keyboard input such as a terminal or text editor and that it has focus.
 
 Run a Facedancer example
 ------------------------
@@ -93,7 +91,7 @@ Open a terminal and run:
 
     python ./rubber-ducky.py
 
-If all goes well, you should see the string ``hello, facedancer`` typed into the target device.
+If all goes well, you should see the string ``hello, facedancer`` typed into the target host.
 
 More Information
 ----------------

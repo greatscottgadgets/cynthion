@@ -59,9 +59,8 @@ Connect Hardware
   :width: 800
   :alt: Connection diagram for testing Cynthion installation.
 
-- Connect the Host computer to the Cynthion Control port.
+- Connect the Host computer to the Cynthion **CONTROL** port.
 - Check that the :ref:`LED A power-on indicator <introduction:Top View>` lights up.
-- Check that the :ref:`LED E fault indicator <introduction:Top View>` remains off.
 
 
 Test Hardware Connectivity
@@ -79,8 +78,10 @@ If everything is working you will see the following output:
 
     Detected a Cynthion device!
         Hardware: Cynthion r1.4
-        Serial number: <snip>
-
+        Serial number: xxxxxxxxxxxxxxxxxxxxxxxxxx
+        Firmware version: v1.0.4
+        USB API version: 1.1
+        Flash UID: xxxxxxxxxxxxxxxx
 
 
 Upgrading Cynthion Host Software

@@ -54,8 +54,8 @@ Running Firmware Unit Tests
 
 Once the firmware is running on the SoC you can execute some unittests to exercise the firmware.
 
-In order to do this you will need to connect both the ``control`` and
-``aux`` ports of the Cynthion to the host and then run:
+In order to do this you will need to connect both the **CONTROL** and
+**AUX** ports of the Cynthion to the host and then run:
 
 .. code-block:: sh
 

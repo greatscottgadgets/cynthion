@@ -9,7 +9,7 @@ Cynthion is an all-in-one tool for building, testing, monitoring, and experiment
 
 Out-of-the-box, Cynthion acts as a USB protocol analyzer capable of capturing and analyzing traffic between a host and any Low-, Full-, or High-Speed ("USB 2.0") USB device. It works seamlessly with our `Packetry <https://github.com/greatscottgadgets/packetry>`__ open-source analysis software.
 
-Combined with our `LUNA <https://luna.readthedocs.io>`__ gateware and `Facedancer <https://facedancer.readthedocs.io>`__ libraries, Cynthion becomes a versatile USB-hacking and development tool. Facedancer makes it quick and easy to create or tamper with real USB devices—not just emulations—even if you don’t have experience with digital-hardware design, HDL, or FPGA architecture!
+Combined with our `LUNA <https://luna.readthedocs.io>`__ gateware and `Facedancer <https://facedancer.readthedocs.io>`__ libraries, Cynthion becomes a versatile USB-hacking and development tool. Facedancer makes it quick and easy to create or tamper with real USB devices—not just emulations—even if you don’t have experience with digital hardware design, HDL, or FPGA architecture!
 
 
 Device Overview
@@ -23,13 +23,15 @@ Top View
   :width: 300
   :alt: Cynthion Top View
 
-- **LEDS A-E** - Five status LEDs managed by the debug micro-contoller.
+- **A-E** - Five status LEDs managed by the debug microcontoller.
+
     - **A** - Power Indicator.
     - **B** - FPGA is online.
-    - **C** - FPGA has requested control of the  **CONTROL USB-C** port.
-    - **D** - FPGA has control of the **CONTROL USB-C** port.
-    - **E** - Fault Indicator.
-- **LEDS 0-5** - Six user LEDs connected to the FPGA
+    - **C** - FPGA has requested control of the  **CONTROL** port.
+    - **D** - FPGA has control of the **CONTROL** port.
+    - **E** - Reserved for future use.
+
+- **0-5** - Six user LEDs connected to the FPGA
 
 
 Left View
@@ -39,13 +41,13 @@ Left View
   :width: 400
   :alt: Cynthion Left View
 
-- **PROGRAM BUTTON** - Returns control of the **CONTROL USB-C** port to the debug micro-controller and holds the FPGA in an unconfigured state.
+- **PROGRAM** - Press this button to return control of the **CONTROL** port to the debug microcontroller and hold the FPGA in an unconfigured state.
 
-    - *Recovery mode*: If this button is pressed during power-on it will invoke the `Saturn-V <https://github.com/greatscottgadgets/saturn-v>`__ bootloader on the **CONTROL USB-C** port.
+    - *Recovery mode*: Press this button during power-on to invoke the `Saturn-V <https://github.com/greatscottgadgets/saturn-v>`__ bootloader on the **CONTROL** port.
 
-- **CONTROL USB-C**  - Primary USB connector used by the host computer to control Cynthion.
-- **USER BUTTON**    - A user-assignable button that can be used in your own designs.
-- **AUX USB-C**      - An auxillary USB connection that can be used in your own designs.
+- **CONTROL**  - Primary USB connector used by the host computer to control Cynthion.
+- **USER**     - A user-assignable button that can be used in your own designs.
+- **AUX**      - An auxiliary USB connection that can be used in your own designs.
 
 
 Right View
@@ -55,9 +57,9 @@ Right View
   :width: 400
   :alt: Cynthion Right View
 
-- **TARGET USB-C** - USB Type-C connector for Packetry traffic capture and Facedancer device emulation.
-- **TARGET USB-A** - USB Type-A connector shared with the TARGET USB-C connector.
-- **RESET BUTTON** - Resets Cynthion's debug micro-controller and reconfigures the FPGA from flash.
+- **TARGET C** - USB Type-C connector for Packetry traffic capture and Facedancer device emulation.
+- **TARGET A** - USB Type-A connector shared with the **TARGET C** connector.
+- **RESET**    - Press this button to reset Cynthion's debug microcontroller and reconfigure the FPGA from flash.
 
 
 Front View
@@ -67,15 +69,16 @@ Front View
   :width: 400
   :alt: Cynthion Front View
 
-- **PMOD A & B** - Digilent Pmod™ Compatible I/O connector with a total of 16 high-speed FPGA user IOs.
-- **PMOD B** can also be configured to act as a serial port and JTAG connector for debugging SoC designs.
+- **A & B** - Two Digilent Pmod™ Compatible I/O connectors for a total of 16 high-speed FPGA user IOs.
 
-    - **Pin 1**  - SERIAL RX
-    - **Pin 2**  - SERIAL TX
-    - **Pin 7**  - JTAG TMS
-    - **Pin 8**  - JTAG TDI
-    - **Pin 9**  - JTAG TDO
-    - **Pin 10** - JTAG TCK
+    - **B** can also be configured to act as a serial port and JTAG connector for debugging SoC designs:
+
+        - **1**  - SERIAL RX
+        - **2**  - SERIAL TX
+        - **7**  - JTAG TMS
+        - **8**  - JTAG TDI
+        - **9**  - JTAG TDO
+        - **10** - JTAG TCK
 
 
 

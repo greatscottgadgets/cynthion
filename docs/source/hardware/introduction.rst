@@ -2,8 +2,8 @@
 Introduction
 ============
 
-.. image:: ../../images/cynthion_hardware.png
-  :alt: TODO Cynthion PCB front (and back ?)
+.. image:: ../../images/cynthion_hardware.jpg
+  :alt: Cynthion PCB (Front)
 
 
 Cynthion Hardware

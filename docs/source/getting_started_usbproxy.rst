@@ -1,5 +1,5 @@
 =============================
-Using Cynthion with USB proxy
+Using Cynthion with USB Proxy
 =============================
 
 Before proceeding, please ensure you have completed all steps in the :doc:`getting_started` and :doc:`getting_started_facedancer` sections.
@@ -14,8 +14,8 @@ Connect Hardware
 
 
 
-Run a USBProxy example
-----------------------
+Run a USB Proxy example
+-----------------------
 
 Create a new Python file called ``usbproxy.py`` with the following content:
 

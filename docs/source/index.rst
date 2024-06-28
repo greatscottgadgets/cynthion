@@ -2,7 +2,7 @@
 Cynthion Documentation
 ======================
 
-.. image:: ../images/cynthion.png
+.. image:: ../images/cynthion.jpg
   :width: 400
   :alt: Cynthion
 
