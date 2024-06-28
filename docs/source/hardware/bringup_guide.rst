@@ -163,7 +163,7 @@ Optionally, you can reversibly lock the bootloader region of the Debug
 Controller, preventing you from accidentally overwriting the bootloader.
 This is most useful for users developing code for the Debug Controller.
 
-If you choose to lock the bootloader, you should lock the first ``4KiB``
+If you choose to lock the bootloader, you should lock the first ``2KiB``
 of flash. Note that currently, the bootloader lock feature of *Black
 Magic Probe* devices always locks ``8KiB`` of flash; and thus cannot be
 used for Cynthion.
