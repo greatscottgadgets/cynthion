@@ -13,7 +13,7 @@ You can rebuild the firmware using ``cargo`` as follows:
 
 .. code-block:: text
 
-    # change to the cynthion firmware directory
+    # change to the Cynthion firmware directory
     cd firmware/moondancer/
 
     # rebuild the firmware
@@ -23,7 +23,7 @@ To upload the firmware binary to Cynthion and flash the SoC bitstream you can ru
 
 .. code-block:: text
 
-    # change to the cynthion firmware directory
+    # change to the Cynthion firmware directory
     cd firmware/moondancer/
 
     # upload firmware and run it
@@ -52,14 +52,14 @@ To upload the firmware binary to Cynthion and flash the SoC bitstream you can ru
 Running Firmware Unit Tests
 ---------------------------
 
-Once the firmware is running on the SoC you can execute some unittests to exercise the firmware.
+Once the firmware is running on the SoC you can execute some unit tests to exercise the firmware.
 
 In order to do this you will need to connect both the **CONTROL** and
 **AUX** ports of the Cynthion to the host and then run:
 
 .. code-block:: sh
 
-    # change to the cynthion firmware directory
+    # change to the Cynthion firmware directory
     cd firmware/moondancer/
 
     # run firmware unit tests
@@ -73,7 +73,7 @@ There are a number of firmware examples in the ``firmware/moondancer/examples/``
 
 .. code-block:: sh
 
-    # change to the cynthion firmware directory
+    # change to the Cynthion firmware directory
     cd firmware/moondancer/
 
     # run example
