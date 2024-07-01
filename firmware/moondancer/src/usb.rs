@@ -6,10 +6,6 @@ use smolusb::descriptor::{
     LanguageId, StringDescriptor, StringDescriptorZero,
 };
 
-// - constants ----------------------------------------------------------------
-
-pub const DEVICE_SERIAL_STRING: &str = "moondancer"; // TODO read flash uid
-
 // - vendor request -----------------------------------------------------------
 
 pub mod vendor {
@@ -209,12 +205,12 @@ pub static STRING_DESCRIPTOR_0: StringDescriptorZero =
 
 // manufacturer
 pub static STRING_DESCRIPTOR_1: StringDescriptor =
-    StringDescriptor::new(cynthion::shared::usb::bManufacturerString::cynthion);
+    StringDescriptor::new(cynthion::shared::usb::bManufacturerString::moondancer);
 // product
 pub static STRING_DESCRIPTOR_2: StringDescriptor =
-    StringDescriptor::new(cynthion::shared::usb::bProductString::cynthion);
+    StringDescriptor::new(cynthion::shared::usb::bProductString::moondancer);
 // serial
-pub static STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new(DEVICE_SERIAL_STRING);
+pub static STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("0000000000000000");
 
 // configuration #0
 pub static STRING_DESCRIPTOR_4: StringDescriptor = StringDescriptor::new("config0");

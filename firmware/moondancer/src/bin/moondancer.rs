@@ -128,11 +128,10 @@ impl<'a> Firmware<'a> {
         moondancer::log::set_port(moondancer::log::Port::Both);
         moondancer::log::init();
         info!(
-            "{} {} r{}.{}",
-            cynthion::shared::usb::bManufacturerString::cynthion,
-            cynthion::shared::usb::bProductString::cynthion,
-            board_major,
-            board_minor,
+            "{} {} v{}",
+            env!("CARGO_PKG_AUTHORS"),
+            env!("CARGO_PKG_NAME"),
+            env!("CARGO_PKG_VERSION"),
         );
         info!("Logging initialized");
 
@@ -149,7 +148,7 @@ impl<'a> Firmware<'a> {
         #[allow(clippy::items_after_statements)]
         let string_descriptors = {
             static mut UUID: heapless::String<16> = heapless::String::new();
-            static mut ISERIALNUMBER: StringDescriptor = StringDescriptor::new("UNKNOWN ");
+            static mut ISERIALNUMBER: StringDescriptor = StringDescriptor::new("0000000000000000");
             unsafe {
                 UUID = uuid.clone();
                 ISERIALNUMBER = StringDescriptor::new(UUID.as_str());

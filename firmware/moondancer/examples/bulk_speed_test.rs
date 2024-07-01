@@ -609,7 +609,7 @@ static USB_STRING_DESCRIPTOR_1: StringDescriptor =
 static USB_STRING_DESCRIPTOR_2: StringDescriptor =
     StringDescriptor::new(cynthion::shared::usb::bProductString::bulk_speed_test);
 static USB_STRING_DESCRIPTOR_3: StringDescriptor =
-    StringDescriptor::new(moondancer::usb::DEVICE_SERIAL_STRING);
+    StringDescriptor::new("0000000000000000");
 
 static USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &USB_STRING_DESCRIPTOR_1,

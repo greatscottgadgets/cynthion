@@ -33,8 +33,9 @@ analyzer_test   = 0x000a # pid.codes Test PID 10
 #
 [bManufacturerString]
 apollo          = "Great Scott Gadgets"
-bulk_speed_test = "LUNA"
-cynthion        = "Great Scott Gadgets"
+bulk_speed_test = "Luna Project"
+analyzer        = "Cynthion Project"
+moondancer      = "Cynthion Project"
 example         = "https://pid.codes/1209/"
 
 # iProduct
@@ -42,9 +43,10 @@ example         = "https://pid.codes/1209/"
 # USB Device Descriptor product string field value.
 #
 [bProductString]
-apollo          = "Apollo Debugger"
-bulk_speed_test = "IN speed test"
-cynthion        = "Cynthion USB Test Instrument"
+apollo          = "Cynthion Apollo Debugger"
+bulk_speed_test = "Bulk Speed Test"
+analyzer        = "USB Analyzer"
+moondancer      = "Facedancer"
 example         = "pid.codes Test PID 1"
 example_2       = "pid.codes Test PID 2"
 example_3       = "pid.codes Test PID 3"
