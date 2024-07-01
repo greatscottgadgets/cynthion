@@ -1,9 +1,7 @@
 import asyncio
-import logging
 
-from facedancer import main
-from facedancer.devices.keyboard     import USBKeyboardDevice
-from facedancer.classes.hid.keyboard import KeyboardModifiers
+from facedancer                   import main
+from facedancer.devices.keyboard  import USBKeyboardDevice
 
 device = USBKeyboardDevice()
 

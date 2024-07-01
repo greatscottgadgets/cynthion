@@ -4,15 +4,14 @@
 #
 """ USB Proxy example; forwards all USB transactions and logs them to the console. """
 
-from facedancer          import *
 from facedancer          import main
 
 from facedancer.proxy    import USBProxyDevice
 from facedancer.filters  import USBProxySetupFilters, USBProxyPrettyPrintFilter
 
 # replace with the proxied device's information
-ID_VENDOR=0x05dc
-ID_PRODUCT=0xc75c
+ID_VENDOR  = 0x1050
+ID_PRODUCT = 0x0407
 
 
 if __name__ == "__main__":
