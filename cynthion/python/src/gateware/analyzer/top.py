@@ -16,7 +16,8 @@ import usb
 from datetime import datetime
 from enum import IntEnum, IntFlag
 
-from amaranth                            import Signal, Elaboratable, Module
+from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter
+from amaranth.lib.fifo                   import AsyncFIFO
 from amaranth.build.res                  import ResourceError
 from usb_protocol.emitters               import DeviceDescriptorCollection
 from usb_protocol.types                  import USBRequestType, USBRequestRecipient
@@ -41,6 +42,7 @@ from usb_protocol.emitters.descriptors.standard import get_string_descriptor
 from usb_protocol.types.descriptors.microsoft10 import RegistryTypes
 
 from .analyzer                           import USBAnalyzer
+from .fifo                               import Stream16to8, StreamFIFO, HyperRAMPacketFIFO
 
 import cynthion
 
@@ -324,8 +326,19 @@ class USBAnalyzerApplet(Elaboratable):
         )
         usb.add_endpoint(stream_ep)
 
-        # Create a USB analyzer, and connect a register up to its output.
+        # Create a USB analyzer.
         m.submodules.analyzer = analyzer = USBAnalyzer(utmi_interface=utmi)
+
+        # Follow this with a HyperRAM FIFO for additional buffering.
+        reset_on_start = ResetInserter(analyzer.discarding)
+        m.submodules.psram_fifo = psram_fifo = reset_on_start(HyperRAMPacketFIFO())
+
+        # Add an additional FIFO for 'sync' to 'usb' crossing.
+        m.submodules.out_fifo = out_fifo = StreamFIFO(reset_on_start(
+            AsyncFIFO(width=16, depth=4096, r_domain="usb", w_domain="sync")))
+
+        # Convert the 16-bit into an 8-bit one for output.
+        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(Stream16to8())
 
         m.d.comb += [
             # Connect enable signal to host-controlled state register.
@@ -337,14 +350,17 @@ class USBAnalyzerApplet(Elaboratable):
             # Discard data buffered by endpoint when the analyzer discards its data.
             stream_ep.discard           .eq(analyzer.discarding),
 
-            # USB stream uplink.
-            stream_ep.stream            .stream_eq(analyzer.stream),
+            # USB stream pipeline.
+            psram_fifo.input            .stream_eq(analyzer.stream),
+            out_fifo.input              .stream_eq(psram_fifo.output),
+            s16to8.input                .stream_eq(out_fifo.output),
+            stream_ep.stream            .stream_eq(s16to8.output),
 
             usb.connect                 .eq(1),
 
             # LED indicators.
             platform.request("led", 0).o  .eq(analyzer.capturing),
-            platform.request("led", 1).o  .eq(analyzer.stream.valid),
+            platform.request("led", 1).o  .eq(stream_ep.stream.valid),
             platform.request("led", 2).o  .eq(analyzer.overrun),
 
             platform.request("led", 3).o  .eq(utmi.session_valid),
