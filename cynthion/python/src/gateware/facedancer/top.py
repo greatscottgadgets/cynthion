@@ -60,7 +60,7 @@ class MoondancerSoc(Elaboratable):
         ),
     ]
 
-    def __init__(self, clock_frequency, uart_baud_rate=115200):
+    def __init__(self, clock_frequency=int(60e6), uart_baud_rate=115200):
         # qspi flash configuration
         spi0_flash_size  = 0x00400000
         spi0_flash_addr  = 0x10000000
@@ -88,6 +88,11 @@ class MoondancerSoc(Elaboratable):
         self.qspi0_pins = Record([
             ('dq',  [('i', 4), ('o', 4), ('oe', 1)]),
             ('cs',  [('o', 1)]),
+        ])
+
+        # ... add a stand-in for the INT pin ...
+        self.int_pin = Record([
+            ('o', [('o', 1)])
         ])
 
         # ... add core peripherals: memory, timer, uart ...
@@ -164,7 +169,7 @@ class MoondancerSoc(Elaboratable):
         self.soc.add_peripheral(self.uart1, addr=0xf0006000)
 
         # ... add an ApolloAdvertiser peripheral ...
-        self.advertiser = ApolloAdvertiserPeripheral(clk_freq_hz=clock_frequency)
+        self.advertiser = ApolloAdvertiserPeripheral(pad=self.int_pin, clk_freq_hz=clock_frequency)
         self.soc.add_peripheral(self.advertiser, addr=0xf0007000)
 
         # ... add a CynthionInformation peripheral ...
@@ -174,8 +179,9 @@ class MoondancerSoc(Elaboratable):
     def elaborate(self, platform):
         m = Module()
 
-        # add additional resource
-        platform.add_resources(self.ADDITIONAL_RESOURCES)
+        # add additional resources (only supported on platforms > r0.4)
+        if platform.version not in [(0, 1), (0, 2), (0, 3), (0, 4)]:
+            platform.add_resources(self.ADDITIONAL_RESOURCES)
 
         # generate our domain clocks/resets
         m.submodules.car = platform.clock_domain_generator()
@@ -202,10 +208,13 @@ class MoondancerSoc(Elaboratable):
         m.submodules += [self.spi0_bus, self.spi0_phy]
 
         # connect GPIOA to Cynthion's PMOD A port
-        pmoda_io = platform.request("user_pmod", 0)
-        m.d.comb += [
-            self.gpioa.pins.connect(pmoda_io),
-        ]
+        try:
+            pmoda_io = platform.request("user_pmod", 0)
+            m.d.comb += [
+                self.gpioa.pins.connect(pmoda_io),
+            ]
+        except:
+            logging.warning("Platform does not support a user pmod port for gpio")
 
         # connect UART0 to Cynthion's SAMD11 uart
         uart0_io = platform.request("uart", 0)
@@ -217,21 +226,36 @@ class MoondancerSoc(Elaboratable):
             m.d.comb += uart0_io.tx.oe.eq(~self.soc.uart._phy.tx.rdy),
 
         # connect UART1 to Cynthion's PMOD B port
-        uart1_io = platform.request("uart", 1)
-        m.d.comb += [
-            uart1_io.tx.o.eq(self.uart1_pins.tx),
-            self.uart1_pins.rx.eq(uart1_io.rx)
-        ]
+        try:
+            uart1_io = platform.request("uart", 1)
+            m.d.comb += [
+                uart1_io.tx.o.eq(self.uart1_pins.tx),
+                self.uart1_pins.rx.eq(uart1_io.rx)
+            ]
+        except:
+            logging.warning("Platform does not support a user pmod port for a second uart")
+
+        # connect INT pin to ApolloAdvertiser
+        try:
+            int_io = platform.request("int")
+            m.d.comb += [
+                int_io.o.eq(self.int_pin)
+            ]
+        except:
+            logging.warning("Platform does not support ApolloAdvertiserPeripheral")
 
         # connect JTAG0 to Cynthion's PMOD B port
-        jtag0_io = platform.request("jtag", 0)
-        m.d.comb += [
-            self.soc.cpu.jtag_tms  .eq(jtag0_io.tms.i),
-            self.soc.cpu.jtag_tdi  .eq(jtag0_io.tdi.i),
-            jtag0_io.tdo.o         .eq(self.soc.cpu.jtag_tdo),
-            self.soc.cpu.jtag_tck  .eq(jtag0_io.tck.i),
-            self.soc.cpu.dbg_reset .eq(self.soc.cpu.ext_reset),
-        ]
+        try:
+            jtag0_io = platform.request("jtag", 0)
+            m.d.comb += [
+                self.soc.cpu.jtag_tms  .eq(jtag0_io.tms.i),
+                self.soc.cpu.jtag_tdi  .eq(jtag0_io.tdi.i),
+                jtag0_io.tdo.o         .eq(self.soc.cpu.jtag_tdo),
+                self.soc.cpu.jtag_tck  .eq(jtag0_io.tck.i),
+                self.soc.cpu.dbg_reset .eq(self.soc.cpu.ext_reset),
+            ]
+        except:
+            logging.warning("Platform does not support a user pmod port for jtag")
 
         # create our USB devices, connect device controllers and add eptri endpoint handlers
 
@@ -284,21 +308,21 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
 
     # select platform
-    platform = get_appropriate_platform()
-    if platform is None:
+    _platform = get_appropriate_platform()
+    if _platform is None:
         logging.error("Failed to identify a supported platform")
         sys.exit(1)
 
     # configure clock frequency
-    clock_frequency = int(platform.DEFAULT_CLOCK_FREQUENCIES_MHZ["usb"] * 1e6)
-    logging.info(f"Building for {platform} with clock frequency: {clock_frequency}")
+    _clock_frequency = int(_platform.DEFAULT_CLOCK_FREQUENCIES_MHZ["usb"] * 1e6)
+    logging.info(f"Building for {_platform} with clock frequency: {_clock_frequency}")
 
     # create design
-    design = MoondancerSoc(clock_frequency=clock_frequency)
+    _design = MoondancerSoc(clock_frequency=_clock_frequency)
 
     # invoke cli
-    overrides = {
+    _overrides = {
         "debug_verilog": False,
         "verbose": False,
     }
-    top_level_cli(design, **overrides)
+    top_level_cli(_design, **_overrides)
