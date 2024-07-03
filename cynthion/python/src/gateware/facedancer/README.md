@@ -42,8 +42,8 @@ This is needed if you want to use gdb for firmware debugging over JTAG.
 
 Build the bitstream by running the following command from the `cynthion/package/` directory:
 
-    make soc
+    make facedancer
 
 You can load the bitstream with the `cynthion` command-line tool using:
 
-    cynthion configure build/soc.bit
+    cynthion configure build/facedancer.bit

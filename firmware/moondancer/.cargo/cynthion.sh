@@ -2,7 +2,7 @@
 
 # configuration
 : ${FLASHADDR:=0x000b0000}
-: ${BITSTREAM:=../../cynthion/python/build/soc.bit}
+: ${BITSTREAM:=../../cynthion/python/build/facedancer.bit}
 : ${UART:=/dev/ttyACM0}
 
 echo
