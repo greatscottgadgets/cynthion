@@ -10,11 +10,13 @@
 import argparse
 import os
 import logging
+import platform
 import re
 import sys
 import textwrap
 import usb
 
+from apollo_fpga               import ApolloDebugger
 from apollo_fpga.commands.cli  import ensure_unconfigured
 from cynthion                  import shared
 from fwup.dfu                  import DFUTarget
@@ -25,21 +27,31 @@ SOC_FIRMWARE_FLASHADDR = 0x000b0000
 
 
 def get_bitstream_information():
-    d = usb.core.find(
+    device = usb.core.find(
         idVendor=shared.usb.bVendorId.cynthion,
         idProduct=shared.usb.bProductId.cynthion
     )
-    if d is None:
+    if device is None:
         return None
 
-    minor = d.bcdDevice & 0xFF
-    major = d.bcdDevice >> 8
+    # In Windows, we first need to claim the target interface.
+    if platform.system() == "Windows":
+        # Find the Apollo stub interface first
+        stub_if = ApolloDebugger._device_has_stub_iface(device, return_iface=True)
+        if stub_if is None:
+            raise DebuggerNotFound("No Apollo stub interface found")
+
+        # Claim the target interface.
+        usb.util.claim_interface(device, stub_if)
+
+    minor = device.bcdDevice & 0xFF
+    major = device.bcdDevice >> 8
 
     return {
-        "product": d.product,
-        "manufacturer": d.manufacturer,
+        "product": device.product,
+        "manufacturer": device.manufacturer,
         "hardware": f"r{major}.{minor}",
-        "flash_uid": d.serial_number,
+        "flash_uid": device.serial_number,
     }
 
 

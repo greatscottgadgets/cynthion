@@ -85,7 +85,10 @@ def main():
         return
 
     # Retrieve information about the active bitstream (if any).
-    bitstream_info = get_bitstream_information()
+    if hasattr(args, "force_offline") and args.force_offline:
+        bitstream_info = None
+    else:
+        bitstream_info = get_bitstream_information()
 
     # Force the FPGA offline by default in most commands to force Apollo mode if needed.
     force_offline = args.force_offline if "force_offline" in args else True
