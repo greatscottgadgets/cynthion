@@ -62,7 +62,7 @@ def main():
     update_parser = command_parsers.add_parser("update", help="update MCU firmware and FPGA configuration flash to the latest installed versions", formatter_class=HelpFormatter)
     update_parser.set_defaults(func=cynthion_update)
     update_parser.add_argument("--mcu-firmware", action='store_true',   help="only update the MCU firmware")
-    update_parser.add_argument("--fpga-bitstream", action='store_true', help="only update the FPGA bitstream")
+    update_parser.add_argument("--bitstream", action='store_true', help="only update the FPGA bitstream")
 
     # cynthion info
     info_parser = command_parsers.add_parser("info", help="print device information", formatter_class=HelpFormatter)
