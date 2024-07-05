@@ -42,13 +42,13 @@ dependencies = [
     "tqdm",
     "pygreat~=2024.0",
     "apollo_fpga~=1.0",
+    "amaranth==0.4.1",
+    "luna-usb~=0.1",
+    "luna-soc~=0.1",
 ]
 
 [project.optional-dependencies]
 gateware = [
-    "amaranth==0.4.1",
-    "luna-usb~=0.1",
-    "luna-soc~=0.1",
 ]
 
 [project.scripts]
