@@ -105,13 +105,13 @@ Then install the `cynthion` package with:
 ## Build Packetry Gateware
 
     cd cynthion.git/cynthion/python/
-    LUNA_PLATFORM="cynthion.gateware.platform:CynthionPlatformRev1D3" make analyzer
+    LUNA_PLATFORM="cynthion.gateware.platform:CynthionPlatformRev1D4" make analyzer
 
 
 ## Build Moondancer SoC Gateware
 
     cd cynthion.git/cynthion/python/
-    LUNA_PLATFORM="cynthion.gateware.platform:CynthionPlatformRev1D3" make soc
+    LUNA_PLATFORM="cynthion.gateware.platform:CynthionPlatformRev1D4" make soc
 
 
 ## Build Moondancer Firmware
