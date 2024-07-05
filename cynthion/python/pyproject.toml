@@ -64,9 +64,11 @@ include-package-data = true
 
 [tool.setuptools.package-dir]
 cynthion = "src"
+assets   = "assets"
 
 [tool.setuptools.package-data]
 "cynthion.shared" = ["*.toml"]
+"assets" = ["*.rules", "*.bin", "**/*.bit"]
 
 [tool.setuptools-git-versioning]
 enabled = true
