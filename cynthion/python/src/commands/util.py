@@ -141,7 +141,6 @@ def run_bitstream(device, filename):
 
     logging.info(f"Uploading target bitstream to FPGA with {len(bitstream)} bytes...")
 
-    ensure_unconfigured(device)
     with device.jtag as jtag:
         programmer = device.create_jtag_programmer(jtag)
         programmer.configure(bitstream)
