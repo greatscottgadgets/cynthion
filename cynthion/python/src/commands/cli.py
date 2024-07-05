@@ -45,6 +45,7 @@ def main():
     flash_group = flash_parser.add_mutually_exclusive_group()
     flash_group.add_argument("--bitstream", help="(advanced) flash the bitstream at <filename>", metavar="<filename>", required=False)
     flash_group.add_argument("--soc-firmware", help="(advanced) flash the soc firmware at <filename>", metavar="<filename>", required=False)
+    flash_group.add_argument("--mcu-firmware", help="(advanced) flash the mcu firmware at <filename>", metavar="<filename>", required=False)
     flash_subparsers  = flash_parser.add_subparsers(dest="target", metavar="BITSTREAM")
     flash_analyzer_parser = flash_subparsers.add_parser("analyzer", help="flash the USB Analyzer bitstream", formatter_class=HelpFormatter)
     flash_facedancer_parser = flash_subparsers.add_parser("facedancer", help="flash the Facedancer bitstream", formatter_class=HelpFormatter)

@@ -10,12 +10,14 @@
 import logging
 
 from .util import find_cynthion_asset, find_cynthion_bitstream
-from .util import flash_bitstream, flash_soc_firmware
+from .util import flash_bitstream, flash_mcu_firmware, flash_soc_firmware
 
 
 def cynthion_flash(device, args):
     if args.bitstream is not None:
         flash_bitstream(device, args.bitstream)
+    elif args.mcu_firmware is not None:
+        flash_mcu_firmware(device, args.mcu_firmware)
     elif args.soc_firmware is not None:
         flash_soc_firmware(device, args.soc_firmware)
     elif args.target == "analyzer":
