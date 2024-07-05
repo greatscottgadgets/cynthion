@@ -111,7 +111,7 @@ Then install the `cynthion` package with:
 ## Build Moondancer SoC Gateware
 
     cd cynthion.git/cynthion/python/
-    LUNA_PLATFORM="cynthion.gateware.platform:CynthionPlatformRev1D4" make soc
+    LUNA_PLATFORM="cynthion.gateware.platform:CynthionPlatformRev1D4" make facedancer
 
 
 ## Build Moondancer Firmware
