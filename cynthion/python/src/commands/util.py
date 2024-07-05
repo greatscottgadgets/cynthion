@@ -65,10 +65,10 @@ def find_cynthion_asset(filename):
         return None
 
 
-def find_cynthion_bitstream(filename):
+def find_cynthion_bitstream(device, filename):
     """Returns the path to the requested bitstream for the appropriate platform"""
 
-    platform = _get_appropriate_platform_name()
+    platform = _get_appropriate_platform_name(device)
 
     module_path = os.path.dirname(__file__)
     bitstream_path = os.path.join(module_path, '../../assets/', platform, filename)
@@ -150,18 +150,10 @@ def run_bitstream(device, filename):
     device.allow_fpga_takeover_usb()
 
 
-def _get_appropriate_platform_name():
+def _get_appropriate_platform_name(device):
     """Returns the LUNA platform name for the connected Cynthion"""
-    # Try to import Apollo and look for a debug interface.
-    try:
-        import apollo_fpga
-        debugger = apollo_fpga.ApolloDebugger()
-    except Exception as e:
-        logging.error(f"{e}")
-        sys.exit(1)
-
     # Retrieve the version of the attached device.
-    major, minor = debugger.detect_connected_version()
+    major, minor = device.detect_connected_version()
 
     return f"CynthionPlatformRev{major}D{minor}"
 

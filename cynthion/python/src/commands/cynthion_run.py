@@ -18,11 +18,11 @@ def cynthion_run(device, args):
         run_bitstream(device, args.bitstream)
 
     elif args.target == "analyzer":
-        run_bitstream(device, find_cynthion_bitstream(f"analyzer.bit"))
+        run_bitstream(device, find_cynthion_bitstream(device, f"analyzer.bit"))
 
     elif args.target == "facedancer":
         flash_soc_firmware(device, find_cynthion_asset("moondancer.bin"))
-        run_bitstream(device, find_cynthion_bitstream(f"facedancer.bit"))
+        run_bitstream(device, find_cynthion_bitstream(device, f"facedancer.bit"))
 
     elif args.target == "selftest":
         _run_selftest(device, args)
@@ -36,7 +36,7 @@ def _run_selftest(device, args):
     from cynthion.selftest.gateware import SelftestDevice
     from cynthion.selftest.host import StandaloneTester
 
-    run_bitstream(device, find_cynthion_bitstream(f"selftest.bit"))
+    run_bitstream(device, find_cynthion_bitstream(device, f"selftest.bit"))
     selftest_device = SelftestDevice()
 
     tester = StandaloneTester(selftest_device)

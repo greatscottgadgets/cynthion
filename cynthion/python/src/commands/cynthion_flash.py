@@ -21,12 +21,12 @@ def cynthion_flash(device, args):
     elif args.soc_firmware is not None:
         flash_soc_firmware(device, args.soc_firmware)
     elif args.target == "analyzer":
-        flash_bitstream(device, find_cynthion_bitstream("analyzer.bit"))
+        flash_bitstream(device, find_cynthion_bitstream(device, "analyzer.bit"))
     elif args.target == "facedancer":
         flash_soc_firmware(device, find_cynthion_asset("moondancer.bin"))
-        flash_bitstream(device, find_cynthion_bitstream("facedancer.bit"))
+        flash_bitstream(device, find_cynthion_bitstream(device, "facedancer.bit"))
     elif args.target == "selftest":
-        flash_bitstream(device, find_cynthion_bitstream("selftest.bit"))
+        flash_bitstream(device, find_cynthion_bitstream(device, "selftest.bit"))
     else:
         logging.error(f"unknown target: {args.target}")
         return
