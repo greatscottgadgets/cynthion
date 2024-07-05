@@ -15,6 +15,7 @@ Cynthion Documentation
   getting_started_packetry
   getting_started_facedancer
   getting_started_usbproxy
+  cli
 
 .. toctree::
   :maxdepth: 2
@@ -22,6 +23,7 @@ Cynthion Documentation
 
   hardware/introduction
   hardware/bringup_guide
+  hardware/cli
 
 .. toctree::
   :maxdepth: 2
@@ -38,4 +40,3 @@ Cynthion Documentation
   developer/introduction
   developer/bitstream_generation
   developer/soc_firmware_compilation
-  developer/cli

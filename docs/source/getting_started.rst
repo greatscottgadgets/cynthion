@@ -1,6 +1,6 @@
-================================================
+=============================
 Getting Started with Cynthion
-================================================
+=============================
 
 
 Prerequisites
@@ -36,8 +36,14 @@ Configure your system to allow access to Cynthion for logged in users:
 
 .. code-block :: sh
 
+    sudo cynthion setup
+
+If you'd prefer to perform this step manually, you can download and install the rules as follows:
+
+.. code-block :: sh
+
     # download udev rules
-    curl -O https://raw.githubusercontent.com/greatscottgadgets/cynthion/main/util/54-cynthion.rules
+    curl -O https://raw.githubusercontent.com/greatscottgadgets/cynthion/main/cynthion/python/assets/54-cynthion.rules
 
     # install udev rules
     sudo cp 54-cynthion.rules /etc/udev/rules.d
@@ -47,6 +53,12 @@ Configure your system to allow access to Cynthion for logged in users:
 
     # apply udev rules to any devices that are already plugged in
     sudo udevadm trigger
+
+You can check if the rules are installed correctly with:
+
+.. code-block :: sh
+
+    cynthion setup --check
 
 
 Test Installation
@@ -70,7 +82,7 @@ Open a terminal and confirm that everything is working by running:
 
 .. code-block :: sh
 
-    cynthion info
+    cynthion info --force-offline
 
 If everything is working you will see the following output:
 
@@ -84,21 +96,33 @@ If everything is working you will see the following output:
         Flash UID: xxxxxxxxxxxxxxxx
 
 
-Upgrading Cynthion Host Software
---------------------------------
+Updating Cynthion Host Software
+-------------------------------
 
-To upgrade the Cynthion host software to the latest version run:
+To update the Cynthion host software to the latest version run:
 
 .. code-block :: sh
 
     pip install --upgrade cynthion
 
 
-Upgrading Cynthion Device Firmware
-----------------------------------
+Updating Cynthion Microcontroller Firmware and FPGA configuration flash
+-----------------------------------------------------------------------
 
-To upgrade the Cynthion device firmware to the latest version run:
+To upgrade the Cynthion Microcontroller firmware and FPGA configuration flash to the latest versions run:
 
 .. code-block :: sh
 
-    cynthion mcu-firmware --autoflash
+    cynthion update
+
+You can update the Microcontroller firmware separately with:
+
+.. code-block :: sh
+
+    cynthion update --mcu-firmware
+
+You can update the FPGA configuration flash separately with:
+
+.. code-block :: sh
+
+    cynthion update --bitstream
