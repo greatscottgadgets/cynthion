@@ -44,6 +44,6 @@ Build the bitstream by running the following command from the `cynthion/package/
 
     make facedancer
 
-You can load the bitstream with the `cynthion` command-line tool using:
+You can load the bitstream with the `apollo` command-line tool using:
 
-    cynthion configure build/facedancer.bit
+    apollo configure build/facedancer.bit

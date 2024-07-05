@@ -25,7 +25,7 @@ console:
 	pyserial-miniterm $(UART) 115200
 
 load:
-	cynthion configure build/facedancer.bit
+	apollo configure build/facedancer.bit
 
 tests:
 	python3 -m unittest
