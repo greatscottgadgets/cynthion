@@ -48,7 +48,7 @@ dependencies = [
 gateware = [
     "amaranth==0.4.1",
     "luna-usb~=0.1",
-    "luna-soc~=0.1",
+    "luna-soc~=0.2",
 ]
 
 [project.scripts]
