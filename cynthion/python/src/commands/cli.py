@@ -11,72 +11,102 @@ import argparse
 import logging
 import sys
 
-from apollo_fpga import ApolloDebugger
-from apollo_fpga.commands.cli import Command, COMMANDS as APOLLO_COMMANDS
+from sys                       import platform
 
+from apollo_fpga               import ApolloDebugger
+from apollo_fpga.commands.cli  import Command, COMMANDS as APOLLO_COMMANDS
 
-def cynthion_info(device, args):
-    # just call the Apollo implementation for now
-    command = next((c for c in APOLLO_COMMANDS if c.name == "info"), None)
-    command.handler(device, args)
+from .util                     import HelpFormatter, get_bitstream_information
 
-def cynthion_selftest(device, args):
-    from .cynthion_selftest import main as main_selftest
-    sys.argv = [sys.argv[0]]
-    main_selftest()
-
-def cynthion_mcu_firmware(device, args):
-    from .cynthion_mcu_firmware import main as main_mcu_firmware
-    sys.argv = [sys.argv[0]]
-    main_mcu_firmware(args.file)
-
-CYNTHION_COMMANDS = [
-    # Apollo commands can be intercepted by simply supplying a new Command with the same name and (optionally) options
-    Command("info",     handler=cynthion_info, args=[(("--force-offline",), dict(action='store_true'))],
-            help="Print device info.", ),
-    Command("selftest", handler=cynthion_selftest,
-            help="Run a hardware self-test on a connected Cynthion."),
-    Command("mcu-firmware", handler=cynthion_mcu_firmware, args=[(("file",), dict(nargs="?"))],
-            help="Update Apollo firmware version.")
-]
+from . import cynthion_info, cynthion_flash, cynthion_build, cynthion_run, cynthion_setup, cynthion_update
 
 
 def main():
-    # combine apollo and cynthion commands, overwriting apollo implementations
-    # with cynthion implementations, where defined.
-    apollo_commands   = dict(zip([c.name for c in APOLLO_COMMANDS],   APOLLO_COMMANDS))
-    cynthion_commands = dict(zip([c.name for c in CYNTHION_COMMANDS], CYNTHION_COMMANDS))
-    apollo_commands.update(cynthion_commands)
-    commands = apollo_commands.values()
+    # Set up python's logging to act as a simple print, for now.
+    logging.basicConfig(level=logging.INFO, format="%(message)-s")
 
-    # Set up a simple argument parser.
-    parser = argparse.ArgumentParser(description="Cynthion FPGA Configuration / Debug tool",
-            formatter_class=argparse.RawTextHelpFormatter)
-    sub_parsers = parser.add_subparsers(dest="command", metavar="command")
-    for command in commands:
-        cmd_parser = sub_parsers.add_parser(command.name, aliases=command.alias, help=command.help)
-        cmd_parser.set_defaults(func=command.handler)
-        for arg in command.args:
-            if isinstance(arg, tuple):
-                cmd_parser.add_argument(*arg[0], **arg[1])
-            else:
-                cmd_parser.add_argument(arg)
+    # Set up an argument parser.
+    parser = argparse.ArgumentParser(description="Cynthion command line interface",
+                                     formatter_class=HelpFormatter)
+    command_parsers = parser.add_subparsers(dest="command", metavar="command")
 
+    # cynthion run
+    run_parser = command_parsers.add_parser("run", help="run a bitstream on the FPGA", formatter_class=HelpFormatter)
+    run_parser.set_defaults(func=cynthion_run)
+    run_parser.add_argument("--bitstream", help="(advanced) run the bitstream at <filename>", metavar="<filename>", required=False)
+    run_subparsers  = run_parser.add_subparsers(dest="target", metavar="BITSTREAM")
+    run_analyzer_parser = run_subparsers.add_parser("analyzer", help="run the USB Analyzer bitstream", formatter_class=HelpFormatter)
+    run_facedancer_parser = run_subparsers.add_parser("facedancer", help="run the Facedancer bitstream", formatter_class=HelpFormatter)
+    run_selftest_parser = run_subparsers.add_parser("selftest", help="run the hardware self-test bitstream", formatter_class=HelpFormatter)
+
+    # cynthion flash
+    flash_parser = command_parsers.add_parser("flash", help="overwrite the FPGA's configuration flash with the target bitstream", formatter_class=HelpFormatter)
+    flash_parser.set_defaults(func=cynthion_flash)
+    flash_group = flash_parser.add_mutually_exclusive_group()
+    flash_group.add_argument("--bitstream", help="(advanced) flash the bitstream at <filename>", metavar="<filename>", required=False)
+    flash_group.add_argument("--soc-firmware", help="(advanced) flash the soc firmware at <filename>", metavar="<filename>", required=False)
+    flash_group.add_argument("--mcu-firmware", help="(advanced) flash the mcu firmware at <filename>", metavar="<filename>", required=False)
+    flash_subparsers  = flash_parser.add_subparsers(dest="target", metavar="BITSTREAM")
+    flash_analyzer_parser = flash_subparsers.add_parser("analyzer", help="flash the USB Analyzer bitstream", formatter_class=HelpFormatter)
+    flash_facedancer_parser = flash_subparsers.add_parser("facedancer", help="flash the Facedancer bitstream", formatter_class=HelpFormatter)
+
+    # cynthion build
+    build_parser = command_parsers.add_parser("build")
+    build_parser.set_defaults(func=cynthion_build)
+    build_subparsers  = build_parser.add_subparsers(dest="target", metavar="TARGET")
+    build_analyzer_parser = build_subparsers.add_parser("analyzer")
+    build_facedancer_parser = build_subparsers.add_parser("facedancer")
+    build_selftest_parser = build_subparsers.add_parser("selftest")
+
+    # cynthion update
+    update_parser = command_parsers.add_parser("update", help="update MCU firmware and FPGA configuration flash to the latest installed versions", formatter_class=HelpFormatter)
+    update_parser.set_defaults(func=cynthion_update)
+    update_parser.add_argument("--mcu-firmware", action='store_true',   help="only update the MCU firmware")
+    update_parser.add_argument("--bitstream", action='store_true', help="only update the FPGA bitstream")
+
+    # cynthion info
+    info_parser = command_parsers.add_parser("info", help="print device information", formatter_class=HelpFormatter)
+    info_parser.add_argument("--force-offline", action='store_true', help="force the FPGA to release the CONTROL port")
+    info_parser.set_defaults(func=cynthion_info)
+
+    # cynthion setup (Linux-only for now)
+    if platform == "linux" or platform == "linux2":
+        setup_parser = command_parsers.add_parser("setup", help="install Cynthion support files required for operation", formatter_class=HelpFormatter)
+        setup_parser.set_defaults(func=cynthion_setup)
+        setup_group = setup_parser.add_mutually_exclusive_group()
+        setup_group.add_argument("--check", action='store_true', help="check Cynthion support files")
+        setup_group.add_argument("--uninstall", action='store_true', help="remove Cynthion support files")
+        setup_parser.add_argument("--udev", action='store_true', help="Linux udev access rules")
+
+    # Parse arguments.
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
         return
 
+    # Retrieve information about the active bitstream (if any).
+    if hasattr(args, "force_offline") and args.force_offline:
+        bitstream_info = None
+    else:
+        bitstream_info = get_bitstream_information()
+
     # Force the FPGA offline by default in most commands to force Apollo mode if needed.
     force_offline = args.force_offline if "force_offline" in args else True
-    device = ApolloDebugger(force_offline=force_offline)
-
-    # Set up python's logging to act as a simple print, for now.
-    logging.basicConfig(level=logging.INFO, format="%(message)-s")
+    try:
+        device = ApolloDebugger(force_offline=force_offline)
+    except Exception as e:
+        # FIXME ugly hack to handle bitstream info when not in Apollo mode
+        if bitstream_info is None:
+            # no bitstream info so device is not connected
+            logging.error(f"{e}")
+            sys.exit(1)
+        else:
+            # device is connected but we are not in apollo mode
+            device = None
 
     # Execute the relevant command.
-    args.func(device, args)
-
-
-if __name__ == '__main__':
-    main()
+    if args.func is cynthion_info:
+        # FIXME ugly hack to handle bitstream info when not in Apollo mode
+        args.func(device, args, bitstream_info)
+    else:
+        args.func(device, args)

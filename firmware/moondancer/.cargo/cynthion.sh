@@ -2,7 +2,7 @@
 
 # configuration
 : ${FLASHADDR:=0x000b0000}
-: ${BITSTREAM:=../../cynthion/python/build/soc.bit}
+: ${BITSTREAM:=../../cynthion/python/build/facedancer.bit}
 : ${UART:=/dev/ttyACM0}
 
 echo
@@ -35,11 +35,11 @@ fi
 
 # flash firmware to cynthion
 echo "Flashing firmware image: $1.bin"
-cynthion flash-program --offset $FLASHADDR $1.bin
+apollo flash-program --offset $FLASHADDR $1.bin
 
 # configure cynthion with soc bitstream
 echo "Configuring fpga: $BITSTREAM"
-cynthion configure $BITSTREAM
+apollo configure $BITSTREAM
 
 # start a terminal for debug output
 pyserial-miniterm $UART 115200

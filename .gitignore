@@ -37,6 +37,9 @@ Thumbs.db
 tags
 
 # files involved in generating a release
+cynthion/python/assets/*.bin
+cynthion/python/assets/*.bit
+cynthion/python/assets/**/*.bit
 cynthion/python/VERSION
 cynthion/python/dist
 cynthion/python/host-packages

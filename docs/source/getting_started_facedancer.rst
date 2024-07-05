@@ -42,17 +42,11 @@ Once you have the source code downloaded you can install the Facedancer library 
 Load Facedancer Bitstream and Firmware
 --------------------------------------
 
-You can load the Facedancer Bitstream and Firmware by running:
+You can run the Facedancer Bitstream and Firmware by running:
 
 .. code-block :: sh
 
-    `cynthion program TODO`
-
-To put Cynthion back into analyzer mode you can run:
-
-.. code-block :: sh
-
-    `cynthion program TODO`
+    cynthion run facedancer
 
 You can verify that everything is working by running:
 
@@ -64,7 +58,10 @@ You should see output like:
 
 .. code-block :: sh
 
-    TODO cynthion info output when running as moondancer
+    Detected a Cynthion device!
+        Bitstream: Facedancer (Cynthion Project)
+        Hardware: Cynthion r1.4
+        Flash UID: xxxxxxxxxxxxxxxx
 
 
 Connect Hardware

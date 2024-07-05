@@ -14,10 +14,6 @@ from luna import top_level_cli
 
 def main():
     device = top_level_cli(SelftestDevice)
-    tester = StandaloneTester(device)
-    tester.run_tests()
-    print()
-
 
 if __name__ == '__main__':
     main()

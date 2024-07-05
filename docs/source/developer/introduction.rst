@@ -41,4 +41,4 @@ To install the ``cynthion`` Python package to allow for in-place editing of the 
     cd cynthion/python/
 
     # install the 'cynthion' Python package, including dependencies required for gateware development
-    pip install --editable ".[gateware]"
+    pip install --editable .

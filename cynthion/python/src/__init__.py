@@ -4,11 +4,14 @@ from __future__ import print_function
 # mildly evil hack to vendor in amaranth_stdio for the benefit of
 # apollo_fpga.gateware.advertiser.ApolloAdvertiser
 try:
-    import amaranth_stdio
+    try:
+        import amaranth_stdio
+    except:
+        import sys
+        from luna_soc.gateware.vendor import amaranth_stdio
+        sys.modules["amaranth_stdio"] = amaranth_stdio
 except:
-    import sys
-    from luna_soc.gateware.vendor import amaranth_stdio
-    sys.modules["amaranth_stdio"] = amaranth_stdio
+    pass
 
 from .cynthion import Cynthion
 from .cynthion import CynthionSingleton

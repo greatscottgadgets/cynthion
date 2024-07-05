@@ -42,10 +42,8 @@ dependencies = [
     "tqdm",
     "pygreat~=2024.0",
     "apollo_fpga~=1.0",
-]
-
-[project.optional-dependencies]
-gateware = [
+    "amaranth==0.4.1",
+    "luna-usb~=0.1",
     "amaranth==0.4.1",
     "luna-usb~=0.1",
     "luna-soc~=0.2",
@@ -64,9 +62,11 @@ include-package-data = true
 
 [tool.setuptools.package-dir]
 cynthion = "src"
+assets   = "assets"
 
 [tool.setuptools.package-data]
 "cynthion.shared" = ["*.toml"]
+"assets" = ["*.rules", "*.bin", "**/*.bit"]
 
 [tool.setuptools-git-versioning]
 enabled = true

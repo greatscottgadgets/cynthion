@@ -19,10 +19,10 @@ class ApolloAdvertiserPeripheral(Peripheral, Elaboratable):
         Set this bit to '1' to start ApolloAdvertiser and disconnect the Cynthion USB control port from Apollo.
     """
 
-    def __init__(self, clk_freq_hz=None):
+    def __init__(self, clk_freq_hz=None, pad=None):
         super().__init__()
 
-        self._clk_freq = clk_freq_hz
+        self.advertiser = ApolloAdvertiser(pad=pad, clk_freq_hz=clk_freq_hz)
 
         #
         # Registers
@@ -50,7 +50,7 @@ class ApolloAdvertiserPeripheral(Peripheral, Elaboratable):
             m.d.sync += stop.eq(~self._enable.w_data)
 
         # create advertiser
-        m.submodules.advertiser = advertiser = ApolloAdvertiser(clk_freq_hz=self._clk_freq)
-        m.d.comb += advertiser.stop.eq(stop)
+        m.submodules.advertiser = self.advertiser
+        m.d.comb += self.advertiser.stop.eq(stop)
 
         return m
