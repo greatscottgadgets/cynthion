@@ -55,11 +55,11 @@ def find_cynthion_asset(filename):
 
 def find_cynthion_bitstream(filename):
     """Returns the path to the requested bitstream for the appropriate platform"""
-    from luna.gateware.platform  import get_appropriate_platform
-    platform = get_appropriate_platform()
+
+    platform = _get_appropriate_platform_name()
 
     module_path = os.path.dirname(__file__)
-    bitstream_path = os.path.join(module_path, '../../assets/', type(platform).__name__, filename)
+    bitstream_path = os.path.join(module_path, '../../assets/', platform, filename)
     if os.path.isfile(bitstream_path):
         return bitstream_path
     else:
@@ -139,6 +139,22 @@ def run_bitstream(device, filename):
     device.allow_fpga_takeover_usb()
 
 
+def _get_appropriate_platform_name():
+    """Returns the LUNA platform name for the connected Cynthion"""
+    # Try to import Apollo and look for a debug interface.
+    try:
+        import apollo_fpga
+        debugger = apollo_fpga.ApolloDebugger()
+    except Exception as e:
+        logging.error(f"{e}")
+        sys.exit(1)
+
+    # Retrieve the version of the attached device.
+    major, minor = debugger.detect_connected_version()
+
+    return f"CynthionPlatformRev{major}D{minor}"
+
+
 class HelpFormatter(argparse.HelpFormatter):
     def __init__(self, prog):
         if "COLUMNS" in os.environ:
@@ -148,7 +164,7 @@ class HelpFormatter(argparse.HelpFormatter):
                 columns, _ = os.get_terminal_size(sys.stderr.fileno())
             except OSError:
                 columns = 80
-        super().__init__(prog, width=columns, max_help_position=28)
+        super().__init__(prog, width=columns, max_help_position=30)
 
     def _fill_text(self, text, width, indent):
         def filler(match):
