@@ -37,7 +37,7 @@ Configure your system to allow access to Cynthion for logged in users:
 .. code-block :: sh
 
     # download udev rules
-    curl -O https://raw.githubusercontent.com/greatscottgadgets/cynthion/main/util/54-cynthion.rules
+    curl -O https://raw.githubusercontent.com/greatscottgadgets/cynthion/main/python/assets/54-cynthion.rules
 
     # install udev rules
     sudo cp 54-cynthion.rules /etc/udev/rules.d
