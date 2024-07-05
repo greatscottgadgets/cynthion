@@ -105,6 +105,9 @@ def flash_mcu_firmware(device, filename):
     with open(filename, 'rb') as f:
         firmware = f.read()
 
+    # Release Apollo debugger
+    del device
+
     # create a DFU programmer instance
     board = DFUTarget(idVendor=shared.usb.bVendorId.apollo, idProduct=shared.usb.bProductId.apollo)
 
