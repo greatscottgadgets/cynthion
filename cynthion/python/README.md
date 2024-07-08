@@ -9,9 +9,3 @@ install or update Cynthion software with:
 ```
 pip3 install --upgrade cynthion
 ```
-
-If you want to build any of the cynthion gateware designs you will need
-additional dependencies that can be installed with:
-```
-pip3 install --upgrade cynthion[gateware]
-```
