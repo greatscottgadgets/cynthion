@@ -21,5 +21,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.0...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.1...HEAD
+[0.1.1]: https://github.com/greatscottgadgets/python-usb-protocol/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/greatscottgadgets/cynthion/releases/tag/0.1.0
