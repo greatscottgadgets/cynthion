@@ -2,7 +2,37 @@
 SoC Firmware Compilation
 ========================
 
+Prerequisites
+-------------
+
 Before proceeding, please ensure you have followed the prerequisites in the :doc:`Setting up a Development Environment <introduction>` section.
+
+
+Install Rust Dependencies
+-------------------------
+
+You will need to install RISC-V embedded target support to compile the firmware:
+
+.. code-block:: text
+
+    rustup target add riscv32imac-unknown-none-elf
+    rustup component add llvm-tools-preview
+    cargo install cargo-binutils
+
+Optionally, to use ``gdb`` for firmware debugging over JTAG, you will need a RISC-V GNU tool chain:
+
+.. code-block:: text
+
+    # debian
+    apt install gcc-riscv64-unknown-elf
+
+    # arch
+    pacman -S riscv-gnu-toolchain-bin
+
+    # macos brew - https://github.com/riscv-software-src/homebrew-riscv
+    brew tap riscv-software-src/riscv
+    brew install riscv-gnu-toolchain
+
 
 Building and Running
 --------------------
