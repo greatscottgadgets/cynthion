@@ -1,6 +1,6 @@
 [package]
 name = "cynthion"
-version = "0.0.0"
+version = "0.1.1"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
 description = "Rust library for the Great Scott Gadgets Cynthion USB Test Instrument."
