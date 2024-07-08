@@ -38,8 +38,6 @@ and debug communications.
                             response.
         jtag-reg            Reads or writes to a provided register of JTAG-tunneled debug SPI.
         leds                Sets the specified pattern for the Debug LEDs.
-        selftest            Run a hardware self-test on a connected Cynthion.
-        mcu-firmware        Update Apollo firmware version.
 
     optional arguments:
       -h, --help            show this help message and exit

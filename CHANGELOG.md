@@ -5,23 +5,17 @@ All notable changes to the `cynthion` Python package will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-> __NOTE__
->
-> All release tags in this repository refer to releases of the `cynthion` Python package.
->
-> Change logs for other packages in this repo can be found in their corresponding directories:
->
-> * [`cynthion/rust`](cynthion/rust/CHANGELOG.md)
-> * [`firmware/ladybug`](firmware/ladybug/CHANGELOG.md)
-> * [`firmware/libgreat`](firmware/libgreat/CHANGELOG.md)
-> * [`firmware/lunasoc-hal`](firmware/lunasoc-hal/CHANGELOG.md)
-> * [`firmware/moondancer-pac`](firmware/moondancer-pac/CHANGELOG.md)
-> * [`firmware/moondancer`](firmware/moondancer/CHANGELOG.md)
-> * [`firmware/smolusb`](firmware/smolusb/CHANGELOG.md)
-
 <!--
 ## [Unreleased]
 -->
+
+## [0.1.1] - 2024-07-08
+### Added
+- Rust crates published for `moondancer` and its dependencies: https://crates.io/crates/moondancer
+### Fixed
+- `[Errno 13] Access denied (insufficient permissions)` when executing `cynthion run selftest` on Windows.
+- Duplicate dependency declarations in `cynthion` Python package.
+
 
 ## [0.1.0] - 2024-07-06
 ### Added

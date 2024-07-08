@@ -1,6 +1,6 @@
 [package]
 name = "libgreat"
-version = "0.0.0"
+version = "0.1.1"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
 categories = ["embedded", "hardware-support", "no-std"]
