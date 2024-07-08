@@ -44,8 +44,6 @@ dependencies = [
     "apollo_fpga~=1.0",
     "amaranth==0.4.1",
     "luna-usb~=0.1",
-    "amaranth==0.4.1",
-    "luna-usb~=0.1",
     "luna-soc~=0.2",
 ]
 
