@@ -37,6 +37,8 @@ def _run_selftest(device, args):
     from cynthion.selftest.host import StandaloneTester
 
     run_bitstream(device, find_cynthion_bitstream(device, f"selftest.bit"))
+    device.close()
+
     selftest_device = SelftestDevice()
 
     tester = StandaloneTester(selftest_device)
