@@ -27,10 +27,9 @@ SOC_FIRMWARE_FLASHADDR = 0x000b0000
 
 
 def get_bitstream_information():
-    device = usb.core.find(
-        idVendor=shared.usb.bVendorId.cynthion,
-        idProduct=shared.usb.bProductId.cynthion
-    )
+    device = ApolloDebugger._find_device([
+        (shared.usb.bVendorId.cynthion, shared.usb.bProductId.cynthion),
+    ])
     if device is None:
         return None
 
