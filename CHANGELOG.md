@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.1.2] - 2024-07-09
+### Fixed
+- `cynthion` Python package assets installed to `site-packages/` instead of `site-packages/cynthion/`.
+- `usb.core.USBError: [Errno 13] Access denied (insufficient permissions)` error when updating the Cynthion Microcontroller firmware.
+- `usb.core.NoBackendError: No backend available` error on Windows. (requires `apollo_fpga>=1.0.7`)
+
+
 ## [0.1.1] - 2024-07-08
 ### Added
 - Rust crates published for `moondancer` and its dependencies: https://crates.io/crates/moondancer
@@ -22,5 +29,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release
 
 [Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.1...HEAD
-[0.1.1]: https://github.com/greatscottgadgets/python-usb-protocol/compare/0.1.0...0.1.1
+[0.1.2]: https://github.com/greatscottgadgets/cynthion/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/greatscottgadgets/cynthion/compare/0.1.0...0.1.1
 [0.1.0]: https://github.com/greatscottgadgets/cynthion/releases/tag/0.1.0
