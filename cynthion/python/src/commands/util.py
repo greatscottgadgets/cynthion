@@ -55,10 +55,27 @@ def get_bitstream_information():
     }
 
 
+def _find_assets_path():
+    try:
+        # <= 3.8
+        from importlib_resources import files
+    except:
+        # >= 3.9
+        from importlib.resources import files
+
+    pkg_path = files("cynthion")
+    if os.path.basename(pkg_path) == "src":
+        assets = os.path.join(pkg_path, "../assets")
+    else:
+        assets = os.path.join(pkg_path, "assets")
+
+    return os.path.normpath(os.path.join(pkg_path, assets))
+
+
 def find_cynthion_asset(filename):
     """Returns the path to the requested asset filename"""
-    module_path = os.path.dirname(__file__)
-    asset_path = os.path.join(module_path, '../../assets', filename)
+
+    asset_path = os.path.join(_find_assets_path(), filename)
     if os.path.isfile(asset_path):
         return asset_path
     else:
@@ -70,8 +87,7 @@ def find_cynthion_bitstream(device, filename):
 
     platform = _get_appropriate_platform_name(device)
 
-    module_path = os.path.dirname(__file__)
-    bitstream_path = os.path.join(module_path, '../../assets/', platform, filename)
+    bitstream_path = os.path.join(_find_assets_path(), platform, filename)
     if os.path.isfile(bitstream_path):
         return bitstream_path
     else:
