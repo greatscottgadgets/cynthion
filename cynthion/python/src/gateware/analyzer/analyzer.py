@@ -118,6 +118,7 @@ class USBAnalyzer(Elaboratable):
         event_code      = Signal(8)
 
         # Triggers for memory write operations.
+        new_packet      = Signal()
         write_packet    = Signal()
         write_header    = Signal()
         write_event     = Signal()
@@ -157,11 +158,9 @@ class USBAnalyzer(Elaboratable):
 
         # On startup, set counts to zero.
         with m.If(self.starting):
-            m.d.usb += [
-                write_byte_addr.eq(0),
-            ]
             m.d.sync += [
                 self.stream.valid.eq(0),
+                write_byte_addr.eq(0),
                 fifo_word_count.eq(0),
                 read_word_addr.eq(0),
                 fifo_words_pending.eq(0),
@@ -174,11 +173,6 @@ class USBAnalyzer(Elaboratable):
             with m.Else():
                 m.d.sync += fifo_word_count.eq(fifo_next_count)
 
-            # When an event is written, update pending words and write pointer.
-            with m.If(write_event):
-                m.d.sync += fifo_words_pending.eq(self.EVENT_SIZE_WORDS)
-                m.d.usb += write_byte_addr.eq(
-                    write_byte_addr + write_odd + self.EVENT_SIZE_BYTES)
 
         # Timestamp counter.
         current_time = Signal(16)
@@ -208,16 +202,12 @@ class USBAnalyzer(Elaboratable):
                 with m.If(~self.capture_enable):
                     m.next = "AWAIT_START"
                 with m.Elif(self.utmi.rx_active):
+                    m.d.comb += new_packet.eq(1)
                     m.next = "CAPTURE_PACKET"
                     m.d.usb += [
-                        header_word_addr   .eq(next_word_addr),
-                        write_byte_addr    .eq(write_byte_addr + write_odd + self.HEADER_SIZE_BYTES),
                         packet_size        .eq(0),
                         packet_time        .eq(current_time),
                         current_time       .eq(0),
-                    ]
-                    m.d.sync += [
-                        fifo_words_pending .eq(self.HEADER_SIZE_WORDS),
                     ]
                 with m.Elif(current_time == 0xFFFF):
                     # The timestamp is about to wrap. Write a dummy event.
@@ -240,7 +230,6 @@ class USBAnalyzer(Elaboratable):
                 # Advance the write pointer each time we receive a bit.
                 with m.If(byte_received):
                     m.d.usb += [
-                        write_byte_addr    .eq(write_byte_addr + 1),
                         packet_size        .eq(packet_size + 1),
                     ]
 
@@ -279,7 +268,15 @@ class USBAnalyzer(Elaboratable):
         with m.FSM(domain="sync"):
             # START: Begin write operation when requested.
             with m.State("START"):
-                with m.If(write_packet):
+                with m.If(new_packet):
+                    # Allocate new packet header.
+                    m.d.sync += [
+                        header_word_addr     .eq(next_word_addr),
+                        fifo_words_pending   .eq(self.HEADER_SIZE_WORDS),
+                        write_byte_addr      .eq(write_byte_addr + write_odd + self.HEADER_SIZE_BYTES),
+                    ]
+                    m.next = "IDLE"
+                with m.Elif(write_packet):
                     # Write packet byte.
                     m.d.comb += [
                         mem_write_port.addr  .eq(write_word_addr),
@@ -288,6 +285,7 @@ class USBAnalyzer(Elaboratable):
                     ]
                     m.d.sync += [
                         fifo_words_pending   .eq(fifo_words_pending + ~write_odd),
+                        write_byte_addr      .eq(write_byte_addr + 1),
                     ]
                     m.next = "IDLE"
                 with m.Elif(write_header):
@@ -305,6 +303,11 @@ class USBAnalyzer(Elaboratable):
                         mem_write_port.data  .eq(Cat([event_code, C(0xFF, 8)])),
                         mem_write_port.en    .eq(0b11),
                     ]
+                    m.d.sync += [
+                        header_word_addr     .eq(next_word_addr),
+                        fifo_words_pending   .eq(self.EVENT_SIZE_WORDS),
+                        write_byte_addr      .eq(write_byte_addr + write_odd + self.EVENT_SIZE_BYTES),
+                    ]
                     m.next = "FINISH_EVENT"
 
             # FINISH_HEADER: Write second word of header.
@@ -320,7 +323,7 @@ class USBAnalyzer(Elaboratable):
             # FINISH_EVENT: Write second word of event.
             with m.State("FINISH_EVENT"):
                 m.d.comb += [
-                        mem_write_port.addr  .eq(next_word_addr + 1),
+                        mem_write_port.addr  .eq(header_word_addr + 1),
                         mem_write_port.data  .eq(current_time),
                         mem_write_port.en    .eq(0b11),
                         data_commit          .eq(1),
