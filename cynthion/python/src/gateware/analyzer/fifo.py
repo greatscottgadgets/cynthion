@@ -4,7 +4,7 @@
 # Copyright (c) 2024 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from amaranth import Elaboratable, Module, Signal, Cat
+from amaranth import Elaboratable, Module, Signal, Cat, Mux
 from amaranth.lib.fifo import SyncFIFO
 
 from luna.gateware.stream import StreamInterface
@@ -19,16 +19,31 @@ class StreamSyncUsbConverter(Elaboratable):
     def elaborate(self, platform):
         m = Module()
 
-        cycle_count = Signal()
-        m.d.sync += cycle_count.eq(cycle_count + 1)
+        # To ensure at least 2 cycles of stable data for clock domain transfer,
+        # use an intermediate buffer with a ready flag.
+        buffer = StreamInterface(payload_width=16)
+        ready  = Signal()
 
         with m.If(~self.output.valid | self.output.ready):
             m.d.usb += [
-                self.output.payload .eq(self.input.payload),
-                self.output.valid   .eq(self.input.valid),
-                self.output.last    .eq(self.input.last),
+                self.output.payload .eq(buffer.payload),
+                self.output.valid   .eq(buffer.valid),
+                self.output.last    .eq(buffer.last)
             ]
-            m.d.comb += self.input.ready.eq(cycle_count)
+            with m.If(ready):
+                m.d.sync += buffer.valid.eq(0)
+
+        m.d.sync += ready.eq(1)
+
+        # Fill the intermediate buffer and clear the ready flag.
+        with m.If(~buffer.valid):
+            m.d.sync += [
+                buffer.payload      .eq(self.input.payload),
+                buffer.valid        .eq(self.input.valid),
+                buffer.last         .eq(self.input.last),
+                ready               .eq(0),
+            ]
+            m.d.comb += self.input.ready.eq(1)
 
         return m
 
