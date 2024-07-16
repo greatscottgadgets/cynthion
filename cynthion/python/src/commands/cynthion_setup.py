@@ -11,7 +11,7 @@ import logging, os, shutil, subprocess, sys
 
 from .util import find_cynthion_asset
 
-UDEV_PATH     = f"/etc/udev/rules.d"
+UDEV_PATH     = "/etc/udev/rules.d"
 UDEV_CYNTHION = "54-cynthion.rules"
 
 
@@ -31,7 +31,7 @@ def _check_udev(device, args):
 
     if not os.path.isfile(sys_path):
         logging.error(f"❌\t{UDEV_CYNTHION} not installed")
-        logging.info(f"\nPlease run 'sudo cynthion setup' to install.")
+        logging.info("\nPlease run 'cynthion setup' to install.")
         sys.exit(1)
 
     logging.info(f"✅\t{UDEV_CYNTHION} is present")
@@ -41,74 +41,59 @@ def _check_udev(device, args):
 
     if sys_rules != factory_rules:
         logging.error(f"❌\t{UDEV_CYNTHION} differs from factory rules")
-        logging.info(f"\nPlease run 'sudo cynthion setup' to re-install.")
+        logging.info("\nPlease run 'cynthion setup' to re-install.")
         sys.exit(1)
 
     logging.info(f"✅\t{UDEV_CYNTHION} matches factory rules")
-    logging.info(f"\nAll checks completed successfully.")
+    logging.info("\nAll checks completed successfully.")
 
 
 def _install_udev(device, args):
     logging.info("Installing: Linux udev rules")
 
-    if os.getuid() != 0:
-        logging.error(f"❌\tRoot privileges are required for installation")
-        logging.info(f"\nPlease run 'sudo cynthion setup' to install.")
-        sys.exit(1)
-
     src = find_cynthion_asset(UDEV_CYNTHION)
     dst = os.path.join(UDEV_PATH, UDEV_CYNTHION)
 
     # copy udev rules file
-    try:
-        shutil.copyfile(src, dst)
-    except Exception as e:
-        logging.error(f"❌\t{e}")
-        sys.exit(1)
-
-    logging.info(f"✅\tcp {UDEV_CYNTHION} {dst}")
+    _run_shell_command(f"cp {src} {dst}", root=True)
 
     # reload udev rules
-    _run_shell_command("udevadm control --reload")
+    _run_shell_command("udevadm control --reload", root=True)
 
     # apply udev rules to any devices that are already plugged in
-    _run_shell_command("udevadm trigger")
+    _run_shell_command("udevadm trigger", root=True)
 
-    logging.info(f"\nInstallation completed successfully.")
+    logging.info("\nInstallation completed successfully.")
 
 
 def _uninstall_udev(device, args):
     logging.info("Uninstalling: Linux udev rules")
 
-    if os.getuid() != 0:
-        logging.error(f"❌\tRoot privileges are required for uninstallation")
-        logging.info(f"\nPlease run 'sudo cynthion setup' to install.")
-        sys.exit(1)
-
     rules = os.path.join(UDEV_PATH, UDEV_CYNTHION)
 
     if os.path.isfile(rules):
         # remove udev rules file
-        try:
-            os.remove(rules)
-        except Exception as e:
-            logging.error(f"❌\t{e}")
-            sys.exit(1)
-
-        logging.info(f"✅\trm {rules}")
+        _run_shell_command(f"rm {rules}", root=True)
 
         # reload udev rules
-        _run_shell_command("udevadm control --reload")
+        _run_shell_command("udevadm control --reload", root=True)
 
         # apply udev rules to any devices that are already plugged in
-        _run_shell_command("udevadm trigger")
+        _run_shell_command("udevadm trigger", root=True)
     else:
         logging.info(f"✅\t{rules} not present, skipping.")
 
-    logging.info(f"\nUninstallation completed successfully.")
+    logging.info("\nUninstallation completed successfully.")
 
 
-def _run_shell_command(cmd):
+def _run_shell_command(cmd, root=False):
+
+    if root and os.getuid() != 0:
+        SUDO_PATH = shutil.which('sudo')
+        if SUDO_PATH is None:
+            raise OSError('Cannot find sudo executable.')
+        cmd = f"sudo {cmd}"
+        
     proc = subprocess.Popen(args=cmd.split())
     proc.wait()
 
