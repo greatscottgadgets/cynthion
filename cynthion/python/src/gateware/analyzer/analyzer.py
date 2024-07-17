@@ -96,7 +96,7 @@ class USBAnalyzer(Elaboratable):
         m = Module()
 
         # Memory read and write ports.
-        m.submodules.read  = mem_read_port  = self.mem.read_port(domain="sync", transparent=False)
+        m.submodules.read  = mem_read_port  = self.mem.read_port(domain="sync")
         m.submodules.write = mem_write_port = self.mem.write_port(domain="sync", granularity=8)
 
         # FIFO write addresses point to bytes.
@@ -122,23 +122,19 @@ class USBAnalyzer(Elaboratable):
         write_event     = Signal()
 
         # Use the FIFO as our stream source.
-        m.d.comb += self.stream.payload.eq(mem_read_port.data)
-        with m.If(~self.stream.valid | self.stream.ready):
+        m.d.comb += [
             # The stream produces the next word when there is data in the FIFO.
-            m.d.comb += [
-                mem_read_port.en    .eq(fifo_word_count != 0)
-            ]
-            m.d.sync += [
-                self.stream.valid   .eq(mem_read_port.en),
-                self.stream.last    .eq(fifo_word_count == 1),
-            ]
-        with m.Else():
-            m.d.comb += mem_read_port.en.eq(0)
+            self.stream.payload .eq(mem_read_port.data),
+            self.stream.valid   .eq(fifo_word_count != 0),
+            self.stream.last    .eq(fifo_word_count == 1),
+        ]
 
         # When a word is read from the FIFO, move to the next address.
-        m.d.comb += mem_read_port.addr.eq(read_word_addr)
-        with m.If(mem_read_port.en):
-            m.d.sync += read_word_addr.eq(read_word_addr + 1)
+        with m.If(self.stream.ready & self.stream.valid):
+            m.d.sync += read_word_addr     .eq(read_word_addr + 1)
+            m.d.comb += mem_read_port.addr .eq(read_word_addr + 1)
+        with m.Else():
+            m.d.comb += mem_read_port.addr .eq(read_word_addr)
 
         #
         # FIFO count handling.
@@ -152,7 +148,7 @@ class USBAnalyzer(Elaboratable):
         data_commit  = Signal()
 
         # One word is popped if the FIFO stream is read.
-        m.d.comb += fifo_words_popped.eq(mem_read_port.en)
+        m.d.comb += fifo_words_popped.eq(self.stream.ready & self.stream.valid)
 
         # If discarding data, set the count to zero.
         with m.If(self.discarding):
