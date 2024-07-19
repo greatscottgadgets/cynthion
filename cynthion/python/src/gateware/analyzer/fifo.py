@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from amaranth                       import Elaboratable, Module, Signal, Cat, Memory, ResetSignal
-from amaranth.lib.fifo              import SyncFIFO, FIFOInterface
+from amaranth.lib.fifo              import SyncFIFOBuffered, FIFOInterface
 from amaranth.lib.coding            import GrayDecoder, GrayEncoder
 from amaranth.hdl.ast               import Assume, Initial
 from amaranth.lib.cdc               import FFSynchronizer
@@ -76,7 +76,7 @@ class HyperRAMPacketFIFO(Elaboratable):
 
         # This output buffer prevents data loss during consumer stalls. It can also be used
         # to gather entire bursts from the HyperRAM if `out_fifo_depth` is big enough.
-        m.submodules.out_fifo = out_fifo = SyncFIFO(width=16, depth=self.out_fifo_depth)
+        m.submodules.out_fifo = out_fifo = SyncFIFOBuffered(width=16, depth=self.out_fifo_depth)
 
         # Hook up our PSRAM.
         m.d.comb += [
