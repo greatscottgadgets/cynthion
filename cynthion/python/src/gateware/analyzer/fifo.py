@@ -110,6 +110,7 @@ class HyperRAMPacketFIFO(Elaboratable):
 
             # IDLE: Begin a write / read burst operation when ready.
             with m.State("IDLE"):
+                # Write whenever we have input data...
                 with m.If(self.input.valid & ~full):
                     m.d.comb += [
                         psram.address           .eq(write_address),
@@ -119,7 +120,8 @@ class HyperRAMPacketFIFO(Elaboratable):
                     m.d.sync += is_write.eq(1)
                     m.next = "BUSY"
 
-                with m.Elif((out_fifo.level == 0) & ~empty):
+                # ...otherwise, read when FIFO is less than half full.
+                with m.Elif(~empty & (out_fifo.level[-1] == 0)):
                     m.d.comb += [
                         psram.address           .eq(read_address),
                         psram.perform_write     .eq(0),
