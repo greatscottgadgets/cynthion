@@ -14,7 +14,7 @@ from enum              import IntEnum
 from luna.gateware.stream import StreamInterface
 from luna.gateware.test   import LunaGatewareTestCase, usb_domain_test_case
 
-from .fifo import Stream16to8, StreamSyncUsbConverter
+from .fifo import Stream16to8, StreamFIFO, AsyncFIFOReadReset
 
 
 class USBAnalyzer(Elaboratable):
@@ -388,10 +388,12 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
         m.submodules.analyzer = self.analyzer = USBAnalyzer(utmi_interface=self.utmi, mem_depth=128)
 
         reset_on_start = ResetInserter(self.analyzer.discarding)
-        m.submodules.clk_conv = clk_conv = reset_on_start(StreamSyncUsbConverter())
+        m.submodules.clk_conv = clk_conv = StreamFIFO(
+            AsyncFIFOReadReset(width=16, depth=4, r_domain="usb", w_domain="sync"))
         m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(reset_on_start(Stream16to8()))
         m.d.comb += [
             clk_conv.input.stream_eq(self.analyzer.stream),
+            clk_conv.fifo.ext_rst.eq(self.analyzer.discarding),
             s16to8.input.stream_eq(clk_conv.output),
         ]
         self.stream = s16to8.output
@@ -562,10 +564,12 @@ class USBAnalyzerStackTest(USBAnalyzerTestBase):
         m.submodules.translator = self.translator = UTMITranslator(ulpi=self.ulpi, handle_clocking=False)
         m.submodules.analyzer   = self.analyzer   = USBAnalyzer(utmi_interface=self.translator, mem_depth=128)
         reset_on_start = ResetInserter(self.analyzer.discarding)
-        m.submodules.clk_conv = clk_conv = reset_on_start(StreamSyncUsbConverter())
+        m.submodules.clk_conv = clk_conv = StreamFIFO(
+            AsyncFIFOReadReset(width=16, depth=4, r_domain="usb", w_domain="sync"))
         m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(reset_on_start(Stream16to8()))
         m.d.comb += [
             clk_conv.input.stream_eq(self.analyzer.stream),
+            clk_conv.fifo.ext_rst.eq(self.analyzer.discarding),
             s16to8.input.stream_eq(clk_conv.output),
         ]
         self.stream = s16to8.output
