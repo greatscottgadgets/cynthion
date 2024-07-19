@@ -393,15 +393,15 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
         m.submodules.analyzer = self.analyzer = USBAnalyzer(utmi_interface=self.utmi, mem_depth=128)
 
         reset_on_start = ResetInserter(self.analyzer.discarding)
+        m.submodules.s16to8 = s16to8 = reset_on_start(Stream16to8())
         m.submodules.clk_conv = clk_conv = StreamFIFO(
-            AsyncFIFOReadReset(width=16, depth=4, r_domain="usb", w_domain="sync"))
-        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(reset_on_start(Stream16to8()))
+            AsyncFIFOReadReset(width=8, depth=4, r_domain="usb", w_domain="sync"))
         m.d.comb += [
-            clk_conv.input.stream_eq(self.analyzer.stream),
+            s16to8.input.stream_eq(self.analyzer.stream),
+            clk_conv.input.stream_eq(s16to8.output),
             clk_conv.fifo.ext_rst.eq(self.analyzer.discarding),
-            s16to8.input.stream_eq(clk_conv.output),
         ]
-        self.stream = s16to8.output
+        self.stream = clk_conv.output
         return m
 
 
@@ -569,15 +569,15 @@ class USBAnalyzerStackTest(USBAnalyzerTestBase):
         m.submodules.translator = self.translator = UTMITranslator(ulpi=self.ulpi, handle_clocking=False)
         m.submodules.analyzer   = self.analyzer   = USBAnalyzer(utmi_interface=self.translator, mem_depth=128)
         reset_on_start = ResetInserter(self.analyzer.discarding)
+        m.submodules.s16to8 = s16to8 = reset_on_start(Stream16to8())
         m.submodules.clk_conv = clk_conv = StreamFIFO(
-            AsyncFIFOReadReset(width=16, depth=4, r_domain="usb", w_domain="sync"))
-        m.submodules.s16to8 = s16to8 = DomainRenamer("usb")(reset_on_start(Stream16to8()))
+            AsyncFIFOReadReset(width=8, depth=4, r_domain="usb", w_domain="sync"))
         m.d.comb += [
-            clk_conv.input.stream_eq(self.analyzer.stream),
+            s16to8.input.stream_eq(self.analyzer.stream),
+            clk_conv.input.stream_eq(s16to8.output),
             clk_conv.fifo.ext_rst.eq(self.analyzer.discarding),
-            s16to8.input.stream_eq(clk_conv.output),
         ]
-        self.stream = s16to8.output
+        self.stream = clk_conv.output
         return m
 
 
