@@ -178,7 +178,7 @@ class USBAnalyzer(Elaboratable):
         with m.FSM(domain="usb") as f:
             m.d.comb += [
                 self.idle      .eq(f.ongoing("AWAIT_START") | f.ongoing("AWAIT_PACKET")),
-                self.stopped   .eq(f.ongoing("AWAIT_START") | f.ongoing("OVERRUN")),
+                self.stopped   .eq(f.ongoing("AWAIT_START")),
                 self.overrun   .eq(f.ongoing("OVERRUN")),
                 self.capturing .eq(f.ongoing("CAPTURE_PACKET")),
                 self.discarding.eq(self.stopped & self.capture_enable),
