@@ -41,7 +41,7 @@ dependencies = [
     "tomli",
     "tqdm",
     "pygreat~=2024.0",
-    "apollo_fpga~=1.0.7",
+    "apollo_fpga~=1.1",
     "amaranth==0.4.1",
     "luna-usb~=0.1",
     "luna-soc~=0.2",

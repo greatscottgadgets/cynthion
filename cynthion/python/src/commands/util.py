@@ -2,7 +2,7 @@
 #
 # This file is part of Cynthion.
 #
-# Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
+# Copyright (c) 2023-2024 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
 """ Support functions for Cynthion CLI. """
@@ -16,7 +16,6 @@ import sys
 import textwrap
 import usb
 
-from apollo_fpga               import ApolloDebugger
 from apollo_fpga.commands.cli  import ensure_unconfigured
 from cynthion                  import shared
 from fwup.dfu                  import DFUTarget
@@ -24,34 +23,6 @@ from tqdm                      import tqdm
 
 
 SOC_FIRMWARE_FLASHADDR = 0x000b0000
-
-
-def get_bitstream_information():
-    device = ApolloDebugger._find_device([
-        (shared.usb.bVendorId.cynthion, shared.usb.bProductId.cynthion),
-    ])
-    if device is None:
-        return None
-
-    # In Windows, we first need to claim the target interface.
-    if platform.system() == "Windows":
-        # Find the Apollo stub interface first
-        stub_if = ApolloDebugger._device_has_stub_iface(device, return_iface=True)
-        if stub_if is None:
-            raise DebuggerNotFound("No Apollo stub interface found")
-
-        # Claim the target interface.
-        usb.util.claim_interface(device, stub_if)
-
-    minor = device.bcdDevice & 0xFF
-    major = device.bcdDevice >> 8
-
-    return {
-        "product": device.product,
-        "manufacturer": device.manufacturer,
-        "hardware": f"r{major}.{minor}",
-        "flash_uid": device.serial_number,
-    }
 
 
 def _find_assets_path():

@@ -2,7 +2,7 @@
 #
 # This file is part of Cynthion.
 #
-# Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
+# Copyright (c) 2023-2024 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
 """ Root command that delegates to all Cynthion subcommands. """
@@ -14,9 +14,8 @@ import sys
 from sys                       import platform
 
 from apollo_fpga               import ApolloDebugger
-from apollo_fpga.commands.cli  import Command, COMMANDS as APOLLO_COMMANDS
 
-from .util                     import HelpFormatter, get_bitstream_information
+from .util                     import HelpFormatter
 
 from . import cynthion_info, cynthion_flash, cynthion_build, cynthion_run, cynthion_setup, cynthion_update
 
@@ -84,29 +83,12 @@ def main():
         parser.print_help()
         return
 
-    # Retrieve information about the active bitstream (if any).
-    if hasattr(args, "force_offline") and args.force_offline:
-        bitstream_info = None
-    else:
-        bitstream_info = get_bitstream_information()
-
     # Force the FPGA offline by default in most commands to force Apollo mode if needed.
     force_offline = args.force_offline if "force_offline" in args else True
-    try:
-        device = ApolloDebugger(force_offline=force_offline)
-    except Exception as e:
-        # FIXME ugly hack to handle bitstream info when not in Apollo mode
-        if bitstream_info is None:
-            # no bitstream info so device is not connected
-            logging.error(f"{e}")
-            sys.exit(1)
-        else:
-            # device is connected but we are not in apollo mode
-            device = None
 
     # Execute the relevant command.
     if args.func is cynthion_info:
-        # FIXME ugly hack to handle bitstream info when not in Apollo mode
-        args.func(device, args, bitstream_info)
+        args.func(args)
     else:
+        device = ApolloDebugger(force_offline=force_offline)
         args.func(device, args)
