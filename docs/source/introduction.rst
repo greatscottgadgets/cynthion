@@ -23,7 +23,7 @@ Top View
   :width: 300
   :alt: Cynthion Top View
 
-- **A-E** - Five status LEDs managed by the debug microcontoller.
+- **A-E** - Five status LEDs managed by the debug microcontroller.
 
     - **A** - Power Indicator.
     - **B** - FPGA is online.
@@ -31,7 +31,7 @@ Top View
     - **D** - FPGA has control of the **CONTROL** port.
     - **E** - Reserved for future use.
 
-- **0-5** - Six user LEDs connected to the FPGA
+- **0-5** - Six user LEDs managed by the FPGA.
 
 
 Left View
