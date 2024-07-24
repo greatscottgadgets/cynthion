@@ -1,3 +1,8 @@
+# This file is part of Cynthion.
+#
+# Copyright (c) 2020-2024 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
+
 from __future__ import print_function
 # Alias objects to make them easier to import.
 
@@ -19,6 +24,9 @@ from .cynthion import CynthionBoard
 
 from . import gateware
 from . import shared
+
+import importlib.metadata
+__version__ = importlib.metadata.version(__package__)
 
 
 Cynthion = Cynthion  # pyflakes
