@@ -34,7 +34,7 @@ dependencies = [
     "future",
     "libusb1",
     "prompt_toolkit",
-    "pyfwup~=0.4",
+    "pyfwup~=0.5",
     "pyserial>=3.5",
     "pyusb",
     "tabulate",
