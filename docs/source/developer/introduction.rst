@@ -29,16 +29,45 @@ Installation
 
 For development you'll need a local copy of the Cynthion repository:
 
-.. code-block:: sh
 
-    git clone https://github.com/greatscottgadgets/cynthion.git
+.. tab:: Linux / macOS
 
-To install the ``cynthion`` Python package to allow for in-place editing of the sources you can use the ``pip --editable`` command:
+    Use git to clone the repository:
 
-.. code-block:: sh
+        .. code-block:: sh
 
-    # change to the 'cynthion' Python package directory
-    cd cynthion/python/
+            git clone https://github.com/greatscottgadgets/cynthion.git
 
-    # install the 'cynthion' Python package, including dependencies required for gateware development
-    pip install --editable .
+.. tab:: Windows
+
+    Please perform the following steps to enable support for symlinks before attempting to clone the repository on Windows:
+
+        1. Open the `"For developers"` page in `System settings` and enable `Developer Mode <https://learn.microsoft.com/en-us/windows/apps/get-started/developer-mode-features-and-debugging#additional-developer-mode-features>`__.
+        2. Restart your computer.
+        3. Open the Group Policy editor: `gpedit.msc`
+        4. Navigate to `Computer Configuration → Windows Settings → Security Settings → Local Policies → User Rights Assignment → Create symbolic links` and check that you have user permission to create symbolic links.
+        5. Restart your computer.
+        6. Configure git to enable symbolic links on Windows:
+
+           .. code-block:: sh
+
+               git config --global core.symlinks true
+
+    Use git to clone the repository:
+
+        .. code-block:: sh
+
+            git clone https://github.com/greatscottgadgets/cynthion.git
+
+
+.. note::
+
+    To install the ``cynthion`` Python package and allow for in-place editing of the sources you can use the ``pip --editable`` command:
+
+    .. code-block:: sh
+
+        # change to the 'cynthion' Python package directory
+        cd cynthion/python/
+
+        # install the 'cynthion' Python package, including dependencies required for gateware development
+        pip install --editable .

@@ -19,6 +19,7 @@ release = ''
 extensions = [
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.autodoc',
+    'sphinx_inline_tabs',
 ]
 autosectionlabel_prefix_document = True
 

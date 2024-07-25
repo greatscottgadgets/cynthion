@@ -8,7 +8,7 @@ Prerequisites
 
 To use Cynthion you will need to ensure the following software is installed:
 
- * `Python <https://wiki.python.org/moin/BeginnersGuide/Download>`__ v3.8, or later.
+    * `Python <https://wiki.python.org/moin/BeginnersGuide/Download>`__ v3.8, or later.
 
 
 Cynthion Host Software Installation
@@ -16,49 +16,83 @@ Cynthion Host Software Installation
 
 The Cynthion host software distribution can be obtained from the `Python Package Index (PyPI) <https://pypi.org/project/cynthion/>`__ or :doc:`directly from source <developer/introduction>`.
 
-Using the `pip <https://pypi.org/project/pip/>`__ tool you can install the Cynthion host software by running:
+    .. note::
 
-.. code-block :: sh
+        For more information on installing Python packages from PyPI please refer to the
+        `"Installing Packages" <https://packaging.python.org/en/latest/tutorials/installing-packages/>`__
+        section of the Python Packaging User Guide.
 
-    pip install cynthion
+.. tab:: Linux
 
-.. note::
+    Use `pip <https://pypi.org/project/pip/>`__ to install the Cynthion host software:
 
-    For more information on installing Python packages from PyPI please refer to the
-    `"Installing Packages" <https://packaging.python.org/en/latest/tutorials/installing-packages/>`__
-    section of the Python Packaging User Guide.
+        .. code-block :: sh
 
+            pip install cynthion
 
-Install udev Rules (Linux Only)
--------------------------------
+    **Install udev Rules**
 
-Configure your system to allow access to Cynthion for logged in users:
+    Configure your system to allow access to Cynthion for logged in users:
 
-.. code-block :: sh
+        .. code-block :: sh
 
-    sudo cynthion setup
+            sudo cynthion setup
 
-If you'd prefer to perform this step manually, you can download and install the rules as follows:
+    If you'd prefer to perform this step manually, you can download and install the rules as follows:
 
-.. code-block :: sh
+        .. code-block :: sh
 
-    # download udev rules
-    curl -O https://raw.githubusercontent.com/greatscottgadgets/cynthion/main/cynthion/python/assets/54-cynthion.rules
+            # download udev rules
+            curl -O https://raw.githubusercontent.com/greatscottgadgets/cynthion/main/cynthion/python/assets/54-cynthion.rules
 
-    # install udev rules
-    sudo cp 54-cynthion.rules /etc/udev/rules.d
+            # install udev rules
+            sudo cp 54-cynthion.rules /etc/udev/rules.d
 
-    # reload udev rules
-    sudo udevadm control --reload
+            # reload udev rules
+            sudo udevadm control --reload
 
-    # apply udev rules to any devices that are already plugged in
-    sudo udevadm trigger
+            # apply udev rules to any devices that are already plugged in
+            sudo udevadm trigger
 
-You can check if the rules are installed correctly with:
+    You can check that the rules are installed correctly with:
 
-.. code-block :: sh
+        .. code-block :: sh
 
-    cynthion setup --check
+            cynthion setup --check
+
+.. tab:: macOS
+
+    Use `Homebrew <https://brew.sh/>`__ to install Python and libusb:
+
+        .. code-block :: sh
+
+            brew install python libusb
+
+    Use `pip <https://pypi.org/project/pip/>`__ to install the Cynthion host software:
+
+        .. code-block :: sh
+
+            pip install cynthion
+
+        .. note::
+
+            The Cynthion host software uses the ``libusb1`` Python package to communicate with the hardware. On macOS, the package does not install the native dynamic library with it, so it's necessary to install the ``libusb`` native library through Homebrew, MacPorts or some other route.
+
+            If you are not using a Python distribution from Homebrew you may be able to direct Cynthion to the correct location by explicitly setting ``DYLD_FALLBACK_LIBRARY_PATH`` to the location of the ``libusb`` native library.
+
+            For example:
+
+                .. code-block :: sh
+
+                    DYLD_FALLBACK_LIBRARY_PATH="/opt/homebrew/lib" cynthion info
+
+.. tab:: Windows
+
+    Use `pip <https://pypi.org/project/pip/>`__ to install the Cynthion host software:
+
+        .. code-block :: sh
+
+            pip install cynthion
 
 
 Test Installation
@@ -80,20 +114,25 @@ Test Hardware Connectivity
 
 Open a terminal and confirm that everything is working by running:
 
-.. code-block :: sh
+    .. code-block :: sh
 
-    cynthion info --force-offline
+        cynthion info --force-offline
 
 If everything is working you will see the following output:
 
-.. code-block :: text
+    .. code-block :: text
 
-    Detected a Cynthion device!
-        Hardware: Cynthion r1.4
-        Serial number: xxxxxxxxxxxxxxxxxxxxxxxxxx
-        Firmware version: v1.0.4
-        USB API version: 1.1
-        Flash UID: xxxxxxxxxxxxxxxx
+        Found Cynthion device!
+            Hardware: Cynthion r1.4
+            Manufacturer: Great Scott Gadgets
+            Product: Cynthion Apollo Debugger
+            Serial number: xxxxxxxxxxxxxxxxxxxxxxxxxx
+            Vendor ID: 1d50
+            Product ID: 615c
+            bcdDevice: 0104
+            Firmware version: v1.0.6
+            USB API version: 1.1
+            Flash UID: xxxxxxxxxxxxxxxx
 
 
 Updating Cynthion Host Software
@@ -101,9 +140,9 @@ Updating Cynthion Host Software
 
 To update the Cynthion host software to the latest version run:
 
-.. code-block :: sh
+    .. code-block :: sh
 
-    pip install --upgrade cynthion
+        pip install --upgrade cynthion
 
 
 Updating Cynthion Microcontroller Firmware and FPGA configuration flash
@@ -111,18 +150,18 @@ Updating Cynthion Microcontroller Firmware and FPGA configuration flash
 
 To upgrade the Cynthion Microcontroller firmware and FPGA configuration flash to the latest versions run:
 
-.. code-block :: sh
+    .. code-block :: sh
 
-    cynthion update
+        cynthion update
 
 You can update the Microcontroller firmware separately with:
 
-.. code-block :: sh
+    .. code-block :: sh
 
-    cynthion update --mcu-firmware
+        cynthion update --mcu-firmware
 
 You can update the FPGA configuration flash separately with:
 
-.. code-block :: sh
+    .. code-block :: sh
 
-    cynthion update --bitstream
+        cynthion update --bitstream
