@@ -36,7 +36,7 @@ The Cynthion host software distribution can be obtained from the `Python Package
 
         .. code-block :: sh
 
-            sudo cynthion setup
+            cynthion setup
 
     If you'd prefer to perform this step manually, you can download and install the rules as follows:
 
