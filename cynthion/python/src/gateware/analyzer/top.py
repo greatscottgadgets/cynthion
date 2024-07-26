@@ -331,7 +331,7 @@ class USBAnalyzerApplet(Elaboratable):
         # Follow this with a HyperRAM FIFO for additional buffering.
         reset_on_start = ResetInserter(analyzer.discarding)
         m.submodules.psram_fifo = psram_fifo = reset_on_start(
-            HyperRAMPacketFIFO(out_fifo_depth=4096))
+            HyperRAMPacketFIFO(out_fifo_depth=128))
 
         # Convert the 16-bit stream into an 8-bit one for output.
         m.submodules.s16to8 = s16to8 = reset_on_start(Stream16to8())
