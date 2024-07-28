@@ -16,7 +16,6 @@ import sys
 import textwrap
 import usb
 
-from apollo_fpga.commands.cli  import ensure_unconfigured
 from cynthion                  import shared
 from fwup.dfu                  import DFUTarget
 from tqdm                      import tqdm
@@ -73,7 +72,7 @@ def flash_bitstream(device, filename):
 
     logging.info(f"Updating FPGA configuration flash with {len(bitstream)} bytes...")
 
-    ensure_unconfigured(device)
+    device.force_fpga_offline()
     with device.jtag as jtag:
         programmer = device.create_jtag_programmer(jtag)
         programmer.flash(bitstream, offset=0)
@@ -117,7 +116,7 @@ def flash_soc_firmware(device, filename):
 
     logging.info(f"Updating SoC firmware flash with {len(firmware)} bytes...")
 
-    ensure_unconfigured(device)
+    device.force_fpga_offline()
     with device.jtag as jtag:
         programmer = device.create_jtag_programmer(jtag)
         programmer.flash(firmware, offset=SOC_FIRMWARE_FLASHADDR)
