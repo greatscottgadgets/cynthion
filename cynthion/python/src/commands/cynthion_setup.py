@@ -15,16 +15,16 @@ UDEV_PATH     = "/etc/udev/rules.d"
 UDEV_CYNTHION = "54-cynthion.rules"
 
 
-def cynthion_setup(device, args):
+def cynthion_setup(args):
     if args.check:
-        _check_udev(device, args)
+        _check_udev(args)
     elif args.uninstall:
-        _uninstall_udev(device, args)
+        _uninstall_udev(args)
     else:
-        _install_udev(device, args)
+        _install_udev(args)
 
 
-def _check_udev(device, args):
+def _check_udev(args):
     logging.info("Checking: Linux udev rules")
 
     sys_path = os.path.join(UDEV_PATH, UDEV_CYNTHION)
@@ -48,7 +48,7 @@ def _check_udev(device, args):
     logging.info("\nAll checks completed successfully.")
 
 
-def _install_udev(device, args):
+def _install_udev(args):
     logging.info("Installing: Linux udev rules")
 
     src = find_cynthion_asset(UDEV_CYNTHION)
@@ -66,7 +66,7 @@ def _install_udev(device, args):
     logging.info("\nInstallation completed successfully.")
 
 
-def _uninstall_udev(device, args):
+def _uninstall_udev(args):
     logging.info("Uninstalling: Linux udev rules")
 
     rules = os.path.join(UDEV_PATH, UDEV_CYNTHION)
