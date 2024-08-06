@@ -87,7 +87,7 @@ def main():
     force_offline = args.force_offline if "force_offline" in args else True
 
     # Execute the relevant command.
-    if args.func is cynthion_info:
+    if args.func in (cynthion_info, cynthion_setup):
         args.func(args)
     else:
         device = ApolloDebugger(force_offline=force_offline)
