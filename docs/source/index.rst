@@ -10,7 +10,7 @@ Cynthion Documentation
   :maxdepth: 2
   :caption: User Documentation
 
-  introduction
+  project description
   getting_started
   getting_started_packetry
   getting_started_facedancer
@@ -22,6 +22,7 @@ Cynthion Documentation
   :caption: Cynthion Hardware
 
   hardware/introduction
+  hardware/device_overview
   hardware/bringup_guide
   hardware/cli
 
