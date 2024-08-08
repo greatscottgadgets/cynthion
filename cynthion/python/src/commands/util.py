@@ -16,6 +16,11 @@ import sys
 import textwrap
 import usb
 
+try:
+    from importlib_resources import files # <= 3.8
+except:
+    from importlib.resources import files # >= 3.9
+
 from cynthion                  import shared
 from fwup.dfu                  import DFUTarget
 from tqdm                      import tqdm
@@ -23,15 +28,15 @@ from tqdm                      import tqdm
 
 SOC_FIRMWARE_FLASHADDR = 0x000b0000
 
+_MSG_SOURCE_INSTALL = """
+If you have installed the 'cynthion' Python package from source please
+run the following command in the package directory:
+
+    make assets
+"""
+
 
 def _find_assets_path():
-    try:
-        # <= 3.8
-        from importlib_resources import files
-    except:
-        # >= 3.9
-        from importlib.resources import files
-
     pkg_path = files("cynthion")
     if os.path.basename(pkg_path) == "src":
         assets = os.path.join(pkg_path, "../assets")
@@ -41,6 +46,10 @@ def _find_assets_path():
     return os.path.normpath(os.path.join(pkg_path, assets))
 
 
+def _is_source_install():
+    return os.path.basename(files("cynthion")) == "src"
+
+
 def find_cynthion_asset(filename):
     """Returns the path to the requested asset filename"""
 
@@ -48,7 +57,10 @@ def find_cynthion_asset(filename):
     if os.path.isfile(asset_path):
         return asset_path
     else:
-        return None
+        logging.error(f"The Cynthion '{filename}' asset could not be located.")
+        if _is_source_install():
+            logging.error(_MSG_SOURCE_INSTALL)
+        sys.exit(1)
 
 
 def find_cynthion_bitstream(device, filename):
@@ -60,9 +72,10 @@ def find_cynthion_bitstream(device, filename):
     if os.path.isfile(bitstream_path):
         return bitstream_path
     else:
-        return None
-
-    return bitstream_path
+        logging.error(f"The Cynthion '{filename}' bitstream could not be located.")
+        if _is_source_install():
+            logging.error(_MSG_SOURCE_INSTALL)
+        sys.exit(1)
 
 
 def flash_bitstream(device, filename):
