@@ -52,6 +52,7 @@ def main():
     # cynthion build
     build_parser = command_parsers.add_parser("build")
     build_parser.set_defaults(func=cynthion_build)
+    build_parser.add_argument("--luna-platform", action='store_true', help="display the LUNA_PLATFORM variable for the connected device")
     build_subparsers  = build_parser.add_subparsers(dest="target", metavar="TARGET")
     build_analyzer_parser = build_subparsers.add_parser("analyzer")
     build_facedancer_parser = build_subparsers.add_parser("facedancer")
