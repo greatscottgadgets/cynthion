@@ -37,7 +37,7 @@ Thumbs.db
 tags
 
 # files involved in generating a release
-cynthion/python/assets/*.bin
+cynthion/python/assets/moondancer.bin
 cynthion/python/assets/*.bit
 cynthion/python/assets/**/*.bit
 cynthion/python/VERSION
