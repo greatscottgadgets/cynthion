@@ -9,17 +9,23 @@
 
 import logging, os, subprocess, sys, tempfile
 
+from . import util
+
 
 def cynthion_build(device, args):
-    if args.target == "analyzer":
+    if args.luna_platform:
+        platform_name = util._get_appropriate_platform_name(device)
+        sys.stdout.write(f"cynthion.gateware.platform:{platform_name}\n")
+        sys.exit(0)
+
+    elif args.target == "analyzer":
         _build_analyzer(device, args)
     elif args.target == "facedancer":
-        _buildn_facedancer(device, args)
+        _build_facedancer(device, args)
     elif args.target == "selftest":
         _build_selftest(device, args)
     else:
         logging.error(f"unknown target: {args.target}")
-        return
 
 
 def _build_analyzer(device, args):
