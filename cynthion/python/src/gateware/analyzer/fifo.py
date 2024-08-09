@@ -100,8 +100,8 @@ class HyperRAMPacketFIFO(Elaboratable):
             # WRITE: Finish when there's no space or incoming data.
             m.d.comb += psram.final_word.eq((word_count == (depth-1)) | self.input.last)
         with m.Else():
-            # READ: Finish when PSRAM is empty or the consumer stalls the output stream.
-            m.d.comb += psram.final_word.eq((word_count == 1) | ~self.output.ready)
+            # READ: Finish when PSRAM is empty or the output FIFO is full.
+            m.d.comb += psram.final_word.eq((word_count == 1) | (out_fifo.level == out_fifo.depth - 1))
 
         #
         # HyperRAM Packet FIFO state machine
