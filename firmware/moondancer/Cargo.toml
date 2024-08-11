@@ -77,10 +77,10 @@ name = "moondancer"
 # - examples ------------------------------------------------------------------
 
 [[example]]
-name = "bulk_speed_test"
+name = "acm_serial"
 
 [[example]]
-name = "cdc_serial_loopback"
+name = "bulk_speed_test"
 
 [[example]]
 name = "gpio"
