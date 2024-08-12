@@ -15,48 +15,50 @@ use crate::traits::AsByteSliceIterator;
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(u8)]
 pub enum DescriptorType {
-    Device = 1,
-    Configuration = 2,
-    String = 3,
-    Interface = 4,
-    Endpoint = 5,
-    DeviceQualifier = 6,
-    OtherSpeedConfiguration = 7,
-    InterfacePower = 8,
-    OnTheGo = 9,
-    Debug = 10,
-    InterfaceAssociation = 11,
-    Security = 12,
-    Key = 13,
-    EncryptionType = 14,
-    BinaryDeviceObjectStore = 15,
-    DeviceCapability = 16,
-    WirelessEndpointCompanion = 17,
-    SuperSpeedEndpointCompanion = 48,
+    Device = 0x01,
+    Configuration = 0x02,
+    String = 0x03,
+    Interface = 0x04,
+    Endpoint = 0x05,
+    DeviceQualifier = 0x06,
+    OtherSpeedConfiguration = 0x07,
+    InterfacePower = 0x08,
+    OnTheGo = 0x09,
+    Debug = 0x0a,                       // 10
+    InterfaceAssociation = 0x0b,        // 11
+    Security = 0x0c,                    // 12
+    Key = 0x0d,                         // 13
+    EncryptionType = 0x0e,              // 14
+    BinaryDeviceObjectStore = 0x0f,     // 15
+    DeviceCapability = 0x10,            // 16
+    WirelessEndpointCompanion = 0x11,   // 17
+    ClassSpecific = 0x24,               // 36
+    SuperSpeedEndpointCompanion = 0x30, // 48
     Unknown = 0xff,
 }
 
 impl From<u8> for DescriptorType {
     fn from(value: u8) -> Self {
         match value {
-            1 => DescriptorType::Device,
-            2 => DescriptorType::Configuration,
-            3 => DescriptorType::String,
-            4 => DescriptorType::Interface,
-            5 => DescriptorType::Endpoint,
-            6 => DescriptorType::DeviceQualifier,
-            7 => DescriptorType::OtherSpeedConfiguration,
-            8 => DescriptorType::InterfacePower,
-            9 => DescriptorType::OnTheGo,
-            10 => DescriptorType::Debug,
-            11 => DescriptorType::InterfaceAssociation,
-            12 => DescriptorType::Security,
-            13 => DescriptorType::Key,
-            14 => DescriptorType::EncryptionType,
-            15 => DescriptorType::BinaryDeviceObjectStore,
-            16 => DescriptorType::DeviceCapability,
-            17 => DescriptorType::WirelessEndpointCompanion,
-            48 => DescriptorType::SuperSpeedEndpointCompanion,
+            0x01 => DescriptorType::Device,
+            0x02 => DescriptorType::Configuration,
+            0x03 => DescriptorType::String,
+            0x04 => DescriptorType::Interface,
+            0x05 => DescriptorType::Endpoint,
+            0x06 => DescriptorType::DeviceQualifier,
+            0x07 => DescriptorType::OtherSpeedConfiguration,
+            0x08 => DescriptorType::InterfacePower,
+            0x09 => DescriptorType::OnTheGo,
+            0x0a => DescriptorType::Debug,
+            0x0b => DescriptorType::InterfaceAssociation,
+            0x0c => DescriptorType::Security,
+            0x0d => DescriptorType::Key,
+            0x0e => DescriptorType::EncryptionType,
+            0x0f => DescriptorType::BinaryDeviceObjectStore,
+            0x10 => DescriptorType::DeviceCapability,
+            0x11 => DescriptorType::WirelessEndpointCompanion,
+            0x24 => DescriptorType::ClassSpecific,
+            0x30 => DescriptorType::SuperSpeedEndpointCompanion,
             _ => DescriptorType::Unknown,
         }
     }
@@ -265,7 +267,7 @@ impl<'a> Iterator for ConfigurationDescriptorIterator<'a> {
 
 // type aliases for sanity
 pub type InterfaceDescriptorIterator<'a> =
-    CompositeIterator<'a, InterfaceDescriptorHeader, EndpointDescriptor>;
+    CompositeIterator3<'a, InterfaceDescriptorHeader, ClassSpecificDescriptor, EndpointDescriptor>;
 pub type ConfigurationDescriptorTailIterator<'a> = iter::FlatMap<
     slice::Iter<'a, InterfaceDescriptor<'a>>,
     InterfaceDescriptorIterator<'a>,
@@ -312,23 +314,84 @@ impl InterfaceDescriptorHeader {
 /// USB interface descriptor
 pub struct InterfaceDescriptor<'a> {
     head: InterfaceDescriptorHeader,
-    tail: &'a [EndpointDescriptor],
+    tail1: &'a [ClassSpecificDescriptor],
+    tail2: &'a [EndpointDescriptor],
 }
 
 impl<'a> InterfaceDescriptor<'a> {
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
-    pub const fn new(mut head: InterfaceDescriptorHeader, tail: &'a [EndpointDescriptor]) -> Self {
+    pub const fn new(mut head: InterfaceDescriptorHeader, tail2: &'a [EndpointDescriptor]) -> Self {
         head.bLength = size_of::<InterfaceDescriptorHeader>() as u8;
-        head.bNumEndpoints = tail.len() as u8;
-        Self { head, tail }
+        head.bNumEndpoints = tail2.len() as u8;
+        Self {
+            head,
+            tail1: &[],
+            tail2,
+        }
+    }
+
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    pub const fn new_cs(
+        mut head: InterfaceDescriptorHeader,
+        tail1: &'a [ClassSpecificDescriptor],
+        tail2: &'a [EndpointDescriptor],
+    ) -> Self {
+        head.bLength = size_of::<InterfaceDescriptorHeader>() as u8;
+        head.bNumEndpoints = tail2.len() as u8;
+        Self { head, tail1, tail2 }
     }
 
     #[must_use]
     #[allow(clippy::iter_without_into_iter)]
-    pub fn iter(&'a self) -> CompositeIterator<'a, InterfaceDescriptorHeader, EndpointDescriptor> {
-        let iter = CompositeIterator::new(&self.head, self.tail);
+    pub fn iter_old(
+        &'a self,
+    ) -> CompositeIterator<'a, InterfaceDescriptorHeader, EndpointDescriptor> {
+        let iter = CompositeIterator::new(&self.head, self.tail2);
         iter
+    }
+
+    #[must_use]
+    #[allow(clippy::iter_without_into_iter)]
+    pub fn iter(
+        &'a self,
+    ) -> CompositeIterator3<
+        'a,
+        InterfaceDescriptorHeader,
+        ClassSpecificDescriptor,
+        EndpointDescriptor,
+    > {
+        let iter = CompositeIterator3::new(&self.head, self.tail1, self.tail2);
+        iter
+    }
+}
+
+// - ClassSpecificDescriptor --------------------------------------------------
+
+/// USB Class-specific Descriptor
+/// FIXME this is only the beginning of being able to handle class-specific descriptors
+#[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
+#[repr(C, packed)]
+pub struct ClassSpecificDescriptor {
+    pub bLength: u8,         // 0x05
+    pub bDescriptorType: u8, // 0x24
+    pub bDescriptorSubtype: u8,
+    pub bmRaw: u16,
+}
+
+impl AsByteSliceIterator for ClassSpecificDescriptor {}
+
+impl ClassSpecificDescriptor {
+    #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
+    pub const fn new() -> Self {
+        Self {
+            bLength: size_of::<Self>() as u8,
+            bDescriptorType: DescriptorType::ClassSpecific as u8,
+            bDescriptorSubtype: 0,
+            bmRaw: 0,
+        }
     }
 }
 
@@ -520,10 +583,17 @@ type TailIterator<'a, T> = iter::FlatMap<
     slice::Iter<'a, u8>,
     &'a dyn Fn(&'a T) -> slice::Iter<'a, u8>,
 >;
-type CompositeChain<'a, T> = iter::Chain<slice::Iter<'a, u8>, TailIterator<'a, T>>;
+type CompositeChain<'a, T> = iter::Chain<HeadIterator<'a>, TailIterator<'a, T>>;
+type CompositeChain3<'a, T1, T2> =
+    iter::Chain<iter::Chain<HeadIterator<'a>, TailIterator<'a, T1>>, TailIterator<'a, T2>>;
 
 pub struct CompositeIterator<'a, H, T> {
     chain: CompositeChain<'a, T>,
+    _marker: PhantomData<H>,
+}
+
+pub struct CompositeIterator3<'a, H, T1, T2> {
+    chain: CompositeChain3<'a, T1, T2>,
     _marker: PhantomData<H>,
 }
 
@@ -543,7 +613,32 @@ where
     }
 }
 
+impl<'a, H, T1, T2> CompositeIterator3<'a, H, T1, T2>
+where
+    H: AsByteSliceIterator + 'a,
+    T1: AsByteSliceIterator + 'a,
+    T2: AsByteSliceIterator + 'a,
+{
+    pub fn new(head: &'a H, tail1: &'a [T1], tail2: &'a [T2]) -> Self {
+        let head_iter: HeadIterator<'a> = head.as_iter();
+        let tail1_iter: TailIterator<'a, T1> = tail1.iter().flat_map(&|x: &'a T1| x.as_iter());
+        let tail2_iter: TailIterator<'a, T2> = tail2.iter().flat_map(&|x: &'a T2| x.as_iter());
+        let chain: CompositeChain3<'a, T1, T2> = head_iter.chain(tail1_iter).chain(tail2_iter);
+        Self {
+            chain,
+            _marker: PhantomData,
+        }
+    }
+}
+
 impl<'a, H, T> Iterator for CompositeIterator<'a, H, T> {
+    type Item = &'a u8;
+    fn next(&mut self) -> Option<Self::Item> {
+        self.chain.next()
+    }
+}
+
+impl<'a, H, T1, T2> Iterator for CompositeIterator3<'a, H, T1, T2> {
     type Item = &'a u8;
     fn next(&mut self) -> Option<Self::Item> {
         self.chain.next()

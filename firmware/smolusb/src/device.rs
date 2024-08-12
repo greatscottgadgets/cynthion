@@ -7,7 +7,7 @@ use crate::descriptor::{
 };
 use crate::setup::SetupPacket;
 use crate::traits::{AsByteSliceIterator, UsbDriver};
-use log::{debug, warn};
+use log::{debug, trace, warn};
 
 /// The set of descriptors describing a USB device.
 pub struct Descriptors<'a> {
@@ -84,7 +84,7 @@ impl<'a> Descriptors<'a> {
                     }
                 } else {
                     // for full/low speed devices, ack HostToDevice instead - TODO check on mac/windows
-                    debug!(
+                    trace!(
                         "  Device qualifier request is not supported for full/low-speed devices"
                     );
                     // FIXME we should stall instead
@@ -136,7 +136,7 @@ impl<'a> Descriptors<'a> {
             }
         };
 
-        debug!("  wrote {} byte descriptor", bytes_written);
+        trace!("  wrote {} byte descriptor", bytes_written);
 
         // consumed
         None

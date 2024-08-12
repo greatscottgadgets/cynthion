@@ -1,6 +1,6 @@
 use core::marker::PhantomData;
 
-use log::{debug, error, info, warn};
+use log::{error, info, trace, warn};
 
 use crate::device::Descriptors;
 use crate::event::UsbEvent;
@@ -205,7 +205,7 @@ where
 
                     // - unsupported requests
                     (direction, request_type, request) => {
-                        debug!(
+                        trace!(
                             "Unhandled request direction:{:?} request_type:{:?} request:{:?}",
                             direction, request_type, request
                         );
