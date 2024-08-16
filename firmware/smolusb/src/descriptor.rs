@@ -11,6 +11,8 @@ use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 use crate::traits::AsByteSliceIterator;
 
+pub mod microsoft10;
+
 /// USB descriptor type.
 #[derive(Debug, PartialEq, Clone, Copy)]
 #[repr(u8)]
@@ -62,6 +64,15 @@ impl From<u8> for DescriptorType {
             _ => DescriptorType::Unknown,
         }
     }
+}
+
+/// USB string descriptor number.
+#[non_exhaustive]
+pub struct StringDescriptorNumber;
+#[allow(non_upper_case_globals)]
+impl StringDescriptorNumber {
+    pub const Zero: u8 = 0x00;
+    pub const Microsoft: u8 = 0xee;
 }
 
 // - DeviceDescriptor ---------------------------------------------------------
@@ -265,6 +276,8 @@ impl<'a> Iterator for ConfigurationDescriptorIterator<'a> {
     }
 }
 
+// - InterfaceDescriptor ------------------------------------------------------
+
 // type aliases for sanity
 pub type InterfaceDescriptorIterator<'a> =
     CompositeIterator3<'a, InterfaceDescriptorHeader, ClassSpecificDescriptor, EndpointDescriptor>;
@@ -273,8 +286,6 @@ pub type ConfigurationDescriptorTailIterator<'a> = iter::FlatMap<
     InterfaceDescriptorIterator<'a>,
     &'a dyn Fn(&'a InterfaceDescriptor<'a>) -> InterfaceDescriptorIterator<'a>,
 >;
-
-// - InterfaceDescriptor ------------------------------------------------------
 
 /// USB interface descriptor header
 #[derive(AsBytes, FromBytes, FromZeroes, Clone, Copy)]
@@ -341,15 +352,6 @@ impl<'a> InterfaceDescriptor<'a> {
         head.bLength = size_of::<InterfaceDescriptorHeader>() as u8;
         head.bNumEndpoints = tail2.len() as u8;
         Self { head, tail1, tail2 }
-    }
-
-    #[must_use]
-    #[allow(clippy::iter_without_into_iter)]
-    pub fn iter_old(
-        &'a self,
-    ) -> CompositeIterator<'a, InterfaceDescriptorHeader, EndpointDescriptor> {
-        let iter = CompositeIterator::new(&self.head, self.tail2);
-        iter
     }
 
     #[must_use]
@@ -510,7 +512,6 @@ impl<'a> StringDescriptor<'a> {
     #[allow(clippy::cast_possible_truncation)]
     pub const fn new(string: &'a str) -> Self {
         let head_length = size_of::<StringDescriptorHeader>();
-        // TODO this may not be accurate
         let tail_length = string.len() * 2;
 
         Self {
