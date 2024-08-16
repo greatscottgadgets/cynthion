@@ -189,19 +189,27 @@ impl<'a> Firmware<'a> {
         let usb2_control = Control::<_, LIBGREAT_MAX_COMMAND_SIZE>::new(
             0,
             Descriptors {
+                // required
                 device_speed: DEVICE_SPEED,
                 device_descriptor: smolusb::descriptor::DeviceDescriptor {
                     bcdDevice: bcd_device,
                     ..moondancer::usb::DEVICE_DESCRIPTOR
                 },
                 configuration_descriptor: moondancer::usb::CONFIGURATION_DESCRIPTOR_0,
+                string_descriptor_zero: moondancer::usb::STRING_DESCRIPTOR_0,
+                string_descriptors,
+                // optional
+                device_qualifier_descriptor: Some(moondancer::usb::DEVICE_QUALIFIER_DESCRIPTOR),
                 other_speed_configuration_descriptor: Some(
                     moondancer::usb::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0,
                 ),
-                device_qualifier_descriptor: Some(moondancer::usb::DEVICE_QUALIFIER_DESCRIPTOR),
-                string_descriptor_zero: moondancer::usb::STRING_DESCRIPTOR_0,
-                //string_descriptors: unsafe { &*core::ptr::addr_of!(STRING_DESCRIPTORS) },
-                string_descriptors,
+                microsoft10: Some(smolusb::descriptor::microsoft10::Descriptors {
+                    string_descriptor: moondancer::usb::STRING_DESCRIPTOR_0XEE,
+                    compat_id_feature_descriptor:
+                        moondancer::usb::MS_OS_10_COMPATIBLE_ID_FEATURE_DESCRIPTOR,
+                    extended_properties_feature_descriptor:
+                        moondancer::usb::MS_OS_10_EXTENDED_PROPERTIES_FEATURE_DESCRIPTOR,
+                }),
             },
         );
 
@@ -343,9 +351,13 @@ impl<'a> Firmware<'a> {
         let vendor_request = VendorRequest::from(setup_packet.request);
         let vendor_value = VendorValue::from(setup_packet.value);
 
-        debug!(
+        log::debug!(
             "handle_vendor_request: {:?} {:?} {:?} {:?} {:?}",
-            request_type, recipient, direction, vendor_request, vendor_value
+            request_type,
+            recipient,
+            direction,
+            vendor_request,
+            vendor_value
         );
 
         match (&request_type, &recipient, &vendor_request) {
@@ -504,11 +516,13 @@ impl<'a> Firmware<'a> {
         Ok(())
     }
 
-    fn dispatch_libgreat_response(&mut self, _setup_packet: SetupPacket) -> GreatResult<()> {
+    fn dispatch_libgreat_response(&mut self, setup_packet: SetupPacket) -> GreatResult<()> {
+        let requested_length = setup_packet.length as usize;
+
         // do we have a response ready?
         if let Some(response) = &mut self.libgreat_response {
             // send response
-            self.usb2.write(0, response);
+            self.usb2.write_requested(0, requested_length, response);
 
             // clear cached response
             self.libgreat_response = None;
@@ -536,8 +550,6 @@ impl<'a> Firmware<'a> {
     }
 
     fn dispatch_libgreat_abort(&mut self, _setup_packet: SetupPacket) -> GreatResult<()> {
-        error!("dispatch_libgreat_response abort");
-
         // send an arbitrary error code if we're aborting mid-response
         if let Some(_response) = &self.libgreat_response {
             // prime to receive host zlp - TODO should control do this in send_complete?
@@ -550,6 +562,8 @@ impl<'a> Firmware<'a> {
         // cancel any queued response
         self.libgreat_response = None;
         self.libgreat_response_last_error = None;
+
+        error!("dispatch_libgreat_response abort");
 
         Ok(())
     }
