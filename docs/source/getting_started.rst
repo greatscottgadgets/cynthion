@@ -106,7 +106,7 @@ Connect Hardware
   :alt: Connection diagram for testing Cynthion installation.
 
 - Connect the Host computer to the Cynthion **CONTROL** port.
-- Check that the :ref:`LED A power-on indicator <introduction:Top View>` lights up.
+- Check that the :ref:`LED A power-on indicator <hardware/device_overview:Top View>` lights up.
 
 
 Test Hardware Connectivity

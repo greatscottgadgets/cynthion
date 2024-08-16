@@ -4,7 +4,7 @@ Device Overview
 Top View
 ~~~~~~~~
 
-.. image:: ../images/cynthion-top.svg
+.. image:: ../../images/cynthion-top.svg
   :width: 300
   :alt: Cynthion Top View
 
@@ -22,7 +22,7 @@ Top View
 Left View
 ~~~~~~~~~
 
-.. image:: ../images/cynthion-left.svg
+.. image:: ../../images/cynthion-left.svg
   :width: 400
   :alt: Cynthion Left View
 
@@ -38,7 +38,7 @@ Left View
 Right View
 ~~~~~~~~~~
 
-.. image:: ../images/cynthion-right.svg
+.. image:: ../../images/cynthion-right.svg
   :width: 400
   :alt: Cynthion Right View
 
@@ -50,7 +50,7 @@ Right View
 Front View
 ~~~~~~~~~~
 
-.. image:: ../images/cynthion-front.svg
+.. image:: ../../images/cynthion-front.svg
   :width: 400
   :alt: Cynthion Front View
 
@@ -70,6 +70,6 @@ Front View
 Bottom View
 ~~~~~~~~~~~
 
-.. image:: ../images/cynthion-bottom.svg
+.. image:: ../../images/cynthion-bottom.svg
   :width: 300
   :alt: Cynthion Bottom View
