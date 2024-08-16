@@ -10,7 +10,7 @@ Cynthion Documentation
   :maxdepth: 2
   :caption: User Documentation
 
-  project description
+  project_description
   getting_started
   getting_started_packetry
   getting_started_facedancer
