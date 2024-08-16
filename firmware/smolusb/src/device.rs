@@ -1,9 +1,10 @@
 //! `smolusb` device types
 //!
 
+use crate::descriptor::microsoft10;
 use crate::descriptor::{
     ConfigurationDescriptor, DescriptorType, DeviceDescriptor, DeviceQualifierDescriptor,
-    StringDescriptor, StringDescriptorZero,
+    StringDescriptor, StringDescriptorNumber, StringDescriptorZero,
 };
 use crate::setup::SetupPacket;
 use crate::traits::{AsByteSliceIterator, UsbDriver};
@@ -11,13 +12,16 @@ use log::{debug, trace, warn};
 
 /// The set of descriptors describing a USB device.
 pub struct Descriptors<'a> {
+    // required
     pub device_speed: Speed,
     pub device_descriptor: DeviceDescriptor,
     pub configuration_descriptor: ConfigurationDescriptor<'a>,
-    pub other_speed_configuration_descriptor: Option<ConfigurationDescriptor<'a>>,
-    pub device_qualifier_descriptor: Option<DeviceQualifierDescriptor>,
     pub string_descriptor_zero: StringDescriptorZero<'a>,
     pub string_descriptors: &'a [&'a StringDescriptor<'a>],
+    // optional
+    pub device_qualifier_descriptor: Option<DeviceQualifierDescriptor>,
+    pub other_speed_configuration_descriptor: Option<ConfigurationDescriptor<'a>>,
+    pub microsoft10: Option<microsoft10::Descriptors<'a>>,
 }
 
 impl<'a> Descriptors<'a> {
@@ -38,6 +42,7 @@ impl<'a> Descriptors<'a> {
     /// Writes the descriptor corresponding to the request.
     ///
     /// Returns the given [`SetupPacket`] if the descriptor request could not be handled.
+    #[allow(clippy::too_many_lines)] // ...and sometimes clippy has opinions it should keep to itself!
     pub fn write<D>(
         &self,
         usb: &D,
@@ -56,15 +61,17 @@ impl<'a> Descriptors<'a> {
         let requested_length = setup_packet.length as usize;
 
         let bytes_written = match (&descriptor_type, descriptor_number) {
-            (DescriptorType::Device, 0) => usb.write(
+            (DescriptorType::Device, 0) => usb.write_requested(
                 endpoint_number,
+                requested_length,
                 self.device_descriptor
                     .as_iter()
                     .copied()
                     .take(requested_length),
             ),
-            (DescriptorType::Configuration, _) => usb.write(
+            (DescriptorType::Configuration, _) => usb.write_requested(
                 endpoint_number,
+                requested_length,
                 self.configuration_descriptor
                     .iter()
                     .copied()
@@ -73,8 +80,9 @@ impl<'a> Descriptors<'a> {
             (DescriptorType::DeviceQualifier, _) => {
                 if self.device_speed == Speed::High {
                     if let Some(descriptor) = &self.device_qualifier_descriptor {
-                        usb.write(
+                        usb.write_requested(
                             endpoint_number,
+                            requested_length,
                             descriptor.as_iter().copied().take(requested_length),
                         )
                     } else {
@@ -93,8 +101,9 @@ impl<'a> Descriptors<'a> {
             }
             (DescriptorType::OtherSpeedConfiguration, _) => {
                 if let Some(descriptor) = self.other_speed_configuration_descriptor {
-                    usb.write(
+                    usb.write_requested(
                         endpoint_number,
+                        requested_length,
                         descriptor.iter().copied().take(requested_length),
                     )
                 } else {
@@ -104,24 +113,42 @@ impl<'a> Descriptors<'a> {
                     usb.write(endpoint_number, [].into_iter())
                 }
             }
-            (DescriptorType::String, 0) => usb.write(
+            (DescriptorType::String, StringDescriptorNumber::Zero) => usb.write_requested(
                 endpoint_number,
+                requested_length,
                 self.string_descriptor_zero
                     .iter()
                     .copied()
                     .take(requested_length),
             ),
+            (DescriptorType::String, StringDescriptorNumber::Microsoft) => {
+                match &self.microsoft10 {
+                    Some(descriptors) => usb.write_requested(
+                        endpoint_number,
+                        requested_length,
+                        descriptors.string_descriptor.iter(),
+                    ),
+                    _ => {
+                        warn!(
+                            "Descriptors::write_descriptor() - no ms os 1.0 string descriptor defined",
+                        );
+                        usb.stall_endpoint_in(endpoint_number);
+                        return Some(setup_packet);
+                    }
+                }
+            }
             (DescriptorType::String, number) => {
                 let offset_index: usize = (number - 1).into();
                 if offset_index > self.string_descriptors.len() {
                     warn!(
-                        "Descriptors::write_descriptor() stall - unknown string descriptor {}",
+                        "Descriptors::write_descriptor() - unknown string descriptor {}",
                         number
                     );
                     return Some(setup_packet);
                 }
-                usb.write(
+                usb.write_requested(
                     endpoint_number,
+                    requested_length,
                     self.string_descriptors[offset_index]
                         .iter()
                         .take(requested_length),
@@ -129,7 +156,7 @@ impl<'a> Descriptors<'a> {
             }
             _ => {
                 warn!(
-                    "  Descriptors::write_descriptor() stall - unhandled descriptor request {:?}, {}",
+                    "  Descriptors::write_descriptor() - unhandled descriptor request {:?}, {}",
                     descriptor_type, descriptor_number
                 );
                 return Some(setup_packet);
