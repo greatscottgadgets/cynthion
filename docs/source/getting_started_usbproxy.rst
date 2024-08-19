@@ -31,9 +31,21 @@ Create a new Python file called ``usbproxy.py`` with the following content:
 
 Open a terminal and run:
 
-.. code-block :: sh
+.. tab:: Linux
 
-    python ./usbproxy.py
+    .. code-block :: sh
+
+        python ./usbproxy.py
+
+.. tab:: macOS
+
+    .. note::
+
+       USBProxy requires root privileges on macOS in order to claim the device being proxied from the operating system.
+
+    .. code-block :: sh
+
+        sudo python ./usbproxy.py
 
 If all goes well you should see the output from device enumeration in your terminal and the proxied USB device should be detected by the target computer.
 
