@@ -31,10 +31,10 @@ distclean: clean
 console:
 	pyserial-miniterm $(UART) 115200
 
-tests: .PHONY
+tests:
 	python3 -m unittest
 
-.PHONY:
+.PHONY: tests
 
 
 # - development ---------------------------------------------------------------
