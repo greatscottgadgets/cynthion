@@ -25,6 +25,9 @@ svd:
 clean:
 	-rm -rf build/
 
+distclean: clean
+	-rm -rf assets/CynthionPlatformRev* assets/moondancer.bin
+
 console:
 	pyserial-miniterm $(UART) 115200
 
