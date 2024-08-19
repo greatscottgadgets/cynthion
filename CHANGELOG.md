@@ -9,7 +9,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
-## [0.1.3] - 2024-08-25
+## [0.1.4] - 2024-08-19
+### Added
+* Prevent running or flashing Facedancer on Windows until full support is enabled.
+
+### Changed
+* Moondancer firmware serial example replaced with an acm serial example that works on all platforms.
+* Updated libgreat to v2024.0.2
+
+### Fixed
+* Cynthion LED B would activate when taken offline.
+* `cynthion setup` required udev rules to be installed in order to install udev rules.
+* Fixed the stop condition for final word during analyzer read bursts.
+
+
+## [0.1.3] - 2024-07-25
 ### Added
 * The `cynthion info` command now shows information from all connected Cynthions.
 * Documentation updates:
@@ -47,7 +61,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.3...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.4...HEAD
+[0.1.4]: https://github.com/greatscottgadgets/cynthion/compare/0.1.3...0.1.4
 [0.1.3]: https://github.com/greatscottgadgets/cynthion/compare/0.1.2...0.1.3
 [0.1.2]: https://github.com/greatscottgadgets/cynthion/compare/0.1.1...0.1.2
 [0.1.1]: https://github.com/greatscottgadgets/cynthion/compare/0.1.0...0.1.1
