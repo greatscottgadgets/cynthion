@@ -28,26 +28,58 @@ from tqdm                      import tqdm
 
 SOC_FIRMWARE_FLASHADDR = 0x000b0000
 
-_MSG_SOURCE_INSTALL = """
+_MSG_EDITABLE_INSTALL = """
 If you have installed the 'cynthion' Python package from source please
 run the following command in the package directory:
 
     make assets
 """
 
+_MSG_SOURCE_INSTALL = """
+If you have installed the 'cynthion' Python package from source please
+run the following commands in the package directory:
+
+    make assets
+    pip install --upgrade .
+"""
 
 def _find_assets_path():
-    pkg_path = files("cynthion")
-    if os.path.basename(pkg_path) == "src":
-        assets = os.path.join(pkg_path, "../assets")
+    package_path = files(__package__.split('.')[0])
+    if _is_editable_install():
+        assets = os.path.join(package_path, "../assets")
     else:
-        assets = os.path.join(pkg_path, "assets")
+        assets = os.path.join(package_path, "assets")
 
-    return os.path.normpath(os.path.join(pkg_path, assets))
+    return os.path.normpath(os.path.join(package_path, assets))
+
+
+def _is_editable_install():
+    package_name = __package__.split('.')[0]
+    package_path = files(package_name)
+
+    # were we installed with `pip -e .` ?
+    if os.path.basename(package_path) == "src":
+        return True
 
 
 def _is_source_install():
-    return os.path.basename(files("cynthion")) == "src"
+    package_name = __package__.split('.')[0]
+    package_path = files(package_name)
+
+    # get .dist-info path
+    dist_info_path = None
+    site_packages_path = os.path.dirname(package_path)
+    for item in os.listdir(site_packages_path):
+        if item.endswith(".dist-info") and item.startswith(package_name.replace('-', '_')):
+            dist_info_path = os.path.join(site_packages_path, item)
+            break
+
+    # pypi installs will always have a .dist-info/ directory
+    if not dist_info_path:
+        return True
+
+    # .dist-info/direct_url.json only exists on non-pypi installs (PEP 610)
+    return os.path.isfile(os.path.join(dist_info_path, "direct_url.json"))
 
 
 def find_cynthion_asset(filename):
@@ -58,7 +90,9 @@ def find_cynthion_asset(filename):
         return asset_path
     else:
         logging.error(f"The Cynthion '{filename}' asset could not be located.")
-        if _is_source_install():
+        if _is_editable_install():
+            logging.error(_MSG_EDITABLE_INSTALL)
+        elif _is_source_install():
             logging.error(_MSG_SOURCE_INSTALL)
         sys.exit(1)
 
@@ -73,7 +107,9 @@ def find_cynthion_bitstream(device, filename):
         return bitstream_path
     else:
         logging.error(f"The Cynthion '{filename}' bitstream could not be located.")
-        if _is_source_install():
+        if _is_editable_install():
+            logging.error(_MSG_EDITABLE_INSTALL)
+        elif _is_source_install():
             logging.error(_MSG_SOURCE_INSTALL)
         sys.exit(1)
 
