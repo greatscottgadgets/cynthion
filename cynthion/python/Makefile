@@ -129,3 +129,6 @@ detect-cynthion-cli:
 ifeq (, $(shell which cynthion))
 	$(error "No cynthion command line tool detected. Please run: 'pip install -e .'")
 endif
+ifeq (, $(shell cynthion build --luna-platform))
+	$(error "Unsupported cynthion command line tool detected. Please upgrade to the latest version.")
+endif
