@@ -433,19 +433,19 @@ macro_rules! impl_usb {
                 where
                     I: Iterator<Item = u8>
                 {
-                    let max_packet_size = match (self.device_speed, endpoint_number) {
-                        (_, 0) => 64,
-                        (Speed::High, _) => smolusb::EP_MAX_PACKET_SIZE,
-                        (Speed::Full, _) => 64,
-                        (_, _) => {
-                            log::warn!("{}::write unsupported device speed: {:?}", stringify!($USBX), self.device_speed);
-                            64
-                        }
-                    };
-                    self.write_with_packet_size(endpoint_number, iter, max_packet_size)
+                    let max_packet_size = smolusb::max_packet_size(self.device_speed, endpoint_number);
+                    self.write_with_packet_size(endpoint_number, None, iter, max_packet_size)
                 }
 
-                fn write_with_packet_size<'a, I>(&self, endpoint_number: u8, iter: I, packet_size: usize) -> usize
+                fn write_requested<'a, I>(&self, endpoint_number: u8, requested_length: usize, iter: I) -> usize
+                where
+                    I: Iterator<Item = u8>
+                {
+                    let max_packet_size = smolusb::max_packet_size(self.device_speed, endpoint_number);
+                    self.write_with_packet_size(endpoint_number, Some(requested_length), iter, max_packet_size)
+                }
+
+                fn write_with_packet_size<'a, I>(&self, endpoint_number: u8, requested_length: Option<usize>, iter: I, packet_size: usize) -> usize
                 where
                     I: Iterator<Item = u8>
                 {
@@ -493,12 +493,33 @@ macro_rules! impl_usb {
                         }
                     }
 
-                    // finally, prime IN endpoint to either send
-                    // remaining queued data or a ZLP if the fifo
-                    // is empty and transmission is complete
-                    self.ep_in
-                        .epno()
-                        .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                    // The host recognizes an EOT (end of transaction) when
+                    // one of the following are true:
+                    //
+                    //   a. A partial packet is sent which makes bytes_written = requested size
+                    //      - need to prime to empty fifo
+                    //   b. A partial packet is sent which is < packet_size
+                    //      - need to prime to empty fifo
+                    //   c. A full packet is sent which makes bytes_written = requested size
+                    //      - no need to prime, fifo is empty
+                    //   d. A full packet is sent, followed by a zlp
+                    //      - fifo is empty, but need to prime to send a zlp so host know it's EOT
+                    //
+                    let is_partial_packet = bytes_written % packet_size != 0;
+                    let is_requested_length = if let Some(requested_length) = requested_length {
+                        bytes_written == requested_length
+                    } else {
+                        false
+                    };
+
+                    if !is_partial_packet && is_requested_length {
+                        // c. already sent, no zlp required
+                    } else {
+                        // a. b. d.
+                        self.ep_in
+                            .epno()
+                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                    }
 
                     bytes_written
                 }

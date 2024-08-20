@@ -2,10 +2,11 @@ use core::marker::PhantomData;
 
 use log::{error, info, trace, warn};
 
+use crate::descriptor::microsoft10;
 use crate::device::Descriptors;
 use crate::event::UsbEvent;
 use crate::setup::{Direction, Feature, Recipient, Request, RequestType, SetupPacket};
-use crate::traits::UsbDriver;
+use crate::traits::{AsByteSliceIterator, UsbDriver};
 
 // - State --------------------------------------------------------------------
 
@@ -98,16 +99,80 @@ where
                 State::Idle | State::Stall,
             ) if endpoint_number == self.endpoint_number => {
                 if matches!(self.next, State::Stall) {
-                    // clear stall
-                    warn!("TODO clearing stall");
+                    // clear State::Stall
                     self.next = State::Idle;
                 }
+
+                let requested_length = setup_packet.length as usize;
 
                 match (
                     setup_packet.direction(),
                     setup_packet.request_type(),
                     setup_packet.request(),
                 ) {
+                    // handle microsoft os 1.0 descriptor requests
+                    //
+                    // reg entries are:
+                    //
+                    //   Microsoft OS 1.0 String Descriptor: <VID><PID><bcdDevice> => 1d50615b0104
+                    //     HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Control\usbflags\1D50615B0104
+                    //     HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\usbflags\1D50615B0104
+                    //
+                    //   Compatible ID Feature Descriptor:   VID_<VID>&PID_<PID>   => VID_1d50&PID_615b
+                    //     HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\USB\VID_1d50&PID_615b
+                    //
+                    (
+                        Direction::DeviceToHost,
+                        RequestType::Vendor,
+                        Request::ClassOrVendor(microsoft10::VendorRequest::Microsoft),
+                    ) => {
+                        let recipient = setup_packet.recipient();
+                        let vendor_index = microsoft10::VendorIndex::from(setup_packet.index);
+
+                        match (&recipient, &vendor_index, &self.descriptors.microsoft10) {
+                            (
+                                Recipient::Device,
+                                microsoft10::VendorIndex::CompatibleIdFeatureDescriptor,
+                                Some(descriptors),
+                            ) => {
+                                self.next = State::Send;
+                                usb.write_requested(
+                                    self.endpoint_number,
+                                    requested_length,
+                                    descriptors
+                                        .compat_id_feature_descriptor
+                                        .iter()
+                                        .copied()
+                                        .take(requested_length),
+                                );
+                            }
+                            (
+                                Recipient::Interface,
+                                microsoft10::VendorIndex::ExtendedPropertiesFeatureDescriptor,
+                                Some(descriptors),
+                            ) => {
+                                self.next = State::Send;
+                                usb.write_requested(
+                                    self.endpoint_number,
+                                    requested_length,
+                                    descriptors
+                                        .extended_properties_feature_descriptor
+                                        .as_iter()
+                                        .copied()
+                                        .take(requested_length),
+                                );
+                            }
+                            _ => {
+                                self.next = State::Stall;
+                                error!(
+                                    "Control error. Could not handle Microsoft OS 1.0 Request: '{:?}'.",
+                                    setup_packet
+                                );
+                                usb.stall_endpoint_in(self.endpoint_number);
+                            }
+                        }
+                    }
+
                     // - standard requests
                     (Direction::DeviceToHost, RequestType::Standard, Request::GetDescriptor) => {
                         self.next = State::Send;
@@ -207,7 +272,9 @@ where
                     (direction, request_type, request) => {
                         trace!(
                             "Unhandled request direction:{:?} request_type:{:?} request:{:?}",
-                            direction, request_type, request
+                            direction,
+                            request_type,
+                            request
                         );
                         self.next = State::Idle;
                         return Some(setup_packet);
@@ -224,16 +291,22 @@ where
                 usb.ep_out_prime_receive(self.endpoint_number);
             }
 
+            (UsbEvent::SendComplete(endpoint_number), State::WaitForZlp)
+                if endpoint_number == self.endpoint_number =>
+            {
+                // it's part of a multi-packet send, we can safely ignore this
+            }
+
             (UsbEvent::ReceivePacket(endpoint_number), State::WaitForZlp)
                 if endpoint_number == self.endpoint_number =>
             {
+                self.next = State::Idle;
                 if !self.read_zlp(usb) {
                     warn!(
                         "Control {:?} {:?} expected a ZLP but received data instead.",
                         event, self.next
                     );
                 }
-                self.next = State::Idle;
             }
 
             (UsbEvent::SendComplete(endpoint_number), &State::SetAddress(address))

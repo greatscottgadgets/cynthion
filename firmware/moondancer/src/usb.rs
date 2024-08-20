@@ -1,9 +1,9 @@
 use crate::hal::smolusb;
 
 use smolusb::descriptor::{
-    ConfigurationDescriptor, ConfigurationDescriptorHeader, DescriptorType, DeviceDescriptor,
-    DeviceQualifierDescriptor, EndpointDescriptor, InterfaceDescriptor, InterfaceDescriptorHeader,
-    LanguageId, StringDescriptor, StringDescriptorZero,
+    microsoft10, ConfigurationDescriptor, ConfigurationDescriptorHeader, DescriptorType,
+    DeviceDescriptor, DeviceQualifierDescriptor, EndpointDescriptor, InterfaceDescriptor,
+    InterfaceDescriptorHeader, LanguageId, StringDescriptor, StringDescriptorZero,
 };
 
 // - vendor request -----------------------------------------------------------
@@ -200,6 +200,26 @@ pub static OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0: ConfigurationDescriptor =
         ],
     );
 
+pub const COMPATIBLE_ID: [u8; 8] = *b"WINUSB\0\0";
+
+pub const MS_OS_10_COMPATIBLE_ID_FEATURE_DESCRIPTOR: microsoft10::CompatibleIdFeatureDescriptor =
+    microsoft10::CompatibleIdFeatureDescriptor::new(&[
+        microsoft10::CompatibleIdFeatureDescriptorFunction {
+            bFirstInterfaceNumber: 0,
+            aCompatibleId: COMPATIBLE_ID,
+            ..microsoft10::CompatibleIdFeatureDescriptorFunction::new()
+        },
+        microsoft10::CompatibleIdFeatureDescriptorFunction {
+            bFirstInterfaceNumber: 1,
+            aCompatibleId: COMPATIBLE_ID,
+            ..microsoft10::CompatibleIdFeatureDescriptorFunction::new()
+        },
+    ]);
+
+pub const MS_OS_10_EXTENDED_PROPERTIES_FEATURE_DESCRIPTOR:
+    microsoft10::ExtendedPropertiesFeatureDescriptor =
+    microsoft10::ExtendedPropertiesFeatureDescriptor::new();
+
 pub static STRING_DESCRIPTOR_0: StringDescriptorZero =
     StringDescriptorZero::new(&[LanguageId::EnglishUnitedStates]);
 
@@ -225,6 +245,10 @@ pub static STRING_DESCRIPTOR_7: StringDescriptor = StringDescriptor::new("other 
 pub static STRING_DESCRIPTOR_8: StringDescriptor = StringDescriptor::new("other interface0");
 // interface #1
 pub static STRING_DESCRIPTOR_9: StringDescriptor = StringDescriptor::new("other interface1");
+
+// microsoft os 1.0 string descriptor
+pub static STRING_DESCRIPTOR_0XEE: microsoft10::StringDescriptor =
+    microsoft10::StringDescriptor::new(microsoft10::VendorRequest::Microsoft);
 
 pub static STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &STRING_DESCRIPTOR_1,

@@ -94,10 +94,23 @@ pub trait WriteEndpoint {
     where
         I: Iterator<Item = u8>;
 
+    /// Write the requested number of bytes from the iterator to endpoint
+    ///
+    /// Returns the number of bytes written to the endpoint.
+    fn write_requested<I>(&self, endpoint_number: u8, requested_length: usize, iter: I) -> usize
+    where
+        I: Iterator<Item = u8>;
+
     /// Write iterator to endpoint using the given packet size
     ///
     /// Returns the number of bytes written to the endpoint.
-    fn write_with_packet_size<I>(&self, endpoint_number: u8, iter: I, packet_size: usize) -> usize
+    fn write_with_packet_size<I>(
+        &self,
+        endpoint_number: u8,
+        requested_length: Option<usize>,
+        iter: I,
+        packet_size: usize,
+    ) -> usize
     where
         I: Iterator<Item = u8>;
 }
