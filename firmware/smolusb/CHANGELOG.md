@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.1.5] - 2024-08-20
+### Added
+* Support for Windows Compatible ID Descriptors.
+
 ## [0.1.4] - 2024-08-19
 ### Changed
 * Replaced ch341 serial class with acm.
@@ -16,6 +20,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.1...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.5...HEAD
+[0.1.5]: https://github.com/greatscottgadgets/cynthion/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/greatscottgadgets/cynthion/compare/0.1.1...0.1.4
 [0.1.1]: https://github.com/greatscottgadgets/cynthion/releases/tag/0.1.1

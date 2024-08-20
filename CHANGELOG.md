@@ -9,6 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.1.5] - 2024-08-20
+### Added
+* Windows support for Facedancer and USB Proxy.
+
+
 ## [0.1.4] - 2024-08-19
 ### Added
 * Prevent running or flashing Facedancer on Windows until full support is enabled.
@@ -61,7 +66,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.4...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.5...HEAD
+[0.1.5]: https://github.com/greatscottgadgets/cynthion/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/greatscottgadgets/cynthion/compare/0.1.3...0.1.4
 [0.1.3]: https://github.com/greatscottgadgets/cynthion/compare/0.1.2...0.1.3
 [0.1.2]: https://github.com/greatscottgadgets/cynthion/compare/0.1.1...0.1.2
