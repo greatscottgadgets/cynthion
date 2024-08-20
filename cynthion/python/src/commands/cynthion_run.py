@@ -7,7 +7,7 @@
 
 """ Cynthion 'run' command. """
 
-import logging, os, platform, subprocess, sys, tempfile
+import logging, os, subprocess, sys, tempfile
 
 from .util  import find_cynthion_asset, find_cynthion_bitstream
 from .util  import flash_soc_firmware, run_bitstream
@@ -21,14 +21,6 @@ def cynthion_run(device, args):
         run_bitstream(device, find_cynthion_bitstream(device, f"analyzer.bit"))
 
     elif args.target == "facedancer":
-        if platform.system() == "Windows":
-            logging.error("\nFacedancer and USBProxy are not currently supported on Windows.")
-            logging.error("Attempting to use Facedancer or USBProxy on Windows may cause")
-            logging.error("USB analysis to stop working.\n")
-            logging.error("For more information please see the tracking issue:\n")
-            logging.error("  https://github.com/greatscottgadgets/cynthion/issues/170\n")
-            logging.error("Command aborted.")
-            sys.exit(1)
         flash_soc_firmware(device, find_cynthion_asset("moondancer.bin"))
         run_bitstream(device, find_cynthion_bitstream(device, f"facedancer.bit"))
 

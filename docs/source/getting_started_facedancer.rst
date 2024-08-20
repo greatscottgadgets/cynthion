@@ -2,12 +2,6 @@
 Using Cynthion with Facedancer
 ==============================
 
-.. warning::
-
-   Facedancer is not currently supported on Windows. Attempting to use Facedancer on Windows may cause USB analysis to stop working.
-
-   For more information please see the tracking issue: `#170 <https://github.com/greatscottgadgets/cynthion/issues/170>`__
-
 Before proceeding, please ensure you have completed all steps in the :doc:`getting_started` section.
 
 
