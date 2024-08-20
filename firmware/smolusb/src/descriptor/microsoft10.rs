@@ -140,7 +140,7 @@ impl CompatibleIdFeatureDescriptorFunction {
     pub const fn new() -> Self {
         Self {
             bFirstInterfaceNumber: 0,
-            bReserved: 0x01, // TODO does this _need_ to be 0x01 ???
+            bReserved: 0x01,
             aCompatibleId: [0; 8],
             aSubCompatibleId: [0; 8],
             aReserved: [0; 6],
