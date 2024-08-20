@@ -41,6 +41,13 @@ Open a terminal and run:
 
         sudo python ./usbproxy.py
 
+.. tab:: Windows
+
+    .. code-block :: sh
+
+        python ./usbproxy.py
+
+
 If all goes well you should see the output from device enumeration in your terminal and the proxied USB device should be detected by the target computer.
 
 More Information
