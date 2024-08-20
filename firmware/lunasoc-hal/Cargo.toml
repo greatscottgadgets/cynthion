@@ -1,6 +1,6 @@
 [package]
 name = "lunasoc-hal"
-version = "0.1.1"
+version = "0.1.5"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
 description = "Hardware Abstraction Layer implementation for LunaSoC cores"
@@ -58,7 +58,7 @@ embedded-hal-nb = "=1.0.0-alpha.1"
 log = { version = "=0.4.17", optional = true }
 nb = "=1.1.0"
 riscv = { version = "=0.10.1" }
-smolusb = { version = "0.1.4", path = "../smolusb", optional = true }
+smolusb = { version = "0.1.5", path = "../smolusb", optional = true }
 
 # - dev-dependencies ----------------------------------------------------------
 
