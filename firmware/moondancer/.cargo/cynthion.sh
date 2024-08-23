@@ -13,12 +13,12 @@ echo "Using uart: UART=$UART"
 if [ ! -f $BITSTREAM ]
 then
     echo
-    echo "Failed to locate the Cynthion SoC bitstream file."
+    echo "Failed to locate the SoC bitstream file."
     echo
     echo "The SoC bitstream file can be generated with:"
     echo
     echo "    cd ../../cynthion/python/"
-    echo "    make soc"
+    echo "    make facedancer"
     echo
     exit 1
 fi
