@@ -88,6 +88,7 @@ mod ladybug_impl {
                         w.odr().bits(self.b.load(Ordering::Relaxed))
                     });
                 }
+                _ => {}
             }
         }
 
@@ -105,6 +106,7 @@ mod ladybug_impl {
                         w.odr().bits(self.b.load(Ordering::Relaxed))
                     });
                 }
+                _ => {}
             }
         }
     }
