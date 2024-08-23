@@ -221,7 +221,9 @@ where
                         match (&recipient, &feature) {
                             (Recipient::Endpoint, Feature::EndpointHalt) => {
                                 let endpoint_address = (setup_packet.index & 0xff) as u8;
-                                usb.clear_feature_endpoint_halt(endpoint_address);
+                                let endpoint_number = endpoint_address & 0x7f;
+                                let direction = Direction::from(endpoint_address);
+                                usb.clear_feature_endpoint_halt(endpoint_number, direction);
                                 self.next = State::Complete;
                                 self.write_zlp(usb);
                             }
