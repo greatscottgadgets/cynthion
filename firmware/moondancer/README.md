@@ -11,7 +11,7 @@ Before you can run any firmware you will first need to build the Moondancer SoC 
 
     cd cynthion.git/cynthion/python
 
-    make soc
+    make facedancer
 
 ### Execute Firmware
 
@@ -214,7 +214,7 @@ You're almost there! The last step you'll need to perform before being able to d
 
     cd cynthion.git/cynthion/python
 
-    make soc
+    make facedancer
     make load
 
 #### 6. start gdb
