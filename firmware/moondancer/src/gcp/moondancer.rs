@@ -254,7 +254,7 @@ impl Moondancer {
 
         // wait for things to settle and get connection speed
         unsafe {
-            riscv::asm::delay(10_000_000);
+            riscv::asm::delay(30_000_000);
         }
         let speed: Speed = self.usb0.controller.speed().read().speed().bits().into();
 
@@ -462,6 +462,34 @@ impl Moondancer {
 
         Ok([].into_iter())
     }
+
+    /// Clears a halt condition on the target endpoint number.
+    pub fn clear_feature_endpoint_halt(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+        #[repr(C)]
+        #[derive(FromBytes, FromZeroes, Unaligned)]
+        struct Args {
+            endpoint_number: u8,
+            direction: u8,
+        }
+        let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
+        let endpoint_number = args.endpoint_number;
+        let direction = match args.direction {
+            0 => Direction::HostToDevice, // OUT
+            _ => Direction::DeviceToHost, // IN
+        };
+
+        // Clear feature endpoint halt
+        self.usb0.clear_feature_endpoint_halt(endpoint_number, direction);
+
+        log::debug!(
+            "MD moondancer::clear_feature_endpoint_halt({}, {:?})",
+            endpoint_number,
+            direction
+        );
+
+        Ok([].into_iter())
+    }
+
 }
 
 // - verb implementations: data transfer --------------------------------------
@@ -787,7 +815,7 @@ pub static CLASS_DOCS: &str = "API for fine-grained control of the Target USB po
 ///
 /// Fields are `"\0"`  where C implementation has `""`
 /// Fields are `"*\0"` where C implementation has `NULL`
-pub static VERBS: [Verb; 16] = [
+pub static VERBS: [Verb; 17] = [
     // - device connection --
     Verb {
         id: 0x0,
@@ -859,6 +887,15 @@ pub static VERBS: [Verb; 16] = [
         doc: "\0", //"Stall the OUT endpoint with the provided endpoint number.\0",
         in_signature: "<B\0",
         in_param_names: "endpoint_number\0",
+        out_signature: "\0",
+        out_param_names: "*\0",
+    },
+    Verb {
+        id: 0xd,
+        name: "clear_feature_endpoint_halt\0",
+        doc: "\0", //"Clear a halt condition on the target endpoint address.\0",
+        in_signature: "<BB\0",
+        in_param_names: "endpoint_number, direction\0",
         out_signature: "\0",
         out_param_names: "*\0",
     },
@@ -1034,6 +1071,12 @@ impl GreatDispatch for Moondancer {
             0xc => {
                 // moondancer::get_nak_status
                 let iter = self.get_nak_status(arguments)?;
+                let response = iter_to_response(iter, response_buffer);
+                Ok(response)
+            }
+            0xd => {
+                // moondancer::clear_feature_endpoint_halt
+                let iter = self.clear_feature_endpoint_halt(arguments)?;
                 let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
