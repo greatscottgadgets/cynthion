@@ -87,37 +87,41 @@ bitstreams: detect-fpga-toolchain analyzer.bit selftest.bit facedancer.bit
 # - environment checks --------------------------------------------------------
 
 detect-fpga-toolchain:
-ifeq (, $(shell which nextpnr-ecp5))
-	$(error "No FPGA toolchain detected. Please install: https://github.com/YosysHQ/oss-cad-suite-build/")
-endif
-	@echo "Using FPGA toolchain: $(shell dirname $(shell which nextpnr-ecp5))"
+	@which nextpnr-ecp5 > /dev/null 2>&1 || [ $$? -eq 0 ] \
+		|| ( echo "No FPGA toolchain detected. Please install: https://github.com/YosysHQ/oss-cad-suite-build/" ; exit 1)
+	@echo "Using FPGA toolchain: $(shell dirname $(shell which nextpnr-ecp5))" \
 
 detect-rust-toolchain:
-ifeq (, $(shell which rustup))
-	$(error "No Rust toolchain detected. Please install https://rustup.rs/")
-endif
-ifeq (, $(shell	rustup component list --installed|grep rust-std-riscv32imac-unknown-none-elf))
-	$(error "No riscv target support detected. Please run: 'rustup target add riscv32imac-unknown-none-elf'")
-endif
-ifeq (, $(shell find ~/.rustup/toolchains -name llvm-objcopy))
-	$(error "No llvm tools detected. Please run: 'rustup component add llvm-tools'")
-endif
-ifeq (, $(shell which cargo-objcopy))
-	$(error "No cargo-binutils detected. Please run: 'cargo install cargo-binutils'")
-endif
+	@which rustup > /dev/null 2>&1 || [ $$? -eq 0 ] \
+		|| ( echo "No Rust toolchain detected. Please install https://rustup.rs/" ; exit 1)
+	@rustup component list --installed | grep rust-std-riscv32imac-unknown-none-elf > /dev/null 2>&1 || [ $$? -eq 0 ] \
+		|| ( echo "No llvm tools detected. Please run: 'rustup component add llvm-tools'" ; exit 1)
+	@which cargo-objcopy > /dev/null 2>&1 || [ $$? -eq 0 ] \
+		|| ( echo "No cargo-binutils detected. Please run: 'cargo install cargo-binutils'" ; exit 1)
 	@echo "Using Rust toolchain: $(shell rustup show home) $(shell rustup show active-toolchain)"
 
 detect-luna-platform: detect-cynthion-cli
 ifeq ($(origin LUNA_PLATFORM), undefined)
 	@echo "LUNA_PLATFORM is not set, trying to autodetect it."
-	$(eval LUNA_PLATFORM := $(shell cynthion build --luna-platform 2> /dev/null))
+
+	@cynthion info > /dev/null 2>&1 || [ $$? -eq 0 ] \
+		|| ( echo "No Cynthion device detected." ; \
+			 echo "" ; \
+			 echo "Please ensure Cynthion is plugged in or set the LUNA_PLATFORM variable, for" ; \
+			 echo "example:" ; \
+			 echo "" ; \
+			 echo " LUNA_PLATFORM=cynthion.gateware.platform:CynthionPlatformRev1D4 make assets" ; \
+			 echo "" ; \
+			 exit 1)
+
+	@cynthion build --luna-platform	> /dev/null 2>&1 || [ $$? -eq 0 ] \
+		|| ( echo "Unsupported cynthion command line tool detected. Please upgrade to the latest version." ; exit 1)
+
+	$(eval LUNA_PLATFORM := $(shell cynthion build --luna-platform 2> /tmp/cynthion-assets.log))
 	@if [ ! -n "$(LUNA_PLATFORM)" ]; then \
-		echo "Detection failed" ; \
+		echo "Failed detect luna platform." ; \
 		echo "" ; \
-		echo "Please ensure Cynthion is plugged in or set the LUNA_PLATFORM variable, for" ; \
-		echo "example:" ; \
-		echo "" ; \
-		echo " LUNA_PLATFORM=cynthion.gateware.platform:CynthionPlatformRev1D4 make assets" ; \
+		echo "Please see '/tmp/cynthion-assets.log' for more information." ; \
 		echo "" ; \
 		exit 1 ; \
 	fi
@@ -126,9 +130,5 @@ endif
 	@echo Using LUNA_PLATFORM: $(LUNA_PLATFORM)
 
 detect-cynthion-cli:
-ifeq (, $(shell which cynthion))
-	$(error "No cynthion command line tool detected. Please run: 'pip install -e .'")
-endif
-ifeq (, $(shell cynthion build --luna-platform))
-	$(error "Unsupported cynthion command line tool detected. Please upgrade to the latest version.")
-endif
+	@which cynthion > /dev/null 2>&1 || [ $$? -eq 0 ] \
+		|| ( echo "No cynthion command line tool detected. Please run: 'pip install -e .'" ; exit 1)
