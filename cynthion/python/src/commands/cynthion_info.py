@@ -7,7 +7,7 @@
 
 """ Cynthion 'info' command. """
 
-import logging
+import logging, sys
 
 from apollo_fpga import ApolloDebugger
 
@@ -21,3 +21,6 @@ def cynthion_info(args):
                 stub_ids=[(shared.usb.bVendorId.cynthion, shared.usb.bProductId.cynthion)]):
         if not args.force_offline:
             logging.info("For additional device information use the --force-offline option.")
+    else:
+        logging.info("Could not find a Cynthion device.")
+        sys.exit(1)
