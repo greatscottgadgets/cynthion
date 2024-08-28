@@ -11,7 +11,9 @@ use pac::csr::interrupt;
 use smolusb::device::Speed;
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Direction, SetupPacket};
-use smolusb::traits::{ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations};
+use smolusb::traits::{
+    ReadEndpoint, UnsafeUsbDriverOperations, UsbDriverOperations, WriteEndpoint,
+};
 
 use libgreat::error::{GreatError, GreatResult};
 use libgreat::gcp::{
@@ -464,7 +466,10 @@ impl Moondancer {
     }
 
     /// Clears a halt condition on the target endpoint number.
-    pub fn clear_feature_endpoint_halt(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+    pub fn clear_feature_endpoint_halt(
+        &mut self,
+        arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
         #[derive(FromBytes, FromZeroes, Unaligned)]
         struct Args {
@@ -479,7 +484,8 @@ impl Moondancer {
         };
 
         // Clear feature endpoint halt
-        self.usb0.clear_feature_endpoint_halt(endpoint_number, direction);
+        self.usb0
+            .clear_feature_endpoint_halt(endpoint_number, direction);
 
         log::debug!(
             "MD moondancer::clear_feature_endpoint_halt({}, {:?})",
@@ -489,7 +495,6 @@ impl Moondancer {
 
         Ok([].into_iter())
     }
-
 }
 
 // - verb implementations: data transfer --------------------------------------
@@ -581,6 +586,74 @@ impl Moondancer {
         Ok([].into_iter())
     }
 
+    pub fn write_control_endpoint(
+        &mut self,
+        arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
+        struct Args<B: zerocopy::ByteSlice> {
+            endpoint_number: zerocopy::Ref<B, u8>,
+            requested_length: zerocopy::Ref<B, U16<LittleEndian>>,
+            blocking: zerocopy::Ref<B, u8>,
+            payload: B,
+        }
+
+        let (endpoint_number, arguments) = zerocopy::Ref::new_unaligned_from_prefix(arguments)
+            .ok_or(GreatError::InvalidArgument)?;
+        let (requested_length, arguments) = zerocopy::Ref::new_unaligned_from_prefix(arguments)
+            .ok_or(GreatError::InvalidArgument)?;
+        let (blocking, payload) = zerocopy::Ref::new_unaligned_from_prefix(arguments)
+            .ok_or(GreatError::InvalidArgument)?;
+        let args = Args {
+            endpoint_number,
+            requested_length,
+            blocking,
+            payload,
+        };
+
+        let endpoint_number: u8 = args.endpoint_number.read();
+        let requested_length = args.requested_length.read();
+        let blocking = args.blocking.read() != 0;
+        let payload_length = args.payload.len();
+        let iter = args.payload.iter();
+        let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
+
+        let bytes_written = self.usb0.write_requested(
+            endpoint_number,
+            requested_length.into(),
+            iter.copied().take(requested_length.into()),
+        );
+
+        // wait for send to complete if we're blocking
+        let mut timeout = 0;
+        while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
+            timeout += 1;
+            if timeout > hal::usb::DEFAULT_TIMEOUT {
+                unsafe {
+                    self.usb0.clear_tx_ack_active(endpoint_number);
+                }
+                log::error!(
+                    "moondancer::write_control_endpoint timed out after {} bytes during write of {} bytes",
+                    payload_length,
+                    bytes_written
+                );
+                return Err(GreatError::StreamIoctlTimeout);
+            }
+        }
+
+        log::debug!(
+            "MD moondancer::write_control_endpoint(endpoint_number:{}, requested_length:{}, blocking:{} payload.len:{} ({})) max_packet_size:{} bytes_written:{}",
+            endpoint_number,
+            requested_length,
+            blocking,
+            payload_length,
+            args.payload.iter().len(),
+            max_packet_size,
+            bytes_written,
+        );
+
+        Ok([].into_iter())
+    }
+
     #[allow(clippy::too_many_lines)]
     pub fn write_endpoint(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
         struct Args<B: zerocopy::ByteSlice> {
@@ -604,13 +677,11 @@ impl Moondancer {
         let iter = args.payload.iter();
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
 
-        // TODO clean up tx_ack_active semantics!!!
         unsafe {
             self.usb0.set_tx_ack_active(endpoint_number);
         }
 
         // check if output FIFO is empty
-        // FIXME return a GreatError::DeviceOrResourceBusy on timeout
         let mut timeout = 0;
         while self.usb0.ep_in.have().read().have().bit() {
             if timeout == 0 {
@@ -637,7 +708,6 @@ impl Moondancer {
 
             // send data if we've written max_packet_size
             if bytes_written % max_packet_size == 0 {
-                // TODO clean up tx_ack_active semantics!!!
                 unsafe {
                     self.usb0.set_tx_ack_active(endpoint_number);
                 }
@@ -699,7 +769,7 @@ impl Moondancer {
                     payload_length,
                     bytes_written
                 );
-                // TODO return an error on timeout
+                return Err(GreatError::StreamIoctlTimeout);
             }
         }
 
@@ -815,10 +885,10 @@ pub static CLASS_DOCS: &str = "API for fine-grained control of the Target USB po
 ///
 /// Fields are `"\0"`  where C implementation has `""`
 /// Fields are `"*\0"` where C implementation has `NULL`
-pub static VERBS: [Verb; 17] = [
+pub static VERBS: [Verb; 18] = [
     // - device connection --
     Verb {
-        id: 0x0,
+        id: 0x00,
         name: "connect\0",
         doc: "\0", //"Connect the target to the host. device_speed is 3:high, 2:full, 1:low\0",
         in_signature: "<HBH\0",
@@ -827,7 +897,7 @@ pub static VERBS: [Verb; 17] = [
         out_param_names: "*\0",
     },
     Verb {
-        id: 0x1,
+        id: 0x01,
         name: "disconnect\0",
         doc: "\0", //"Disconnect the target port from the host.\0",
         in_signature: "\0",
@@ -836,7 +906,7 @@ pub static VERBS: [Verb; 17] = [
         out_param_names: "*\0",
     },
     Verb {
-        id: 0x2,
+        id: 0x02,
         name: "bus_reset\0",
         doc: "\0", //"Cause the target device to handle a bus reset.\0",
         in_signature: "\0",
@@ -846,7 +916,7 @@ pub static VERBS: [Verb; 17] = [
     },
     // - status & control --
     Verb {
-        id: 0x3,
+        id: 0x03,
         name: "read_control\0",
         doc: "\0", //"Read a setup packet from the control endpoint.\0",
         in_signature: "\0",
@@ -855,7 +925,7 @@ pub static VERBS: [Verb; 17] = [
         out_param_names: "setup_packet\0",
     },
     Verb {
-        id: 0x4,
+        id: 0x04,
         name: "set_address\0",
         doc: "\0", //"Set the address of the target device.\nIf deferred is set this action won't complete until the setup phase ends.\0",
         in_signature: "<BB\0",
@@ -864,8 +934,8 @@ pub static VERBS: [Verb; 17] = [
         out_param_names: "*\0",
     },
     Verb {
-        id: 0x5,
-        name: "configure_endpoints\0", // TODO s/prime_out_endpoint
+        id: 0x05,
+        name: "configure_endpoints\0",
         doc: "\0", //"Set up all of the non-control endpoints for the device.\0",
         in_signature: "<*(BHB)\0",
         in_param_names: "endpoint_descriptors\0",
@@ -873,7 +943,7 @@ pub static VERBS: [Verb; 17] = [
         out_param_names: "*\0",
     },
     Verb {
-        id: 0x6,
+        id: 0x06,
         name: "stall_endpoint_in\0",
         doc: "\0", //"Stall the IN endpoint with the provided endpoint number.\0",
         in_signature: "<B\0",
@@ -882,7 +952,7 @@ pub static VERBS: [Verb; 17] = [
         out_param_names: "*\0",
     },
     Verb {
-        id: 0x7,
+        id: 0x07,
         name: "stall_endpoint_out\0",
         doc: "\0", //"Stall the OUT endpoint with the provided endpoint number.\0",
         in_signature: "<B\0",
@@ -891,7 +961,7 @@ pub static VERBS: [Verb; 17] = [
         out_param_names: "*\0",
     },
     Verb {
-        id: 0xd,
+        id: 0x08,
         name: "clear_feature_endpoint_halt\0",
         doc: "\0", //"Clear a halt condition on the target endpoint address.\0",
         in_signature: "<BB\0",
@@ -901,7 +971,7 @@ pub static VERBS: [Verb; 17] = [
     },
     // - data transfer --
     Verb {
-        id: 0x8,
+        id: 0x09,
         name: "read_endpoint\0",
         doc: "\0", //"Read a packet from an OUT endpoint.\0",
         in_signature: "<B\0",
@@ -910,7 +980,7 @@ pub static VERBS: [Verb; 17] = [
         out_param_names: "read_data\0",
     },
     Verb {
-        id: 0x9,
+        id: 0x0a,
         name: "ep_out_prime_receive\0",
         doc: "\0", //"Prepare OUT endpoint to receive a single packet.\0",
         in_signature: "<B\0",
@@ -919,7 +989,16 @@ pub static VERBS: [Verb; 17] = [
         out_param_names: "*\0",
     },
     Verb {
-        id: 0xa,
+        id: 0x0b,
+        name: "write_control_endpoint\0",
+        doc: "\0", //"Write a packet to an IN endpoint.\0",
+        in_signature: "<BHB*X\0",
+        in_param_names: "endpoint_number, requested_length, blocking, payload\0",
+        out_signature: "\0",
+        out_param_names: "*\0",
+    },
+    Verb {
+        id: 0x0c,
         name: "write_endpoint\0",
         doc: "\0", //"Write a packet to an IN endpoint.\0",
         in_signature: "<BB*X\0",
@@ -929,7 +1008,7 @@ pub static VERBS: [Verb; 17] = [
     },
     // - interrupts --
     Verb {
-        id: 0xb,
+        id: 0x0d,
         name: "get_interrupt_events\0",
         doc: "\0", //"Return the most recent driver messages.\0",
         in_signature: "\0",
@@ -938,7 +1017,7 @@ pub static VERBS: [Verb; 17] = [
         out_param_names: "type, endpoint\0",
     },
     Verb {
-        id: 0xc,
+        id: 0x0e,
         name: "get_nak_status\0",
         doc: "\0", //"Return endpoint NAK status.\0",
         in_signature: "\0",
@@ -986,25 +1065,25 @@ impl GreatDispatch for Moondancer {
         response_buffer: [u8; LIBGREAT_MAX_COMMAND_SIZE],
     ) -> GreatResult<GreatResponse> {
         match verb_number {
-            0x0 => {
+            0x00 => {
                 // moondancer::connect
                 let iter = self.connect(arguments)?;
                 let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
-            0x1 => {
+            0x01 => {
                 // moondancer::disconnect
                 let iter = self.disconnect(arguments)?;
                 let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
-            0x2 => {
+            0x02 => {
                 // moondancer::bus_reset
                 let iter = self.bus_reset(arguments)?;
                 let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
-            0x3 => {
+            0x03 => {
                 // moondancer::read_control
                 ladybug::trace(Channel::A, Bit::A_READ_CONTROL, || {
                     let iter = self.read_control(arguments)?;
@@ -1012,31 +1091,37 @@ impl GreatDispatch for Moondancer {
                     Ok(response)
                 })
             }
-            0x4 => {
+            0x04 => {
                 // moondancer::set_address
                 let iter = self.set_address(arguments)?;
                 let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
-            0x5 => {
+            0x05 => {
                 // moondancer::configure_endpoints
                 let iter = self.configure_endpoints(arguments)?;
                 let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
-            0x6 => {
+            0x06 => {
                 // moondancer::stall_endpoint_in
                 let iter = self.stall_endpoint_in(arguments)?;
                 let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
-            0x7 => {
+            0x07 => {
                 // moondancer::stall_endpoint_out
                 let iter = self.stall_endpoint_out(arguments)?;
                 let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
-            0x8 => {
+            0x08 => {
+                // moondancer::clear_feature_endpoint_halt
+                let iter = self.clear_feature_endpoint_halt(arguments)?;
+                let response = iter_to_response(iter, response_buffer);
+                Ok(response)
+            }
+            0x09 => {
                 // moondancer::read_endpoint
                 ladybug::trace(Channel::A, Bit::A_READ_ENDPOINT, || {
                     let iter = self.read_endpoint(arguments)?;
@@ -1044,7 +1129,7 @@ impl GreatDispatch for Moondancer {
                     Ok(response)
                 })
             }
-            0x9 => {
+            0x0a => {
                 // moondancer::ep_out_prime_receive
                 ladybug::trace(Channel::A, Bit::A_PRIME_RECEIVE, || {
                     let iter = self.ep_out_prime_receive(arguments)?;
@@ -1052,7 +1137,15 @@ impl GreatDispatch for Moondancer {
                     Ok(response)
                 })
             }
-            0xa => {
+            0x0b => {
+                // moondancer::write_control_endpoint
+                ladybug::trace(Channel::A, Bit::A_WRITE_ENDPOINT, || {
+                    let iter = self.write_control_endpoint(arguments)?;
+                    let response = iter_to_response(iter, response_buffer);
+                    Ok(response)
+                })
+            }
+            0x0c => {
                 // moondancer::write_endpoint
                 ladybug::trace(Channel::A, Bit::A_WRITE_ENDPOINT, || {
                     let iter = self.write_endpoint(arguments)?;
@@ -1060,7 +1153,7 @@ impl GreatDispatch for Moondancer {
                     Ok(response)
                 })
             }
-            0xb => {
+            0x0d => {
                 // moondancer::get_interrupt_events
                 ladybug::trace(Channel::A, Bit::A_GET_EVENTS, || {
                     let iter = self.get_interrupt_events(arguments)?;
@@ -1068,15 +1161,9 @@ impl GreatDispatch for Moondancer {
                     Ok(response)
                 })
             }
-            0xc => {
+            0x0e => {
                 // moondancer::get_nak_status
                 let iter = self.get_nak_status(arguments)?;
-                let response = iter_to_response(iter, response_buffer);
-                Ok(response)
-            }
-            0xd => {
-                // moondancer::clear_feature_endpoint_halt
-                let iter = self.clear_feature_endpoint_halt(arguments)?;
                 let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
