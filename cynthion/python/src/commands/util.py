@@ -34,6 +34,14 @@ run the following command in the package directory:
 
     make assets
 """
+_MSG_UNSUPPORTED_FIRMWARE = """
+There is no prebuilt Apollo firmware available for Cynthion r{}.{}.
+
+Please see the developer documentation for instructions on how to build
+and flash your own:
+
+    https://cynthion.readthedocs.io/en/latest/hardware/bringup_guide.html
+"""
 
 _MSG_SOURCE_INSTALL = """
 If you have installed the 'cynthion' Python package from source please
@@ -138,6 +146,12 @@ def flash_mcu_firmware(device, filename):
     """Flashes the given filename to the device's Microcontroller"""
     with open(filename, 'rb') as f:
         firmware = f.read()
+
+    # Check for unsupported hardware
+    major, minor = device.detect_connected_version()
+    if major == 0 and minor < 6:
+        logging.error(_MSG_UNSUPPORTED_FIRMWARE.format(major, minor))
+        sys.exit(1)
 
     # Release Apollo debugger
     device.close()
