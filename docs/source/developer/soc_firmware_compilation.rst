@@ -1,6 +1,6 @@
-========================
-SoC Firmware Compilation
-========================
+===================================
+Facedancer SoC Firmware Compilation
+===================================
 
 Prerequisites
 -------------

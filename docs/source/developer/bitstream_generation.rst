@@ -10,8 +10,8 @@ Cynthion Gateware
 
 The Cynthion repository contains gateware for two designs:
 
-- ``analyzer`` -- USB analyzer for using Cynthion with Packetry.
-- ``soc``      -- System-on-Chip for using Cynthion with Facedancer.
+- ``analyzer``   -- USB analyzer for using Cynthion with Packetry.
+- ``facedancer`` -- System-on-Chip for using Cynthion with Facedancer.
 
 Bitstreams can be generated from the ``cynthion`` Python package sub-directory as follows:
 
@@ -26,8 +26,8 @@ Analyzer Gateware
     # generate bitstream
     python3 -m cynthion.gateware.analyzer.top
 
-SoC Gateware
-^^^^^^^^^^^^
+Facedancer SoC Gateware
+^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: sh
 
@@ -35,7 +35,7 @@ SoC Gateware
     cd cynthion/python/
 
     # generate bitstream
-    python3 -m cynthion.gateware.soc.top
+    python3 -m cynthion.gateware.facedancer.top
 
 Additional Options
 ^^^^^^^^^^^^^^^^^^
