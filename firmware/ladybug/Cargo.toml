@@ -18,5 +18,6 @@ bench = false
 [features]
 disable = []
 enable = []
+nightly = []
 
 [dependencies]

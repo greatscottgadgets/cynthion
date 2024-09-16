@@ -12,5 +12,8 @@ documentation = "https://cynthion.readthedocs.io"
 edition = "2021"
 rust-version = "1.68"
 
+[features]
+nightly = []
+
 [dependencies]
 static-toml = { version = "1.0.1" }

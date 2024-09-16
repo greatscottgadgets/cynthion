@@ -132,18 +132,17 @@ macro_rules! impl_usb {
                     self.device_speed = device_speed;
                     match device_speed {
                         Speed::High => {
-                            self.controller.full_speed_only().write(|w| w.full_speed_only().bit(false));
-                            self.controller.low_speed_only().write(|w| w.low_speed_only().bit(false));
+                            self.controller.full_speed_only().modify(|_, w| w.full_speed_only().bit(false));
+                            self.controller.low_speed_only().modify(|_, w| w.low_speed_only().bit(false));
                         },
                         Speed::Full => {
-                            self.controller.full_speed_only().write(|w| w.full_speed_only().bit(true));
-                            self.controller.low_speed_only().write(|w| w.low_speed_only().bit(false));
+                            self.controller.full_speed_only().modify(|_, w| w.full_speed_only().bit(true));
+                            self.controller.low_speed_only().modify(|_, w| w.low_speed_only().bit(false));
                         },
-                        /*Speed::Low => {
-                            // FIXME still connects at full speed
-                            self.controller.full_speed_only.write(|w| w.full_speed_only().bit(false));
-                            self.controller.low_speed_only.write(|w| w.low_speed_only().bit(true));
-                        }*/
+                        Speed::Low => {
+                            self.controller.full_speed_only().modify(|_, w| w.full_speed_only().bit(false));
+                            self.controller.low_speed_only().modify(|_, w| w.low_speed_only().bit(true));
+                        }
                         _ => {
                             log::warn!("Requested unsupported device speed '{:?}'. Ignoring request and setting device to 'Speed::High'.", device_speed);
                             self.device_speed = Speed::High;
@@ -250,19 +249,19 @@ macro_rules! impl_usb {
                 /// Clear the PID toggle bit for the given endpoint address.
                 ///
                 /// TODO this works most of the time, but not always ...
-                /// TODO pass in endpoint number and direction separately
                 ///
                 /// Also see: <https://github.com/greatscottgadgets/luna/issues/166>
-                fn clear_feature_endpoint_halt(&self, endpoint_address: u8) {
-                    let endpoint_number = endpoint_address & 0xf;
+                fn clear_feature_endpoint_halt(&self, endpoint_number: u8, direction: Direction) {
+                    match direction {
+                        Direction::HostToDevice => { // OUT
+                            self.ep_out.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
+                            self.ep_out.pid().write(|w| w.pid().bit(false));
 
-                    if (endpoint_address & 0x80) == 0 {  // HostToDevice
-                        self.ep_out.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
-                        self.ep_out.pid().write(|w| w.pid().bit(false));
-
-                    } else { // DeviceToHost
-                        self.ep_in.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
-                        self.ep_in.pid().write(|w| w.pid().bit(false));
+                        }
+                        Direction::DeviceToHost => { // IN
+                            self.ep_in.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
+                            self.ep_in.pid().write(|w| w.pid().bit(false));
+                        }
                     }
                 }
             }

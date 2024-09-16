@@ -26,8 +26,8 @@ pub trait UsbDriverOperations {
     /// Stall the given OUT endpoint number.
     fn stall_endpoint_out(&self, endpoint_number: u8);
 
-    /// Clear any halt condition on the target endpoint address, and clear the data toggle bit.
-    fn clear_feature_endpoint_halt(&self, endpoint_address: u8);
+    /// Clear a halt condition on the target endpoint address.
+    fn clear_feature_endpoint_halt(&self, endpoint_number: u8, direction: Direction);
 }
 
 /// These are used to deal with the situation where we need to block
