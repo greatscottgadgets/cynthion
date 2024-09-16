@@ -451,14 +451,17 @@ macro_rules! impl_usb {
                     unsafe { self.set_tx_ack_active(endpoint_number); }
 
                     // check if output FIFO is empty
-                    // FIXME return a GreatError::DeviceOrResourceBusy on timeout
                     let mut timeout = 0;
                     while self.ep_in.have().read().have().bit() {
                         if timeout == 0 {
                             log::warn!("  {} clear tx", stringify!($USBX));
                         } else if timeout > DEFAULT_TIMEOUT {
                             self.ep_in.reset().write(|w| w.reset().bit(true));
+                            unsafe {
+                                self.clear_tx_ack_active(endpoint_number);
+                            }
                             log::error!("  {} clear tx timeout", stringify!($USBX));
+                            return 0;
                         }
                         timeout += 1;
                     }
@@ -470,6 +473,9 @@ macro_rules! impl_usb {
 
                         // check if we've written a packet yet and need to send it
                         if bytes_written % packet_size == 0 {
+                            unsafe {
+                                self.set_tx_ack_active(endpoint_number);
+                            }
                             // prime the IN endpoint to send it
                             self.ep_in
                                 .epno()
@@ -477,15 +483,18 @@ macro_rules! impl_usb {
 
                             // wait for transmission to complete
                             let mut timeout = 0;
-                            while self.ep_in.have().read().have().bit() {
+                            //while self.ep_in.have().read().have().bit() {
+                            while unsafe { self.is_tx_ack_active(endpoint_number) } {
                                 timeout += 1;
                                 if timeout > DEFAULT_TIMEOUT {
+                                    unsafe {
+                                        self.clear_tx_ack_active(endpoint_number);
+                                    }
                                     log::error!(
                                         "{}::write timed out after {} bytes",
                                         stringify!($USBX),
                                         bytes_written
                                     );
-                                    // TODO return an error
                                     return bytes_written;
                                 }
                             }
@@ -503,6 +512,8 @@ macro_rules! impl_usb {
                     //      - no need to prime, fifo is empty
                     //   d. A full packet is sent, followed by a zlp
                     //      - fifo is empty, but need to prime to send a zlp so host know it's EOT
+                    //   e. An emptry packet is sent, followed by a zlp
+                    //      - fifo is empty, but need to prime to send a zlp so host know it's EOT
                     //
                     let is_partial_packet = bytes_written % packet_size != 0;
                     let is_requested_length = if let Some(requested_length) = requested_length {
@@ -510,11 +521,15 @@ macro_rules! impl_usb {
                     } else {
                         false
                     };
+                    let is_zlp = bytes_written == 0;
 
-                    if !is_partial_packet && is_requested_length {
+                    if !is_partial_packet && is_requested_length && !is_zlp {
                         // c. already sent, no zlp required
                     } else {
-                        // a. b. d.
+                        // a. b. d. e.
+                        unsafe {
+                            self.set_tx_ack_active(endpoint_number);
+                        }
                         self.ep_in
                             .epno()
                             .write(|w| unsafe { w.epno().bits(endpoint_number) });
