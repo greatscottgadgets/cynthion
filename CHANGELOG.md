@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+
+## [0.1.6] - 2024-09-19
+### Added
+* Improved error messages.
+* New `make assets` rule to automatically populate the cynthion Python package `assets/` directory for source installs.
+### Fixed
+* Compilation error and warnings when compiling on rustc `>= 1.8.0`.
+* A number of USB Proxy bugs (#71 #134 #156).
+
+
 ## [0.1.5] - 2024-08-20
 ### Added
 * Windows support for Facedancer and USB Proxy.
