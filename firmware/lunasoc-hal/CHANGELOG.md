@@ -8,6 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.1.6] - 2024-09-19
+### Added
+- Support USB Low-speed operation.
+### Changed
+- Refactor `clear_feature_endpoint_halt()` to take an endpoint number and direction rather than endpoint address.
+### Fixed
+- ZLP was not being sent when sending an empty USB packet.
+
 ## [0.1.5] - 2024-08-20
 ### Fixed
 - Control transactions could break if the requested length was a multiple of the packet size.
@@ -16,6 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.5...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.6...HEAD
+[0.1.6]: https://github.com/greatscottgadgets/cynthion/compare/0.1.5...0.1.6
 [0.1.5]: https://github.com/greatscottgadgets/cynthion/compare/0.1.4...0.1.5
 [0.1.1]: https://github.com/greatscottgadgets/cynthion/releases/tag/0.1.1

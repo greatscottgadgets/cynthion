@@ -1,6 +1,6 @@
 [package]
 name = "lunasoc-hal"
-version = "0.1.5"
+version = "0.1.6"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
 description = "Hardware Abstraction Layer implementation for LunaSoC cores"
