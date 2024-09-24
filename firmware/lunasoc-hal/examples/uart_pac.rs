@@ -4,7 +4,7 @@
 use panic_halt as _;
 use riscv_rt::entry;
 
-use moondancer_pac as pac;
+use facedancer_pac as pac;
 
 const SYSTEM_CLOCK_FREQUENCY: u32 = pac::clock::sysclk();
 

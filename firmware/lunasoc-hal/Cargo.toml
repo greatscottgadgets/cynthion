@@ -33,10 +33,10 @@ default = [
 
 # select softcore
 minerva = [
-    "moondancer-pac/minerva",
+    "facedancer-pac/minerva",
 ]
 vexriscv = [
-    "moondancer-pac/vexriscv",
+    "facedancer-pac/vexriscv",
 ]
 
 # use nightly features
@@ -63,7 +63,7 @@ smolusb = { version = "0.1.6", path = "../smolusb", optional = true }
 # - dev-dependencies ----------------------------------------------------------
 
 [dev-dependencies]
-moondancer-pac = { version = "0.1.1", path = "../moondancer-pac", default-features = false, features = ["critical-section", "rt"]}
+facedancer-pac = { version = "0.1.1", path = "../facedancer-pac", default-features = false, features = ["critical-section", "rt"]}
 panic-halt = "=0.2.0"
 riscv = { version = "=0.10.1", features = ["critical-section-single-hart"] }
 riscv-rt = { version = "=0.11.0" }
@@ -73,24 +73,24 @@ riscv-rt = { version = "=0.11.0" }
 
 [[example]]
 name = "blinky"
-required-features = ["moondancer-pac/rt"]
+required-features = ["facedancer-pac/rt"]
 
 [[example]]
 name = "blinky_pac"
-required-features = ["moondancer-pac/rt"]
+required-features = ["facedancer-pac/rt"]
 
 [[example]]
 name = "interrupts"
-required-features = ["moondancer-pac/rt"]
+required-features = ["facedancer-pac/rt"]
 
 [[example]]
 name = "interrupts_pac"
-required-features = ["moondancer-pac/rt"]
+required-features = ["facedancer-pac/rt"]
 
 [[example]]
 name = "uart"
-required-features = ["moondancer-pac/rt"]
+required-features = ["facedancer-pac/rt"]
 
 [[example]]
 name = "uart_pac"
-required-features = ["moondancer-pac/rt"]
+required-features = ["facedancer-pac/rt"]
