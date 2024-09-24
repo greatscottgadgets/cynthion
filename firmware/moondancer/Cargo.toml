@@ -38,10 +38,10 @@ ladybug = ["ladybug/enable"]
 
 # select softcore
 minerva = [
-    "moondancer-pac/minerva",
+    "facedancer-pac/minerva",
 ]
 vexriscv = [
-    "moondancer-pac/vexriscv",
+    "facedancer-pac/vexriscv",
 ]
 vexriscv_dcache = []
 
