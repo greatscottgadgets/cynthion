@@ -17,7 +17,7 @@ facedancer:
 
 svd:
 	mkdir -p build/gensvd/
-	python3 -m cynthion.gateware.facedancer.top --generate-svd > build/gensvd/lunasoc.svd
+	python3 -m cynthion.gateware.facedancer.top --generate-svd > build/gensvd/facedancer.svd
 
 
 # - helpers -------------------------------------------------------------------
