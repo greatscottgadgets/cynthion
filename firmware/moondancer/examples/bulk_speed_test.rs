@@ -63,9 +63,9 @@ extern "C" fn MachineExternal() {
 
         // USB0 BusReset
         pac::Interrupt::USB0 => {
-            usb0.controller
+            usb0.device
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
 
             usb0.bus_reset();
             dispatch_event(InterruptEvent::Usb(Target, UsbEvent::BusReset));
@@ -75,9 +75,9 @@ extern "C" fn MachineExternal() {
         pac::Interrupt::USB0_EP_CONTROL => {
             usb0.ep_control
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
 
-            let endpoint = usb0.ep_control.epno().read().bits() as u8;
+            let endpoint = usb0.ep_control.status().read().epno().bits() as u8;
             let mut buffer = [0_u8; 8];
             let _bytes_read = usb0.read_control(&mut buffer);
             let setup_packet = SetupPacket::from(buffer);
@@ -91,10 +91,10 @@ extern "C" fn MachineExternal() {
         pac::Interrupt::USB0_EP_IN => {
             usb0.ep_in
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
 
             // TODO something a little safer would be nice
-            let endpoint = usb0.ep_in.epno().read().bits() as u8;
+            let endpoint = usb0.ep_in.status().read().epno().bits() as u8;
             unsafe {
                 usb0.clear_tx_ack_active(endpoint);
             }
@@ -109,9 +109,9 @@ extern "C" fn MachineExternal() {
         pac::Interrupt::USB0_EP_OUT => {
             usb0.ep_out
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
 
-            let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
+            let endpoint = usb0.ep_out.status().read().epno().bits() as u8;
 
             // discard packets from Bulk OUT transfer endpoint
             /*if endpoint == 1 {
@@ -189,6 +189,7 @@ fn main_loop() -> GreatResult<()> {
             device_qualifier_descriptor: Some(USB_DEVICE_QUALIFIER_DESCRIPTOR),
             string_descriptor_zero: USB_STRING_DESCRIPTOR_0,
             string_descriptors: USB_STRING_DESCRIPTORS,
+            microsoft10: None, // TODO
         }
         .set_total_lengths(), // TODO figure out a better solution
     );
@@ -245,7 +246,7 @@ fn main_loop() -> GreatResult<()> {
             use moondancer::{event::InterruptEvent::*, UsbInterface::Target};
             use smolusb::event::UsbEvent::*;
 
-            leds.output().write(|w| unsafe { w.output().bits(0) });
+            leds.output().write(|w| unsafe { w.bits(0) });
 
             //log::info!("{:?}", event);
 
@@ -270,7 +271,7 @@ fn main_loop() -> GreatResult<()> {
 
                     if endpoint == 1 {
                         leds.output()
-                            .write(|w| unsafe { w.output().bits(0b11_1000) });
+                            .write(|w| unsafe { w.bits(0b11_1000) });
                         if counter % 100 == 0 {
                             log::trace!(
                                 "{:?} .. {:?}",
@@ -325,7 +326,7 @@ fn main_loop() -> GreatResult<()> {
                 // Usb0 transfer complete
                 Usb(Target, SendComplete(_endpoint)) => {
                     leds.output()
-                        .write(|w| unsafe { w.output().bits(0b00_0111) });
+                        .write(|w| unsafe { w.bits(0b00_0111) });
                 }
 
                 // Error Message
@@ -375,28 +376,28 @@ fn test_in_speed(
         data: &[u8; smolusb::EP_MAX_PACKET_SIZE],
     ) -> bool {
         let mut did_reset = false;
-        if usb0.ep_in.have().read().have().bit() {
-            usb0.ep_in.reset().write(|w| w.reset().bit(true));
+        if usb0.ep_in.status().read().have().bit() {
+            usb0.ep_in.reset().write(|w| w.high().bit(true));
             did_reset = true;
         }
         // 5.033856452242371MB/s.
         for byte in data {
-            usb0.ep_in.data().write(|w| unsafe { w.data().bits(*byte) });
+            usb0.ep_in.data().write(|w| unsafe { w.byte().bits(*byte) });
         }
         // 6.392375785142406MB/s. - no memory access
         /*for n in 0..smolusb::EP_MAX_PACKET_SIZE {
             usb0.ep_in.data.write(|w| unsafe { w.data().bits((n % 256) as u8) });
         }*/
         usb0.ep_in
-            .epno()
-            .write(|w| unsafe { w.epno().bits(endpoint & 0xf) });
+            .endpoint()
+            .write(|w| unsafe { w.number().bits(endpoint & 0xf) });
         did_reset
     }
 
     // wait for fifo endpoint to be idle
     let ((), t_flush) = moondancer::profile!(
         let mut timeout = 100;
-        while !usb0.ep_in.idle().read().idle().bit() && timeout > 0 {
+        while !usb0.ep_in.status().read().idle().bit() && timeout > 0 {
             timeout -= 1;
         }
     );

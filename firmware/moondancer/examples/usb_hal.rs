@@ -75,9 +75,9 @@ extern "C" fn MachineExternal() {
 
         // USB0 BusReset
         pac::Interrupt::USB0 => {
-            usb0.controller
+            usb0.device
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
 
             // handle bus reset in interrupt handler for lowest latency
             usb0.bus_reset();
@@ -87,9 +87,9 @@ extern "C" fn MachineExternal() {
         pac::Interrupt::USB0_EP_CONTROL => {
             usb0.ep_control
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
 
-            let endpoint = usb0.ep_control.epno().read().bits() as u8;
+            let endpoint = usb0.ep_control.status().read().epno().bits() as u8;
             let mut buffer = [0_u8; 8];
             let _bytes_read = usb0.read_control(&mut buffer);
             let setup_packet = SetupPacket::from(buffer);
@@ -102,10 +102,10 @@ extern "C" fn MachineExternal() {
         pac::Interrupt::USB0_EP_IN => {
             usb0.ep_in
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
 
             // TODO something a little safer would be nice
-            let endpoint = usb0.ep_in.epno().read().bits() as u8;
+            let endpoint = usb0.ep_in.status().read().epno().bits() as u8;
             unsafe {
                 usb0.clear_tx_ack_active(endpoint);
             }
@@ -119,9 +119,9 @@ extern "C" fn MachineExternal() {
         pac::Interrupt::USB0_EP_OUT => {
             usb0.ep_out
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
 
-            let endpoint = usb0.ep_out.data_ep().read().bits() as u8;
+            let endpoint = usb0.ep_out.status().read().epno().bits() as u8;
             dispatch_event(InterruptEvent::Usb(
                 Target,
                 UsbEvent::ReceivePacket(endpoint),
@@ -185,6 +185,7 @@ fn main_loop() -> GreatResult<()> {
             device_qualifier_descriptor: Some(USB_DEVICE_QUALIFIER_DESCRIPTOR),
             string_descriptor_zero: USB_STRING_DESCRIPTOR_0,
             string_descriptors: USB_STRING_DESCRIPTORS,
+            microsoft10: None, // TODO
         }, //.set_total_lengths() // TODO figure out a better solution
     );
 

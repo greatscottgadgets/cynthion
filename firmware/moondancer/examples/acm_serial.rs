@@ -7,6 +7,7 @@
 ///
 ///     picocom --imap crcrlf -b 115200 /dev/ttyACM0
 ///
+
 use log::{error, info};
 
 use moondancer::event::InterruptEvent;
@@ -19,8 +20,8 @@ use smolusb::control::Control;
 use smolusb::device::{Descriptors, Speed};
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Direction, Request, RequestType, SetupPacket};
-use smolusb::traits::UnsafeUsbDriverOperations;
 use smolusb::traits::{ReadControl, ReadEndpoint, UsbDriverOperations, WriteEndpoint};
+use smolusb::traits::UnsafeUsbDriverOperations;
 
 use pac::csr::interrupt;
 
@@ -67,7 +68,7 @@ extern "C" fn MachineExternal() {
 
     // debug
     leds.output()
-        .write(|w| unsafe { w.output().bits(interrupt::bits_pending() as u8) });
+        .write(|w| unsafe { w.bits(interrupt::bits_pending() as u8) });
 
     // get pending interrupt
     let pending = match pac::csr::interrupt::pending() {
@@ -84,14 +85,14 @@ extern "C" fn MachineExternal() {
             usb0.bus_reset();
 
             // prime the usb OUT endpoints we'll be using
-            usb0.ep_out_prime_receive(4);
+            //usb0.ep_out_prime_receive(4);
 
-            usb0.controller
+            usb0.device
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
         }
         pac::Interrupt::USB0_EP_CONTROL => {
-            let endpoint = usb0.ep_control.epno().read().bits() as u8;
+            let endpoint = usb0.ep_control.status().read().epno().bits() as u8;
             let mut buffer = [0_u8; 8];
             let _bytes_read = usb0.read_control(&mut buffer);
             let setup_packet = SetupPacket::from(buffer);
@@ -101,14 +102,12 @@ extern "C" fn MachineExternal() {
             ));
             usb0.ep_control
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
         }
         pac::Interrupt::USB0_EP_IN => {
-            let endpoint = usb0.ep_in.epno().read().bits() as u8;
+            let endpoint = usb0.ep_in.status().read().epno().bits() as u8;
 
-            unsafe {
-                usb0.clear_tx_ack_active(endpoint);
-            }
+            unsafe { usb0.clear_tx_ack_active(endpoint); }
 
             dispatch_event(InterruptEvent::Usb(
                 Target,
@@ -116,17 +115,17 @@ extern "C" fn MachineExternal() {
             ));
             usb0.ep_in
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
         }
         pac::Interrupt::USB0_EP_OUT => {
-            let endpoint = usb0.ep_out.epno().read().bits() as u8;
+            let endpoint = usb0.ep_out.status().read().epno().bits() as u8;
             dispatch_event(InterruptEvent::Usb(
                 Target,
                 UsbEvent::ReceivePacket(endpoint),
             ));
             usb0.ep_out
                 .ev_pending()
-                .modify(|r, w| w.pending().bit(r.pending().bit()));
+                .modify(|r, w| w.mask().bit(r.mask().bit()));
         }
 
         // - Unhandled Interrupt --
@@ -166,26 +165,27 @@ fn main() -> ! {
     let mut control_usb0 = Control::<_, MAX_CONTROL_RESPONSE_SIZE>::new(
         0,
         Descriptors {
+            // required
             device_speed: DEVICE_SPEED,
             device_descriptor: acm::DEVICE_DESCRIPTOR,
             configuration_descriptor: acm::CONFIGURATION_DESCRIPTOR_0,
-            other_speed_configuration_descriptor: Some(acm::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0),
-            device_qualifier_descriptor: Some(acm::DEVICE_QUALIFIER_DESCRIPTOR),
             string_descriptor_zero: acm::STRING_DESCRIPTOR_0,
             string_descriptors: acm::STRING_DESCRIPTORS,
+            // optional
+            other_speed_configuration_descriptor: Some(acm::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0),
+            device_qualifier_descriptor: Some(acm::DEVICE_QUALIFIER_DESCRIPTOR),
+            microsoft10: None, // TODO
         }
         .set_total_lengths(),
     );
 
     // disconnect device
     usb0.disconnect();
-    unsafe {
-        riscv::asm::delay(6_000_000);
-    }
+    unsafe { riscv::asm::delay(6_000_000); }
 
     // connect device
     usb0.connect(DEVICE_SPEED);
-    let speed: Speed = usb0.controller.speed().read().speed().bits().into();
+    let speed: Speed = usb0.device.status().read().speed().bits().into();
     info!("Connected USB0 device: {:?}", speed);
 
     // enable interrupts
@@ -208,9 +208,9 @@ fn main() -> ! {
 
     loop {
         if let Some(event) = EVENT_QUEUE.dequeue() {
-            use smolusb::event::UsbEvent::*;
             use InterruptEvent::Usb;
             use UsbInterface::Target;
+            use smolusb::event::UsbEvent::*;
 
             match event {
                 // Usb0 received a control event
@@ -245,7 +245,7 @@ fn main() -> ! {
                     usb0.write(4, rx_buffer[0..bytes_read].iter().cloned());
                 }
 
-                // On send complete, prime OUT ep 0x04 to receive next packet
+                // Handle send complete, prime OUT ep 0x04 to receive next packet
                 Usb(Target, SendComplete(4)) => {
                     usb0.ep_out_prime_receive(4);
                 }
@@ -277,10 +277,8 @@ where
             // In testing, macOS and Linux are fine will all requests being stalled; while Windows
             // seems to be happy as long as SET_LINE_CODING is implemented. We'll implement only
             // that, and stall every other handler.
-            match (direction, &class_request) {
-                (Direction::HostToDevice, SetLineCoding) => {
-                    // 32
-                    // has 7 bytes of data
+            match (direction, class_request) {
+                (Direction::HostToDevice, SetLineCoding) => { // 32 - comes with 7 bytes of data
                     usb.ep_out_prime_receive(4);
                 }
                 // we can just stall the reset

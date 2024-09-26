@@ -94,6 +94,9 @@ name = "hello"
 name = "interrupts"
 
 [[example]]
+name = "irq"
+
+[[example]]
 name = "spiflash"
 
 [[example]]
