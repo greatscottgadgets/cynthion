@@ -1,17 +1,18 @@
 pub use crate::pac;
 pub use lunasoc_hal::*;
 
-lunasoc_hal::impl_gpio! {
-    Gpio0: pac::GPIOA,
-}
+/*lunasoc_hal::impl_gpio! {
+    Gpio0: pac::GPIO0,
+}*/
 
 lunasoc_hal::impl_serial! {
-    Serial0: pac::UART,
+    Serial0: pac::UART0,
     Serial1: pac::UART1,
 }
 
 lunasoc_hal::impl_timer! {
-    Timer0: pac::TIMER,
+    Timer0: pac::TIMER0,
+    Timer1: pac::TIMER1,
 }
 
 pub use lunasoc_hal::smolusb;

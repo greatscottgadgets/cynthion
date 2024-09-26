@@ -28,7 +28,7 @@ impl Bit {
 
 #[allow(clippy::needless_pass_by_value)]
 #[allow(clippy::missing_panics_doc)]
-pub fn init(_gpioa: pac::GPIOA, _gpiob: pac::GPIOB) {
+pub fn init(_gpioa: pac::GPIO0, _gpiob: pac::GPIO1) {
     #[cfg(feature = "ladybug")]
     unsafe {
         use crate::debug::ladybug_impl::{LadybugCynthion, LADYBUG_CYNTHION};
