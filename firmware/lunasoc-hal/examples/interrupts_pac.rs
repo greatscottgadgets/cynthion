@@ -10,17 +10,16 @@ use pac::csr;
 #[entry]
 fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
-    let timer = &peripherals.TIMER;
+    let timer = &peripherals.TIMER0;
 
     // configure and enable timer
-    timer.reload().write(|w| unsafe { w.reload().bits(0) });
     timer
-        .ctr()
-        .write(|w| unsafe { w.ctr().bits(pac::clock::sysclk() / 2) });
-    timer.en().write(|w| w.en().bit(true));
+        .reload()
+        .write(|w| unsafe { w.value().bits(pac::clock::sysclk() / 2) });
+    timer.enable().write(|w| w.enable().bit(true));
 
     // enable timer events
-    timer.ev_enable().write(|w| w.enable().bit(true));
+    timer.ev_enable().write(|w| unsafe { w.mask().bits(1) });
 
     // enable interrupts
     unsafe {
@@ -31,7 +30,7 @@ fn main() -> ! {
         riscv::register::mie::set_mext();
 
         // write csr: enable timer interrupt
-        csr::interrupt::enable(pac::Interrupt::TIMER)
+        csr::interrupt::enable(pac::Interrupt::TIMER0)
     }
 
     loop {
@@ -51,18 +50,17 @@ unsafe fn MachineExternal() {
 
     let peripherals = unsafe { pac::Peripherals::steal() };
     let leds = &peripherals.LEDS;
-    let timer = &peripherals.TIMER;
+    let timer = &peripherals.TIMER0;
 
-    if csr::interrupt::is_pending(pac::Interrupt::TIMER) {
+    if csr::interrupt::is_pending(pac::Interrupt::TIMER0) {
         // clear interrupt
-        let pending = timer.ev_pending().read().pending().bit();
-        timer.ev_pending().write(|w| w.pending().bit(pending));
+        timer.ev_pending().modify(|r, w| w.mask().bits(r.mask().bits()));
 
         // blinkenlights
         if TOGGLE {
-            leds.output().write(|w| unsafe { w.output().bits(255) });
+            leds.output().write(|w| unsafe { w.bits(255) });
         } else {
-            leds.output().write(|w| unsafe { w.output().bits(0) });
+            leds.output().write(|w| unsafe { w.bits(0) });
         }
         TOGGLE = !TOGGLE;
     } else {
@@ -83,15 +81,15 @@ unsafe fn ExceptionHandler(_trap_frame: &riscv_rt::TrapFrame) -> ! {
 
 fn uart_tx(string: &str) {
     let peripherals = unsafe { pac::Peripherals::steal() };
-    let uart = &peripherals.UART;
+    let uart = &peripherals.UART0;
 
     for c in string.chars() {
-        while uart.tx_rdy().read().tx_rdy().bit() == false {
+        while uart.tx_ready().read().txe().bit() == false {
             unsafe {
                 riscv::asm::nop();
             }
         }
         uart.tx_data()
-            .write(|w| unsafe { w.tx_data().bits(c as u8) })
+            .write(|w| unsafe { w.data().bits(c as u8) })
     }
 }
