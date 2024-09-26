@@ -5,7 +5,7 @@
 #![allow(clippy::must_use_candidate)]
 
 // modules
-pub mod gpio;
+//pub mod gpio;
 pub mod serial;
 pub mod timer;
 #[cfg(feature = "usb")]
