@@ -117,12 +117,12 @@ impl<'a> Firmware<'a> {
 
         // enable ApolloAdvertiser to disconnect the Cynthion USB2 control port from Apollo
         let advertiser = peripherals.ADVERTISER;
-        advertiser.enable().write(|w| w.enable().bit(true));
+        advertiser.control().write(|w| w.enable().bit(true));
 
         // get Cynthion hardware revision information from the SoC
         let info = &peripherals.INFO;
-        let board_major = info.version_major().read().bits() as u8;
-        let board_minor = info.version_minor().read().bits() as u8;
+        let board_major = info.version().read().major().bits() as u8;
+        let board_minor = info.version().read().minor().bits() as u8;
 
         // initialize logging
         moondancer::log::set_port(moondancer::log::Port::Both);
@@ -136,7 +136,7 @@ impl<'a> Firmware<'a> {
         info!("Logging initialized");
 
         // initialize ladybug
-        moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
+        moondancer::debug::init(peripherals.GPIO0, peripherals.GPIO1);
 
         // get Cynthion SPI Flash uuid from the SoC
         let uuid = util::read_flash_uuid(&peripherals.SPI0).unwrap_or([0_u8; 8]);
@@ -233,7 +233,7 @@ impl<'a> Firmware<'a> {
         // leds: starting up
         self.leds
             .output()
-            .write(|w| unsafe { w.output().bits(1 << 2) });
+            .write(|w| unsafe { w.bits(1 << 2) });
 
         // connect usb2
         self.usb2.connect(DEVICE_SPEED);
@@ -276,7 +276,7 @@ impl<'a> Firmware<'a> {
             // leds: main loop is responsive, interrupts are firing
             self.leds
                 .output()
-                .write(|w| unsafe { w.output().bits((counter % 0xff) as u8) });
+                .write(|w| unsafe { w.bits((counter % 0xff) as u8) });
 
             if queue_length > max_queue_length {
                 max_queue_length = queue_length;
@@ -297,7 +297,7 @@ impl<'a> Firmware<'a> {
                 // leds: event loop is active
                 self.leds
                     .output()
-                    .write(|w| unsafe { w.output().bits(1 << 0) });
+                    .write(|w| unsafe { w.bits(1 << 0) });
 
                 match interrupt_event {
                     // - misc event handlers --
@@ -369,7 +369,7 @@ impl<'a> Firmware<'a> {
                 // allow apollo to claim Cynthion's control port
                 info!("Releasing Cynthion USB Control Port and activating Apollo");
                 let advertiser = unsafe { pac::ADVERTISER::steal() };
-                advertiser.enable().write(|w| w.enable().bit(false));
+                advertiser.control().write(|w| w.enable().bit(false));
             }
 
             // handle moondancer control requests
