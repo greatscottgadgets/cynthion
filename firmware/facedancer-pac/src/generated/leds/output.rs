@@ -1,27 +1,115 @@
-#[doc = "Register `output` writer"]
+#[doc = "Register `Output` reader"]
+pub type R = crate::R<OUTPUT_SPEC>;
+#[doc = "Register `Output` writer"]
 pub type W = crate::W<OUTPUT_SPEC>;
-#[doc = "Field `output` writer - "]
-pub type OUTPUT_W<'a, REG> = crate::FieldWriter<'a, REG, 6>;
-impl W {
-    #[doc = "Bits 0:5"]
+#[doc = "Field `pin_0` reader - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_0_R = crate::BitReader;
+#[doc = "Field `pin_0` writer - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_0_W<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `pin_1` reader - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_1_R = crate::BitReader;
+#[doc = "Field `pin_1` writer - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_1_W<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `pin_2` reader - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_2_R = crate::BitReader;
+#[doc = "Field `pin_2` writer - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_2_W<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `pin_3` reader - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_3_R = crate::BitReader;
+#[doc = "Field `pin_3` writer - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_3_W<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `pin_4` reader - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_4_R = crate::BitReader;
+#[doc = "Field `pin_4` writer - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_4_W<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `pin_5` reader - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_5_R = crate::BitReader;
+#[doc = "Field `pin_5` writer - TODO amaranth_soc/csr/reg.py:471"]
+pub type PIN_5_W<'a, REG> = crate::BitWriter<'a, REG>;
+impl R {
+    #[doc = "Bit 0 - TODO amaranth_soc/csr/reg.py:471"]
     #[inline(always)]
-    #[must_use]
-    pub fn output(&mut self) -> OUTPUT_W<OUTPUT_SPEC> {
-        OUTPUT_W::new(self, 0)
+    pub fn pin_0(&self) -> PIN_0_R {
+        PIN_0_R::new((self.bits & 1) != 0)
+    }
+    #[doc = "Bit 1 - TODO amaranth_soc/csr/reg.py:471"]
+    #[inline(always)]
+    pub fn pin_1(&self) -> PIN_1_R {
+        PIN_1_R::new(((self.bits >> 1) & 1) != 0)
+    }
+    #[doc = "Bit 2 - TODO amaranth_soc/csr/reg.py:471"]
+    #[inline(always)]
+    pub fn pin_2(&self) -> PIN_2_R {
+        PIN_2_R::new(((self.bits >> 2) & 1) != 0)
+    }
+    #[doc = "Bit 3 - TODO amaranth_soc/csr/reg.py:471"]
+    #[inline(always)]
+    pub fn pin_3(&self) -> PIN_3_R {
+        PIN_3_R::new(((self.bits >> 3) & 1) != 0)
+    }
+    #[doc = "Bit 4 - TODO amaranth_soc/csr/reg.py:471"]
+    #[inline(always)]
+    pub fn pin_4(&self) -> PIN_4_R {
+        PIN_4_R::new(((self.bits >> 4) & 1) != 0)
+    }
+    #[doc = "Bit 5 - TODO amaranth_soc/csr/reg.py:471"]
+    #[inline(always)]
+    pub fn pin_5(&self) -> PIN_5_R {
+        PIN_5_R::new(((self.bits >> 5) & 1) != 0)
     }
 }
-#[doc = "leds output register\n\nYou can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`output::W`](W). See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+impl W {
+    #[doc = "Bit 0 - TODO amaranth_soc/csr/reg.py:471"]
+    #[inline(always)]
+    #[must_use]
+    pub fn pin_0(&mut self) -> PIN_0_W<OUTPUT_SPEC> {
+        PIN_0_W::new(self, 0)
+    }
+    #[doc = "Bit 1 - TODO amaranth_soc/csr/reg.py:471"]
+    #[inline(always)]
+    #[must_use]
+    pub fn pin_1(&mut self) -> PIN_1_W<OUTPUT_SPEC> {
+        PIN_1_W::new(self, 1)
+    }
+    #[doc = "Bit 2 - TODO amaranth_soc/csr/reg.py:471"]
+    #[inline(always)]
+    #[must_use]
+    pub fn pin_2(&mut self) -> PIN_2_W<OUTPUT_SPEC> {
+        PIN_2_W::new(self, 2)
+    }
+    #[doc = "Bit 3 - TODO amaranth_soc/csr/reg.py:471"]
+    #[inline(always)]
+    #[must_use]
+    pub fn pin_3(&mut self) -> PIN_3_W<OUTPUT_SPEC> {
+        PIN_3_W::new(self, 3)
+    }
+    #[doc = "Bit 4 - TODO amaranth_soc/csr/reg.py:471"]
+    #[inline(always)]
+    #[must_use]
+    pub fn pin_4(&mut self) -> PIN_4_W<OUTPUT_SPEC> {
+        PIN_4_W::new(self, 4)
+    }
+    #[doc = "Bit 5 - TODO amaranth_soc/csr/reg.py:471"]
+    #[inline(always)]
+    #[must_use]
+    pub fn pin_5(&mut self) -> PIN_5_W<OUTPUT_SPEC> {
+        PIN_5_W::new(self, 5)
+    }
+}
+#[doc = "TODO amaranth_soc/csr/reg.py:471\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`output::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`output::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct OUTPUT_SPEC;
 impl crate::RegisterSpec for OUTPUT_SPEC {
-    type Ux = u32;
+    type Ux = u8;
 }
+#[doc = "`read()` method returns [`output::R`](R) reader structure"]
+impl crate::Readable for OUTPUT_SPEC {}
 #[doc = "`write(|w| ..)` method takes [`output::W`](W) writer structure"]
 impl crate::Writable for OUTPUT_SPEC {
     type Safety = crate::Unsafe;
-    const ZERO_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
-    const ONE_TO_MODIFY_FIELDS_BITMAP: u32 = 0;
+    const ZERO_TO_MODIFY_FIELDS_BITMAP: u8 = 0;
+    const ONE_TO_MODIFY_FIELDS_BITMAP: u8 = 0;
 }
-#[doc = "`reset()` method sets output to value 0"]
+#[doc = "`reset()` method sets Output to value 0"]
 impl crate::Resettable for OUTPUT_SPEC {
-    const RESET_VALUE: u32 = 0;
+    const RESET_VALUE: u8 = 0;
 }
