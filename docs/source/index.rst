@@ -19,6 +19,12 @@ Cynthion Documentation
 
 .. toctree::
   :maxdepth: 2
+  :caption: tutorials
+
+  tutorial_usb_analysis
+
+.. toctree::
+  :maxdepth: 2
   :caption: Cynthion Hardware
 
   hardware/introduction
