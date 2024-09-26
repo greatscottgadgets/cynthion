@@ -1,0 +1,3979 @@
+<?xml version="1.0" encoding="utf-8"?>
+<device xmlns:xs="http://www.w3.org/2001/XMLSchema-instance" schemaVersion="1.1" xs:noNamespaceSchemaLocation="CMSIS-SVD.xsd">
+  <vendor>luna-soc</vendor>
+  <name>SOC</name>
+  <description>TODO device.description</description>
+  <addressUnitBits>8</addressUnitBits>
+  <width>32</width>
+  <size>32</size>
+  <access>read-write</access>
+  <resetValue>0x00000000</resetValue>
+  <resetMask>0xFFFFFFFF</resetMask>
+  <peripherals>
+    <peripheral>
+      <name>spi0</name>
+      <groupName/>
+      <baseAddress>0xf0000000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x18</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>phy</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>length</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>6</bitWidth>
+              <bitRange>[5:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>width</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>6</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[9:6]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[17:10]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>cs</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>select</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>64</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>32</bitWidth>
+              <bitRange>[31:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>ready</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>32</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[32:32]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>tx</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>64</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>32</bitWidth>
+              <bitRange>[31:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>ready</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>32</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[32:32]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>leds</name>
+      <groupName/>
+      <baseAddress>0xf0000050</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x06</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>Mode</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[1:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[3:2]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_2</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[5:4]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_3</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>6</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[7:6]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_4</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[9:8]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_5</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[11:10]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>Input</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[1:1]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_2</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[2:2]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_3</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[3:3]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_4</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[4:4]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_5</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>5</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[5:5]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>Output</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0003</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[1:1]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_2</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[2:2]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_3</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[3:3]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_4</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[4:4]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_5</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>5</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[5:5]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>SetClr</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_0_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[1:1]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_1_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[2:2]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_1_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[3:3]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_2_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[4:4]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_2_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>5</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[5:5]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_3_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>6</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[6:6]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_3_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>7</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[7:7]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_4_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[8:8]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_4_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>9</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[9:9]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_5_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[10:10]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_5_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>11</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[11:11]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>gpio0</name>
+      <groupName/>
+      <baseAddress>0xf0000100</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x06</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>Mode</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[1:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[3:2]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_2</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[5:4]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_3</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>6</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[7:6]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_4</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[9:8]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_5</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[11:10]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_6</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>12</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[13:12]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_7</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>14</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[15:14]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>Input</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[1:1]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_2</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[2:2]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_3</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[3:3]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_4</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[4:4]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_5</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>5</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[5:5]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_6</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>6</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[6:6]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_7</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>7</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[7:7]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>Output</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0003</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[1:1]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_2</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[2:2]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_3</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[3:3]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_4</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[4:4]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_5</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>5</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[5:5]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_6</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>6</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[6:6]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_7</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>7</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[7:7]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>SetClr</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_0_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[1:1]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_1_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[2:2]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_1_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[3:3]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_2_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[4:4]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_2_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>5</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[5:5]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_3_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>6</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[6:6]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_3_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>7</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[7:7]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_4_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[8:8]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_4_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>9</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[9:9]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_5_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[10:10]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_5_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>11</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[11:11]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_6_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>12</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[12:12]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_6_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>13</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[13:13]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_7_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>14</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[14:14]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_7_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>15</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[15:15]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>gpio1</name>
+      <groupName/>
+      <baseAddress>0xf0000150</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x06</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>Mode</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[1:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[3:2]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_2</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[5:4]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_3</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>6</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[7:6]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_4</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[9:8]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_5</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[11:10]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_6</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>12</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[13:12]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_7</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>14</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[15:14]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>Input</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[1:1]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_2</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[2:2]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_3</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[3:3]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_4</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[4:4]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_5</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>5</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[5:5]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_6</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>6</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[6:6]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pin_7</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>7</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[7:7]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>Output</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0003</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[1:1]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_2</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[2:2]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_3</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[3:3]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_4</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[4:4]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_5</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>5</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[5:5]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_6</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>6</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[6:6]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>pin_7</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>7</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[7:7]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>SetClr</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>pin_0_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_0_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[1:1]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_1_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[2:2]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_1_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>3</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[3:3]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_2_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[4:4]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_2_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>5</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[5:5]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_3_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>6</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[6:6]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_3_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>7</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[7:7]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_4_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[8:8]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_4_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>9</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[9:9]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_5_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[10:10]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_5_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>11</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[11:11]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_6_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>12</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[12:12]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_6_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>13</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[13:13]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_7_set</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>14</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[14:14]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_7_clr</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>15</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[15:15]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>uart0</name>
+      <groupName/>
+      <baseAddress>0xf0000200</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x14</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>tx_data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx_data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>tx_ready</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>txe</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx_avail</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>rxe</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>divisor</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>div</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>24</bitWidth>
+              <bitRange>[23:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>uart1</name>
+      <groupName/>
+      <baseAddress>0xf0000250</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x14</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>tx_data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx_data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>data</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>tx_ready</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>txe</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>rx_avail</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x000c</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>rxe</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>divisor</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>div</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>24</bitWidth>
+              <bitRange>[23:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>timer0</name>
+      <groupName/>
+      <baseAddress>0xf0000300</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x12</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>timer0</name>
+        <value>0</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>reload</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>value</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>32</bitWidth>
+              <bitRange>[31:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>counter</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>value</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>32</bitWidth>
+              <bitRange>[31:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[1:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0011</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[1:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>timer1</name>
+      <groupName/>
+      <baseAddress>0xf0000400</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x12</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>timer1</name>
+        <value>1</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>reload</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>value</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>32</bitWidth>
+              <bitRange>[31:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>counter</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>value</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>32</bitWidth>
+              <bitRange>[31:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[1:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0011</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[1:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb0</name>
+      <groupName/>
+      <baseAddress>0xf0000500</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x0a</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb0</name>
+        <value>2</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>control</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>connect</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>low_speed_only</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[8:8]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>full_speed_only</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>9</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[9:9]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>6</bitWidth>
+              <bitRange>[15:10]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>speed</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[1:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>6</bitWidth>
+              <bitRange>[7:2]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0009</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb0_ep_control</name>
+      <groupName/>
+      <baseAddress>0xf0000600</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x12</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb0_ep_control</name>
+        <value>3</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>control</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>epno</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[11:8]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>have</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>12</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[12:12]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>13</bitOffset>
+              <bitWidth>3</bitWidth>
+              <bitRange>[15:13]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>high</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0005</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>byte</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0011</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb0_ep_in</name>
+      <groupName/>
+      <baseAddress>0xf0000700</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x12</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb0_ep_in</name>
+        <value>4</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>endpoint</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>number</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[3:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[7:4]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0001</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>stalled</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>toggle</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>nak</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>16</bitWidth>
+              <bitRange>[15:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>epno</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[19:16]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>20</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[23:20]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>idle</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>24</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[24:24]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>have</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>25</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[25:25]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pid</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>26</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[26:26]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>27</bitOffset>
+              <bitWidth>5</bitWidth>
+              <bitRange>[31:27]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>high</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0009</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>byte</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0011</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb0_ep_out</name>
+      <groupName/>
+      <baseAddress>0xf0000800</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x22</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb0_ep_out</name>
+        <value>5</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>control</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>endpoint</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0001</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>number</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[3:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[7:4]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>enabled</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>prime</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0003</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>primed</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>stalled</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0005</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>toggle</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0006</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[3:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[7:4]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>have</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[8:8]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pid</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>9</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[9:9]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>6</bitWidth>
+              <bitRange>[15:10]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>high</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0009</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>byte</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0021</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb1</name>
+      <groupName/>
+      <baseAddress>0xf0000900</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x0a</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb1</name>
+        <value>6</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>control</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>connect</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>low_speed_only</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[8:8]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>full_speed_only</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>9</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[9:9]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>6</bitWidth>
+              <bitRange>[15:10]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>speed</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[1:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>6</bitWidth>
+              <bitRange>[7:2]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0009</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb1_ep_control</name>
+      <groupName/>
+      <baseAddress>0xf0000a00</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x12</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb1_ep_control</name>
+        <value>7</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>control</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>epno</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[11:8]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>have</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>12</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[12:12]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>13</bitOffset>
+              <bitWidth>3</bitWidth>
+              <bitRange>[15:13]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>high</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0005</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>byte</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0011</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb1_ep_in</name>
+      <groupName/>
+      <baseAddress>0xf0000b00</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x12</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb1_ep_in</name>
+        <value>8</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>endpoint</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>number</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[3:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[7:4]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0001</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>stalled</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>toggle</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>nak</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>16</bitWidth>
+              <bitRange>[15:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>epno</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[19:16]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>20</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[23:20]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>idle</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>24</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[24:24]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>have</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>25</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[25:25]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pid</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>26</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[26:26]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>27</bitOffset>
+              <bitWidth>5</bitWidth>
+              <bitRange>[31:27]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>high</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0009</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>byte</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0011</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb1_ep_out</name>
+      <groupName/>
+      <baseAddress>0xf0000c00</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x22</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb1_ep_out</name>
+        <value>9</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>control</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>endpoint</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0001</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>number</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[3:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[7:4]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>enabled</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>prime</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0003</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>primed</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>stalled</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0005</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>toggle</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0006</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[3:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[7:4]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>have</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[8:8]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pid</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>9</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[9:9]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>6</bitWidth>
+              <bitRange>[15:10]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>high</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0009</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>byte</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0021</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb2</name>
+      <groupName/>
+      <baseAddress>0xf0000d00</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x0a</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb2</name>
+        <value>10</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>control</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>connect</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>low_speed_only</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[8:8]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>full_speed_only</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>9</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[9:9]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>6</bitWidth>
+              <bitRange>[15:10]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>speed</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[1:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>2</bitOffset>
+              <bitWidth>6</bitWidth>
+              <bitRange>[7:2]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0009</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb2_ep_control</name>
+      <groupName/>
+      <baseAddress>0xf0000e00</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x12</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb2_ep_control</name>
+        <value>11</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>control</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>epno</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[11:8]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>have</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>12</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[12:12]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>13</bitOffset>
+              <bitWidth>3</bitWidth>
+              <bitRange>[15:13]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>high</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0005</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>byte</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0011</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb2_ep_in</name>
+      <groupName/>
+      <baseAddress>0xf0000f00</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x12</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb2_ep_in</name>
+        <value>12</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>endpoint</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>number</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[3:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[7:4]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0001</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>stalled</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>toggle</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>nak</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>16</bitWidth>
+              <bitRange>[15:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>epno</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>16</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[19:16]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>20</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[23:20]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>idle</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>24</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[24:24]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>have</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>25</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[25:25]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pid</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>26</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[26:26]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>27</bitOffset>
+              <bitWidth>5</bitWidth>
+              <bitRange>[31:27]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>high</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0009</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>byte</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0010</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0011</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>usb2_ep_out</name>
+      <groupName/>
+      <baseAddress>0xf0001000</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x22</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <interrupt>
+        <name>usb2_ep_out</name>
+        <value>13</value>
+      </interrupt>
+      <registers>
+        <register>
+          <name>control</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>address</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>endpoint</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0001</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>number</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[3:0]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[7:4]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>enabled</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>prime</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0003</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>primed</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>stall</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>stalled</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>pid</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0005</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>toggle</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0006</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>epno</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[3:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>4</bitOffset>
+              <bitWidth>4</bitWidth>
+              <bitRange>[7:4]</bitRange>
+              <access>read-write</access>
+            </field>
+            <field>
+              <name>have</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[8:8]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>pid</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>9</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[9:9]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>_1</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>10</bitOffset>
+              <bitWidth>6</bitWidth>
+              <bitRange>[15:10]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reset</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0008</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>high</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>_0</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>7</bitWidth>
+              <bitRange>[7:1]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0009</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>byte</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_enable</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0020</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>ev_pending</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0021</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>mask</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>advertiser</name>
+      <groupName/>
+      <baseAddress>0xf0001100</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x01</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>control</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>enable</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+    <peripheral>
+      <name>info</name>
+      <groupName/>
+      <baseAddress>0xf0001200</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x02</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>version</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0000</addressOffset>
+          <size>16</size>
+          <resetValue>0x00</resetValue>
+          <fields>
+            <field>
+              <name>major</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[7:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>minor</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>8</bitOffset>
+              <bitWidth>8</bitWidth>
+              <bitRange>[15:8]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
+  </peripherals>
+</device>
