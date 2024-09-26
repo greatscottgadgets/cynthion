@@ -1,30 +1,18 @@
 #[repr(C)]
 #[doc = "Register block"]
 pub struct RegisterBlock {
-    version_major: VERSION_MAJOR,
-    version_minor: VERSION_MINOR,
+    version: VERSION,
 }
 impl RegisterBlock {
-    #[doc = "0x00 - info version_major register"]
+    #[doc = "0x00 - TODO amaranth_soc/csr/reg.py:471"]
     #[inline(always)]
-    pub const fn version_major(&self) -> &VERSION_MAJOR {
-        &self.version_major
-    }
-    #[doc = "0x04 - info version_minor register"]
-    #[inline(always)]
-    pub const fn version_minor(&self) -> &VERSION_MINOR {
-        &self.version_minor
+    pub const fn version(&self) -> &VERSION {
+        &self.version
     }
 }
-#[doc = "version_major (r) register accessor: info version_major register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`version_major::R`].  See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@version_major`]
+#[doc = "version (rw) register accessor: TODO amaranth_soc/csr/reg.py:471\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`version::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`version::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@version`]
 module"]
-#[doc(alias = "version_major")]
-pub type VERSION_MAJOR = crate::Reg<version_major::VERSION_MAJOR_SPEC>;
-#[doc = "info version_major register"]
-pub mod version_major;
-#[doc = "version_minor (r) register accessor: info version_minor register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`version_minor::R`].  See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@version_minor`]
-module"]
-#[doc(alias = "version_minor")]
-pub type VERSION_MINOR = crate::Reg<version_minor::VERSION_MINOR_SPEC>;
-#[doc = "info version_minor register"]
-pub mod version_minor;
+#[doc(alias = "version")]
+pub type VERSION = crate::Reg<version::VERSION_SPEC>;
+#[doc = "TODO amaranth_soc/csr/reg.py:471"]
+pub mod version;
