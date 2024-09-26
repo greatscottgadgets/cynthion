@@ -61,7 +61,7 @@ fn main() -> ! {
         riscv::register::mie::set_mext();
 
         // write csr: enable gpioa interrupt
-        pac::csr::interrupt::enable(pac::Interrupt::GPIOA);
+        pac::csr::interrupt::enable(pac::Interrupt::GPIO0);
     }
 
     info!("Peripherals initialized, entering main loop.");
@@ -72,7 +72,7 @@ fn main() -> ! {
         gpioa
             .odr()
             .write(|w| unsafe { w.odr().bits(counter & 0b1111_0000) });
-        leds.output().write(|w| unsafe { w.output().bits(counter) });
+        leds.output().write(|w| unsafe { w.bits(counter) });
 
         timer.delay_ms(100).unwrap();
         counter += 1;
