@@ -10,14 +10,14 @@ use facedancer_pac as pac;
 use hal::hal::delay::DelayUs;
 
 lunasoc_hal::impl_timer! {
-    Timer: pac::TIMER,
+    Timer: pac::TIMER0,
 }
 
 #[entry]
 fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
     let leds = &peripherals.LEDS;
-    let mut timer = Timer::new(peripherals.TIMER, pac::clock::sysclk());
+    let mut timer = Timer::new(peripherals.TIMER0, pac::clock::sysclk());
 
     let mut direction = true;
     let mut led_state = 0b110000;
@@ -38,6 +38,6 @@ fn main() -> ! {
         }
 
         leds.output()
-            .write(|w| unsafe { w.output().bits(led_state) });
+            .write(|w| unsafe { w.bits(led_state) });
     }
 }
