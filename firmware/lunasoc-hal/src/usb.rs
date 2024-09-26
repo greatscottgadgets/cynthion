@@ -18,11 +18,11 @@ pub const DEFAULT_TIMEOUT: usize = 1_000_000;
 #[macro_export]
 macro_rules! impl_usb {
     ($(
-        $USBX:ident: $IDX:ident, $USBX_CONTROLLER:ty, $USBX_EP_CONTROL:ty, $USBX_EP_IN:ty, $USBX_EP_OUT:ty,
+        $USBX:ident: $IDX:ident, $USBX_DEVICE:ty, $USBX_EP_CONTROL:ty, $USBX_EP_IN:ty, $USBX_EP_OUT:ty,
     )+) => {
         $(
             pub struct $USBX {
-                pub controller: $USBX_CONTROLLER,
+                pub device: $USBX_DEVICE,
                 pub ep_control: $USBX_EP_CONTROL,
                 pub ep_in: $USBX_EP_IN,
                 pub ep_out: $USBX_EP_OUT,
@@ -32,13 +32,13 @@ macro_rules! impl_usb {
             impl $USBX {
                 /// Create a new `Usb` instance.
                 pub fn new(
-                    controller: $USBX_CONTROLLER,
+                    device: $USBX_DEVICE,
                     ep_control: $USBX_EP_CONTROL,
                     ep_in: $USBX_EP_IN,
                     ep_out: $USBX_EP_OUT,
                 ) -> Self {
                     Self {
-                        controller,
+                        device,
                         ep_control,
                         ep_in,
                         ep_out,
@@ -50,12 +50,12 @@ macro_rules! impl_usb {
                 pub fn free(
                     self,
                 ) -> (
-                    $USBX_CONTROLLER,
+                    $USBX_DEVICE,
                     $USBX_EP_CONTROL,
                     $USBX_EP_IN,
                     $USBX_EP_OUT,
                 ) {
-                    (self.controller, self.ep_control, self.ep_in, self.ep_out)
+                    (self.device, self.ep_control, self.ep_in, self.ep_out)
                 }
 
                 /// Obtain a static [`Usb0`] instance for use in e.g. interrupt handlers
@@ -66,7 +66,7 @@ macro_rules! impl_usb {
                 #[inline(always)]
                 pub unsafe fn summon() -> Self {
                     Self {
-                        controller: <$USBX_CONTROLLER>::steal(),
+                        device: <$USBX_DEVICE>::steal(),
                         ep_control: <$USBX_EP_CONTROL>::steal(),
                         ep_in: <$USBX_EP_IN>::steal(),
                         ep_out: <$USBX_EP_OUT>::steal(),
@@ -100,38 +100,38 @@ macro_rules! impl_usb {
             impl $USBX {
                 /// Enable all device interrupt events.
                 pub fn enable_events(&self) {
-                    // clear all event handlers
-                    self.controller.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
-                    self.ep_control.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
-                    self.ep_in.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
-                    self.ep_out.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
+                    // clear all pending event
+                    self.device.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
+                    self.ep_control.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
+                    self.ep_in.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
+                    self.ep_out.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
 
-                    // enable all device controller events
-                    self.controller.ev_enable().write(|w| w.enable().bit(true));
-                    self.ep_control.ev_enable().write(|w| w.enable().bit(true));
-                    self.ep_in.ev_enable().write(|w| w.enable().bit(true));
-                    self.ep_out.ev_enable().write(|w| w.enable().bit(true));
+                    // enable all events
+                    self.device.ev_enable().write(|w| w.mask().bit(true));
+                    self.ep_control.ev_enable().write(|w| w.mask().bit(true));
+                    self.ep_in.ev_enable().write(|w| w.mask().bit(true));
+                    self.ep_out.ev_enable().write(|w| w.mask().bit(true));
                 }
 
                 /// Disable all device interrupt events.
                 pub fn disable_events(&self) {
-                    // clear all event handlers
-                    self.controller.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
-                    self.ep_control.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
-                    self.ep_in.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
-                    self.ep_out.ev_pending().modify(|r, w| w.pending().bit(r.pending().bit()));
+                    // clear all pending event
+                    self.device.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
+                    self.ep_control.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
+                    self.ep_in.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
+                    self.ep_out.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
 
-                    // disable all device controller events
-                    self.controller.ev_enable().write(|w| w.enable().bit(false));
-                    self.ep_control.ev_enable().write(|w| w.enable().bit(false));
-                    self.ep_in.ev_enable().write(|w| w.enable().bit(false));
-                    self.ep_out.ev_enable().write(|w| w.enable().bit(false));
+                    // disable all events
+                    self.device.ev_enable().write(|w| w.mask().bit(false));
+                    self.ep_control.ev_enable().write(|w| w.mask().bit(false));
+                    self.ep_in.ev_enable().write(|w| w.mask().bit(false));
+                    self.ep_out.ev_enable().write(|w| w.mask().bit(false));
                 }
 
                 /// Returns the address of the control endpoint.
                 #[must_use]
                 pub fn ep_control_address(&self) -> u8 {
-                    self.ep_control.address().read().address().bits()
+                    self.ep_control.status().read().address().bits()
                 }
             }
 
@@ -144,16 +144,18 @@ macro_rules! impl_usb {
                     self.device_speed = device_speed;
                     match device_speed {
                         Speed::High => {
-                            self.controller.full_speed_only().modify(|_, w| w.full_speed_only().bit(false));
-                            self.controller.low_speed_only().modify(|_, w| w.low_speed_only().bit(false));
+                            self.device.control().modify(|_, w| {
+                                w.full_speed_only().bit(false).low_speed_only().bit(false)
+                            });
+                            //self.device.control().modify(|_, w| w.low_speed_only().bit(false));
                         },
                         Speed::Full => {
-                            self.controller.full_speed_only().modify(|_, w| w.full_speed_only().bit(true));
-                            self.controller.low_speed_only().modify(|_, w| w.low_speed_only().bit(false));
+                            self.device.control().modify(|_, w| w.full_speed_only().bit(true));
+                            self.device.control().modify(|_, w| w.low_speed_only().bit(false));
                         },
                         Speed::Low => {
-                            self.controller.full_speed_only().modify(|_, w| w.full_speed_only().bit(false));
-                            self.controller.low_speed_only().modify(|_, w| w.low_speed_only().bit(true));
+                            self.device.control().modify(|_, w| w.full_speed_only().bit(false));
+                            self.device.control().modify(|_, w| w.low_speed_only().bit(true));
                         }
                         _ => {
                             log::warn!("Requested unsupported device speed '{:?}'. Ignoring request and setting device to 'Speed::High'.", device_speed);
@@ -161,8 +163,8 @@ macro_rules! impl_usb {
                         }
                     }
 
-                    // disconnect device controller
-                    self.controller.connect().write(|w| w.connect().bit(false));
+                    // disconnect device
+                    self.device.control().modify(|_, w| w.connect().bit(false));
 
                     // disable endpoint events
                     self.disable_events();
@@ -177,19 +179,19 @@ macro_rules! impl_usb {
                     self.ep_out.enable().write(|w| w.enable().bit(false));
 
                     // reset FIFOs
-                    self.ep_control.reset().write(|w| w.reset().bit(true));
-                    self.ep_in.reset().write(|w| w.reset().bit(true));
-                    self.ep_out.reset().write(|w| w.reset().bit(true));
+                    self.ep_control.reset().write(|w| w.high().bit(true));
+                    self.ep_in.reset()     .write(|w| w.high().bit(true));
+                    self.ep_out.reset()    .write(|w| w.high().bit(true));
 
-                    // connect device controller
-                    self.controller.connect().write(|w| w.connect().bit(true));
+                    // connect device
+                    self.device.control().modify(|_, w| w.connect().bit(true));
                 }
 
                 /// Disconnect the device.
                 fn disconnect(&mut self) {
                     // reset speed
-                    self.controller.full_speed_only().write(|w| w.full_speed_only().bit(false));
-                    self.controller.low_speed_only().write(|w| w.low_speed_only().bit(false));
+                    self.device.control().modify(|_, w| w.full_speed_only().bit(false));
+                    self.device.control().modify(|_, w| w.low_speed_only().bit(false));
                     self.device_speed = Speed::Unknown;
 
                     // disable endpoint events
@@ -198,8 +200,8 @@ macro_rules! impl_usb {
                     // reset device address to 0
                     self.set_address(0);
 
-                    // disconnect device controller
-                    self.controller.connect().write(|w| w.connect().bit(false));
+                    // disconnect device
+                    self.device.control().modify(|_, w| w.connect().bit(false));
 
                     // un-prime all OUT endpoints and disable interface
                     for endpoint_number in 0..smolusb::EP_MAX_ENDPOINTS as u8 {
@@ -211,9 +213,9 @@ macro_rules! impl_usb {
                     self.ep_out.enable().write(|w| w.enable().bit(false));
 
                     // reset FIFOs
-                    self.ep_control.reset().write(|w| w.reset().bit(true));
-                    self.ep_in.reset().write(|w| w.reset().bit(true));
-                    self.ep_out.reset().write(|w| w.reset().bit(true));
+                    self.ep_control.reset().write(|w| w.high().bit(true));
+                    self.ep_in.reset()     .write(|w| w.high().bit(true));
+                    self.ep_out.reset()    .write(|w| w.high().bit(true));
                 }
 
                 /// Perform a bus reset of the device.
@@ -225,9 +227,9 @@ macro_rules! impl_usb {
                     self.set_address(0);
 
                     // reset FIFOs
-                    self.ep_control.reset().write(|w| w.reset().bit(true));
-                    self.ep_in.reset().write(|w| w.reset().bit(true));
-                    self.ep_out.reset().write(|w| w.reset().bit(true));
+                    self.ep_control.reset().write(|w| w.high().bit(true));
+                    self.ep_in.reset()     .write(|w| w.high().bit(true));
+                    self.ep_out.reset()    .write(|w| w.high().bit(true));
 
                     // clear status for all IN endpoints
                     for endpoint in 0..(smolusb::EP_MAX_ENDPOINTS as u8) {
@@ -257,25 +259,25 @@ macro_rules! impl_usb {
                 /// Set the device address.
                 fn set_address(&self, address: u8) {
                     self.ep_out
-                        .address()
-                        .write(|w| unsafe { w.address().bits(address & 0x7f) });
+                        .control()
+                        .modify(|_, w| unsafe { w.address().bits(address & 0x7f) });
                     self.ep_control
-                        .address()
-                        .write(|w| unsafe { w.address().bits(address & 0x7f) });
+                        .control()
+                        .modify(|_, w| unsafe { w.address().bits(address & 0x7f) });
                 }
 
                 /// Stall the given IN endpoint number.
                 fn stall_endpoint_in(&self, endpoint_number: u8) {
-                    self.ep_in.reset().write(|w| w.reset().bit(true));
-                    self.ep_in.stall().write(|w| w.stall().bit(true));
-                    self.ep_in.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
+                    self.ep_in.reset().write(|w| w.high().bit(true));
+                    self.ep_in.stall().write(|w| w.stalled().bit(true));
+                    self.ep_in.endpoint().write(|w| unsafe { w.number().bits(endpoint_number) });
                 }
 
                 /// Stall the given OUT endpoint number.
                 fn stall_endpoint_out(&self, endpoint_number: u8) {
-                    self.ep_out.reset().write(|w| w.reset().bit(true));
-                    self.ep_out.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
-                    self.ep_out.stall().write(|w| w.stall().bit(true));
+                    self.ep_out.reset().write(|w| w.high().bit(true));
+                    self.ep_out.endpoint().write(|w| unsafe { w.number().bits(endpoint_number) });
+                    self.ep_out.stall().write(|w| w.stalled().bit(true));
                 }
 
                 /// Clear the PID toggle bit for the given endpoint address.
@@ -286,13 +288,13 @@ macro_rules! impl_usb {
                 fn clear_feature_endpoint_halt(&self, endpoint_number: u8, direction: Direction) {
                     match direction {
                         Direction::HostToDevice => { // OUT
-                            self.ep_out.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
-                            self.ep_out.pid().write(|w| w.pid().bit(false));
+                            self.ep_out.endpoint().write(|w| unsafe { w.number().bits(endpoint_number) });
+                            self.ep_out.pid().write(|w| w.toggle().bit(false));
 
                         }
                         Direction::DeviceToHost => { // IN
-                            self.ep_in.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
-                            self.ep_in.pid().write(|w| w.pid().bit(false));
+                            self.ep_in.endpoint().write(|w| unsafe { w.number().bits(endpoint_number) });
+                            self.ep_in.pid().write(|w| w.toggle().bit(false));
                         }
                     }
                 }
@@ -377,12 +379,12 @@ macro_rules! impl_usb {
                     // drain fifo
                     let mut bytes_read = 0;
                     let mut overflow = 0;
-                    while self.ep_control.have().read().have().bit() {
+                    while self.ep_control.status().read().have().bit() {
                         if bytes_read >= buffer.len() {
-                            let _drain = self.ep_control.data().read().data().bits();
+                            let _drain = self.ep_control.data().read().byte().bits();
                             overflow += 1;
                         } else {
-                            buffer[bytes_read] = self.ep_control.data().read().data().bits();
+                            buffer[bytes_read] = self.ep_control.data().read().byte().bits();
                             bytes_read += 1;
                         }
                     }
@@ -410,21 +412,21 @@ macro_rules! impl_usb {
                 #[inline(always)]
                 fn ep_out_prime_receive(&self, endpoint_number: u8) {
                     // 0. clear receive fifo in case the previous transaction wasn't handled
-                    if self.ep_out.have().read().have().bit() {
-                        log::warn!("  {} priming out endpoint with unread data", stringify!($USBX));
-                        self.ep_out.reset().write(|w| w.reset().bit(true));
+                    if self.ep_out.status().read().have().bit() {
+                        log::warn!("  {} priming out endpoint {} with unread data", stringify!($USBX), endpoint_number);
+                        self.ep_out.reset().write(|w| w.high().bit(true));
                     }
 
                     // 1. select endpoint
                     self.ep_out
-                        .epno()
-                        .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                        .endpoint()
+                        .write(|w| unsafe { w.number().bits(endpoint_number) });
 
                     // 2. prime endpoint
-                    self.ep_out.prime().write(|w| w.prime().bit(true));
+                    self.ep_out.prime().write(|w| w.primed().bit(true));
 
                     // 3. re-enable ep_out interface
-                    self.ep_out.enable().write(|w| w.enable().bit(true));
+                    self.ep_out.enable().write(|w| w.enabled().bit(true));
                 }
 
                 #[inline(always)]
@@ -432,8 +434,8 @@ macro_rules! impl_usb {
                     let mut bytes_read = 0;
                     let mut did_overflow = true;
                     for b in buffer.iter_mut() {
-                        if self.ep_out.have().read().have().bit() {
-                            *b = self.ep_out.data().read().data().bits();
+                        if self.ep_out.status().read().have().bit() {
+                            *b = self.ep_out.data().read().byte().bits();
                             bytes_read += 1;
                         } else {
                             did_overflow = false;
@@ -443,8 +445,8 @@ macro_rules! impl_usb {
 
                     // drain fifo if needed
                     let mut overflow = 0;
-                    while did_overflow && self.ep_out.have().read().have().bit() {
-                        let _drain = self.ep_out.data().read().data().bits();
+                    while did_overflow && self.ep_out.status().read().have().bit() {
+                        let _drain = self.ep_out.data().read().byte().bits();
                         overflow += 1;
                     }
 
@@ -488,7 +490,7 @@ macro_rules! impl_usb {
 
                     let mut bytes_written: usize = 0;
                     for byte in iter {
-                        self.ep_in.data().write(|w| unsafe { w.data().bits(byte) });
+                        self.ep_in.data().write(|w| unsafe { w.byte().bits(byte) });
                         bytes_written += 1;
 
                         // check if we've written a packet yet and need to send it
@@ -498,8 +500,8 @@ macro_rules! impl_usb {
                             }
                             // prime the IN endpoint to send it
                             self.ep_in
-                                .epno()
-                                .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                                .endpoint()
+                                .write(|w| unsafe { w.number().bits(endpoint_number) });
 
                             // wait for transmission to complete
                             if self.ep_in_busy(endpoint_number, "usb::write_with_packet_size() - ep_in.epno()") {
@@ -538,13 +540,12 @@ macro_rules! impl_usb {
                             self.set_tx_ack_active(endpoint_number);
                         }
                         self.ep_in
-                            .epno()
-                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                            .endpoint()
+                            .write(|w| unsafe { w.number().bits(endpoint_number) });
                     }
 
                     bytes_written
                 }
-
             }
 
             // mark implementation as complete
