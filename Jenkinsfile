@@ -43,11 +43,12 @@ pipeline {
             }
             steps {
                 sh '''#!/bin/bash
-                    git clone --recurse-submodules https://github.com/grvvy/cynthion-test
+                    git clone https://github.com/grvvy/cynthion-test
                     cd cynthion-test/
                     cp /tmp/calibration.dat calibration.dat
                     make
                     environment/bin/pip install --upgrade dependencies/cynthion/cynthion/python/.
+                    make analyzer.bit
                 '''
                 sh 'hubs all off'
                 retry(3) {
