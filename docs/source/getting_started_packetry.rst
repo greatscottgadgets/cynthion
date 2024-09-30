@@ -13,7 +13,7 @@ Prerequisites
 
 To use Cynthion's USB Analyzer you will need to ensure the following software is installed:
 
-* `Packetry <https://github.com/greatscottgadgets/packetry/>`__
+* `Packetry <https://packetry.readthedocs.io/en/latest/quick_start.html#install-packetry>`__
 
 
 USB Analyzer Bitstream
