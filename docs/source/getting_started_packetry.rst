@@ -55,3 +55,7 @@ Connect Hardware
 .. image:: ../images/cynthion-connections-packetry.svg
   :width: 800
   :alt: Connection diagram for using Cynthion with Packetry.
+
+
+Next, see the `Packetry documentation <https://packetry.readthedocs.io/en/latest/quick_start.html#connect-cynthion>`__ for more detail,
+or the tutorial :doc:`tutorial_usb_analysis` for a worked example.
