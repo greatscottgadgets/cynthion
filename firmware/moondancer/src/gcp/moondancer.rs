@@ -256,7 +256,7 @@ impl Moondancer {
 
         // wait for things to settle and get connection speed
         unsafe {
-            riscv::asm::delay(30_000_000);
+            riscv::asm::delay(20_000_000);
         }
         let speed: Speed = self.usb0.controller.speed().read().speed().bits().into();
 
