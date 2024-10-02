@@ -518,17 +518,17 @@ impl<'a> Firmware<'a> {
 
         // do we have a response ready?
         if let Some(response) = &mut self.libgreat_response {
-            // send response
-            self.usb2.write_requested(0, requested_length, response);
-
-            // clear cached response
-            self.libgreat_response = None;
-
             // prime to receive host zlp
             self.usb2.ep_out_prime_receive(0);
 
+            // send response
+            self.usb2.write_requested(0, requested_length, response);
+
+            // clear any queued responses
+            self.libgreat_response = None;
+
         } else if let Some(error) = self.libgreat_response_last_error {
-            warn!("dispatch_libgreat_response error result: {:?} (reqlen:{})", error, requested_length);
+            warn!("dispatch_libgreat_response error result: {:?}", error);
 
         } else {
             self.usb2.stall_endpoint_in(0);
@@ -541,28 +541,21 @@ impl<'a> Firmware<'a> {
     fn dispatch_libgreat_abort(&mut self, setup_packet: SetupPacket) -> GreatResult<()> {
         let requested_length = setup_packet.length as usize;
 
+        // prime to receive host zlp
+        self.usb2.ep_out_prime_receive(0);
+
+        // send error response
         if let Some(error) = self.libgreat_response_last_error {
-            // send error
             self.usb2.write_requested(0, requested_length, (error as u32).to_le_bytes().into_iter());
-
-            // prime to receive host zlp
-            self.usb2.ep_out_prime_receive(0);
-
-            warn!("dispatch_libgreat_abort error result: {:?} (reqlen:{})", error, requested_length);
-
+            warn!("dispatch_libgreat_abort: {:?}", error);
         } else {
             self.usb2.write_requested(0, requested_length, (GreatError::StateNotRecoverable as u32).to_le_bytes().into_iter());
-
-            // prime to receive host zlp
-            self.usb2.ep_out_prime_receive(0);
+            warn!("dispatch_libgreat_abort: libgreat abort requested but no error queued");
         }
 
-
-        // cancel any queued response
+        // clear any queued responses
         self.libgreat_response = None;
         self.libgreat_response_last_error = None;
-
-        error!("dispatch_libgreat_response abort");
 
         Ok(())
     }
