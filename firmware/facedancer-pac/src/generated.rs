@@ -69,52 +69,6 @@ pub static __EXTERNAL_INTERRUPTS: [Vector; 14] = [
 #[doc(hidden)]
 pub mod interrupt;
 pub use self::interrupt::Interrupt;
-#[doc = "spi0"]
-pub struct SPI0 {
-    _marker: PhantomData<*const ()>,
-}
-unsafe impl Send for SPI0 {}
-impl SPI0 {
-    #[doc = r"Pointer to the register block"]
-    pub const PTR: *const spi0::RegisterBlock = 0xf000_0000 as *const _;
-    #[doc = r"Return the pointer to the register block"]
-    #[inline(always)]
-    pub const fn ptr() -> *const spi0::RegisterBlock {
-        Self::PTR
-    }
-    #[doc = r" Steal an instance of this peripheral"]
-    #[doc = r""]
-    #[doc = r" # Safety"]
-    #[doc = r""]
-    #[doc = r" Ensure that the new instance of the peripheral cannot be used in a way"]
-    #[doc = r" that may race with any existing instances, for example by only"]
-    #[doc = r" accessing read-only or write-only registers, or by consuming the"]
-    #[doc = r" original peripheral and using critical sections to coordinate"]
-    #[doc = r" access between multiple new instances."]
-    #[doc = r""]
-    #[doc = r" Additionally, other software such as HALs may rely on only one"]
-    #[doc = r" peripheral instance existing to ensure memory safety; ensure"]
-    #[doc = r" no stolen instances are passed to such software."]
-    pub unsafe fn steal() -> Self {
-        Self {
-            _marker: PhantomData,
-        }
-    }
-}
-impl Deref for SPI0 {
-    type Target = spi0::RegisterBlock;
-    #[inline(always)]
-    fn deref(&self) -> &Self::Target {
-        unsafe { &*Self::PTR }
-    }
-}
-impl core::fmt::Debug for SPI0 {
-    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
-        f.debug_struct("SPI0").finish()
-    }
-}
-#[doc = "spi0"]
-pub mod spi0;
 #[doc = "leds"]
 pub struct LEDS {
     _marker: PhantomData<*const ()>,
@@ -122,7 +76,7 @@ pub struct LEDS {
 unsafe impl Send for LEDS {}
 impl LEDS {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const leds::RegisterBlock = 0xf000_0050 as *const _;
+    pub const PTR: *const leds::RegisterBlock = 0xf000_0000 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const leds::RegisterBlock {
@@ -214,7 +168,7 @@ pub struct GPIO1 {
 unsafe impl Send for GPIO1 {}
 impl GPIO1 {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const gpio1::RegisterBlock = 0xf000_0150 as *const _;
+    pub const PTR: *const gpio1::RegisterBlock = 0xf000_0200 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const gpio1::RegisterBlock {
@@ -260,7 +214,7 @@ pub struct UART0 {
 unsafe impl Send for UART0 {}
 impl UART0 {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const uart0::RegisterBlock = 0xf000_0200 as *const _;
+    pub const PTR: *const uart0::RegisterBlock = 0xf000_0300 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const uart0::RegisterBlock {
@@ -306,7 +260,7 @@ pub struct UART1 {
 unsafe impl Send for UART1 {}
 impl UART1 {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const uart1::RegisterBlock = 0xf000_0250 as *const _;
+    pub const PTR: *const uart1::RegisterBlock = 0xf000_0400 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const uart1::RegisterBlock {
@@ -352,7 +306,7 @@ pub struct TIMER0 {
 unsafe impl Send for TIMER0 {}
 impl TIMER0 {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const timer0::RegisterBlock = 0xf000_0300 as *const _;
+    pub const PTR: *const timer0::RegisterBlock = 0xf000_0500 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const timer0::RegisterBlock {
@@ -398,7 +352,7 @@ pub struct TIMER1 {
 unsafe impl Send for TIMER1 {}
 impl TIMER1 {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const timer1::RegisterBlock = 0xf000_0400 as *const _;
+    pub const PTR: *const timer1::RegisterBlock = 0xf000_0600 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const timer1::RegisterBlock {
@@ -437,6 +391,52 @@ impl core::fmt::Debug for TIMER1 {
 }
 #[doc = "timer1"]
 pub mod timer1;
+#[doc = "spi0"]
+pub struct SPI0 {
+    _marker: PhantomData<*const ()>,
+}
+unsafe impl Send for SPI0 {}
+impl SPI0 {
+    #[doc = r"Pointer to the register block"]
+    pub const PTR: *const spi0::RegisterBlock = 0xf000_0700 as *const _;
+    #[doc = r"Return the pointer to the register block"]
+    #[inline(always)]
+    pub const fn ptr() -> *const spi0::RegisterBlock {
+        Self::PTR
+    }
+    #[doc = r" Steal an instance of this peripheral"]
+    #[doc = r""]
+    #[doc = r" # Safety"]
+    #[doc = r""]
+    #[doc = r" Ensure that the new instance of the peripheral cannot be used in a way"]
+    #[doc = r" that may race with any existing instances, for example by only"]
+    #[doc = r" accessing read-only or write-only registers, or by consuming the"]
+    #[doc = r" original peripheral and using critical sections to coordinate"]
+    #[doc = r" access between multiple new instances."]
+    #[doc = r""]
+    #[doc = r" Additionally, other software such as HALs may rely on only one"]
+    #[doc = r" peripheral instance existing to ensure memory safety; ensure"]
+    #[doc = r" no stolen instances are passed to such software."]
+    pub unsafe fn steal() -> Self {
+        Self {
+            _marker: PhantomData,
+        }
+    }
+}
+impl Deref for SPI0 {
+    type Target = spi0::RegisterBlock;
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        unsafe { &*Self::PTR }
+    }
+}
+impl core::fmt::Debug for SPI0 {
+    fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+        f.debug_struct("SPI0").finish()
+    }
+}
+#[doc = "spi0"]
+pub mod spi0;
 #[doc = "usb0"]
 pub struct USB0 {
     _marker: PhantomData<*const ()>,
@@ -444,7 +444,7 @@ pub struct USB0 {
 unsafe impl Send for USB0 {}
 impl USB0 {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb0::RegisterBlock = 0xf000_0500 as *const _;
+    pub const PTR: *const usb0::RegisterBlock = 0xf000_0800 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb0::RegisterBlock {
@@ -490,7 +490,7 @@ pub struct USB0_EP_CONTROL {
 unsafe impl Send for USB0_EP_CONTROL {}
 impl USB0_EP_CONTROL {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb0_ep_control::RegisterBlock = 0xf000_0600 as *const _;
+    pub const PTR: *const usb0_ep_control::RegisterBlock = 0xf000_0900 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb0_ep_control::RegisterBlock {
@@ -536,7 +536,7 @@ pub struct USB0_EP_IN {
 unsafe impl Send for USB0_EP_IN {}
 impl USB0_EP_IN {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb0_ep_in::RegisterBlock = 0xf000_0700 as *const _;
+    pub const PTR: *const usb0_ep_in::RegisterBlock = 0xf000_0a00 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb0_ep_in::RegisterBlock {
@@ -582,7 +582,7 @@ pub struct USB0_EP_OUT {
 unsafe impl Send for USB0_EP_OUT {}
 impl USB0_EP_OUT {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb0_ep_out::RegisterBlock = 0xf000_0800 as *const _;
+    pub const PTR: *const usb0_ep_out::RegisterBlock = 0xf000_0b00 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb0_ep_out::RegisterBlock {
@@ -628,7 +628,7 @@ pub struct USB1 {
 unsafe impl Send for USB1 {}
 impl USB1 {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb1::RegisterBlock = 0xf000_0900 as *const _;
+    pub const PTR: *const usb1::RegisterBlock = 0xf000_0c00 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb1::RegisterBlock {
@@ -674,7 +674,7 @@ pub struct USB1_EP_CONTROL {
 unsafe impl Send for USB1_EP_CONTROL {}
 impl USB1_EP_CONTROL {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb1_ep_control::RegisterBlock = 0xf000_0a00 as *const _;
+    pub const PTR: *const usb1_ep_control::RegisterBlock = 0xf000_0d00 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb1_ep_control::RegisterBlock {
@@ -720,7 +720,7 @@ pub struct USB1_EP_IN {
 unsafe impl Send for USB1_EP_IN {}
 impl USB1_EP_IN {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb1_ep_in::RegisterBlock = 0xf000_0b00 as *const _;
+    pub const PTR: *const usb1_ep_in::RegisterBlock = 0xf000_0e00 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb1_ep_in::RegisterBlock {
@@ -766,7 +766,7 @@ pub struct USB1_EP_OUT {
 unsafe impl Send for USB1_EP_OUT {}
 impl USB1_EP_OUT {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb1_ep_out::RegisterBlock = 0xf000_0c00 as *const _;
+    pub const PTR: *const usb1_ep_out::RegisterBlock = 0xf000_0f00 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb1_ep_out::RegisterBlock {
@@ -812,7 +812,7 @@ pub struct USB2 {
 unsafe impl Send for USB2 {}
 impl USB2 {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb2::RegisterBlock = 0xf000_0d00 as *const _;
+    pub const PTR: *const usb2::RegisterBlock = 0xf000_1000 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb2::RegisterBlock {
@@ -858,7 +858,7 @@ pub struct USB2_EP_CONTROL {
 unsafe impl Send for USB2_EP_CONTROL {}
 impl USB2_EP_CONTROL {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb2_ep_control::RegisterBlock = 0xf000_0e00 as *const _;
+    pub const PTR: *const usb2_ep_control::RegisterBlock = 0xf000_1100 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb2_ep_control::RegisterBlock {
@@ -904,7 +904,7 @@ pub struct USB2_EP_IN {
 unsafe impl Send for USB2_EP_IN {}
 impl USB2_EP_IN {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb2_ep_in::RegisterBlock = 0xf000_0f00 as *const _;
+    pub const PTR: *const usb2_ep_in::RegisterBlock = 0xf000_1200 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb2_ep_in::RegisterBlock {
@@ -950,7 +950,7 @@ pub struct USB2_EP_OUT {
 unsafe impl Send for USB2_EP_OUT {}
 impl USB2_EP_OUT {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const usb2_ep_out::RegisterBlock = 0xf000_1000 as *const _;
+    pub const PTR: *const usb2_ep_out::RegisterBlock = 0xf000_1300 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const usb2_ep_out::RegisterBlock {
@@ -996,7 +996,7 @@ pub struct ADVERTISER {
 unsafe impl Send for ADVERTISER {}
 impl ADVERTISER {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const advertiser::RegisterBlock = 0xf000_1100 as *const _;
+    pub const PTR: *const advertiser::RegisterBlock = 0xf000_1400 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const advertiser::RegisterBlock {
@@ -1042,7 +1042,7 @@ pub struct INFO {
 unsafe impl Send for INFO {}
 impl INFO {
     #[doc = r"Pointer to the register block"]
-    pub const PTR: *const info::RegisterBlock = 0xf000_1200 as *const _;
+    pub const PTR: *const info::RegisterBlock = 0xf000_1500 as *const _;
     #[doc = r"Return the pointer to the register block"]
     #[inline(always)]
     pub const fn ptr() -> *const info::RegisterBlock {
@@ -1086,8 +1086,6 @@ static mut DEVICE_PERIPHERALS: bool = false;
 #[doc = r" All the peripherals."]
 #[allow(non_snake_case)]
 pub struct Peripherals {
-    #[doc = "spi0"]
-    pub SPI0: SPI0,
     #[doc = "leds"]
     pub LEDS: LEDS,
     #[doc = "gpio0"]
@@ -1102,6 +1100,8 @@ pub struct Peripherals {
     pub TIMER0: TIMER0,
     #[doc = "timer1"]
     pub TIMER1: TIMER1,
+    #[doc = "spi0"]
+    pub SPI0: SPI0,
     #[doc = "usb0"]
     pub USB0: USB0,
     #[doc = "usb0_ep_control"]
@@ -1152,9 +1152,6 @@ impl Peripherals {
     pub unsafe fn steal() -> Self {
         DEVICE_PERIPHERALS = true;
         Peripherals {
-            SPI0: SPI0 {
-                _marker: PhantomData,
-            },
             LEDS: LEDS {
                 _marker: PhantomData,
             },
@@ -1174,6 +1171,9 @@ impl Peripherals {
                 _marker: PhantomData,
             },
             TIMER1: TIMER1 {
+                _marker: PhantomData,
+            },
+            SPI0: SPI0 {
                 _marker: PhantomData,
             },
             USB0: USB0 {

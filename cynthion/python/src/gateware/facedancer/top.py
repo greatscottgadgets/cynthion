@@ -37,50 +37,50 @@ class Soc(Component):
 
         # configuration
         self.blockram_base        = 0x00000000
-        #self.blockram_size        = 0x00010000  # 65536 bytes
-        self.blockram_size        = 0x00004000
+        self.blockram_size        = 0x00010000  # 65536 bytes
+        #self.blockram_size        = 0x00004000
         self.hyperram_base        = 0x20000000  # Winbond W956A8MBYA6I
         self.hyperram_size        = 0x08000000  # 8 * 1024 * 1024
         self.spiflash_base        = 0x10000000
         self.spiflash_size        = 0x00400000  # 4 MiB
 
         self.csr_base             = 0xf0000000
-        self.spi0_base            = 0x00000000
-        self.leds_base            = 0x00000050
+        self.leds_base            = 0x00000000
         self.gpio0_base           = 0x00000100
-        self.gpio1_base           = 0x00000150
-        self.uart0_base           = 0x00000200
-        self.uart1_base           = 0x00000250
-        self.timer0_base          = 0x00000300
+        self.gpio1_base           = 0x00000200
+        self.uart0_base           = 0x00000300
+        self.uart1_base           = 0x00000400
+        self.timer0_base          = 0x00000500
         self.timer0_irq           = 0
-        self.timer1_base          = 0x00000400
+        self.timer1_base          = 0x00000600
         self.timer1_irq           = 1
-        self.usb0_base            = 0x00000500
+        self.spi0_base            = 0x00000700
+        self.usb0_base            = 0x00000800
         self.usb0_irq             = 2
-        self.usb0_ep_control_base = 0x00000600
+        self.usb0_ep_control_base = 0x00000900
         self.usb0_ep_control_irq  = 3
-        self.usb0_ep_in_base      = 0x00000700
+        self.usb0_ep_in_base      = 0x00000a00
         self.usb0_ep_in_irq       = 4
-        self.usb0_ep_out_base     = 0x00000800
+        self.usb0_ep_out_base     = 0x00000b00
         self.usb0_ep_out_irq      = 5
-        self.usb1_base            = 0x00000900
+        self.usb1_base            = 0x00000c00
         self.usb1_irq             = 6
-        self.usb1_ep_control_base = 0x00000a00
+        self.usb1_ep_control_base = 0x00000d00
         self.usb1_ep_control_irq  = 7
-        self.usb1_ep_in_base      = 0x00000b00
+        self.usb1_ep_in_base      = 0x00000e00
         self.usb1_ep_in_irq       = 8
-        self.usb1_ep_out_base     = 0x00000c00
+        self.usb1_ep_out_base     = 0x00000f00
         self.usb1_ep_out_irq      = 9
-        self.usb2_base            = 0x00000d00
+        self.usb2_base            = 0x00001000
         self.usb2_irq             = 10
-        self.usb2_ep_control_base = 0x00000e00
+        self.usb2_ep_control_base = 0x00001100
         self.usb2_ep_control_irq  = 11
-        self.usb2_ep_in_base      = 0x00000f00
+        self.usb2_ep_in_base      = 0x00001200
         self.usb2_ep_in_irq       = 12
-        self.usb2_ep_out_base     = 0x00001000
+        self.usb2_ep_out_base     = 0x00001300
         self.usb2_ep_out_irq      = 13
-        self.advertiser_base      = 0x00001100
-        self.info_base            = 0x00001200
+        self.advertiser_base      = 0x00001400
+        self.info_base            = 0x00001500
 
         # cpu
         self.cpu = VexRiscv(
@@ -267,6 +267,12 @@ class Soc(Component):
         for n in range(8):
             wiring.connect(m, self.gpio0.pins[n], gpio0_provider.pins[n])
 
+        # gpio1
+        #gpio1_provider = provider.GPIOProvider("user_pmod", 1)
+        #m.submodules += [gpio1_provider, self.gpio1]
+        #for n in range(8):
+        #    wiring.connect(m, self.gpio1.pins[n], gpio1_provider.pins[n])
+
         # uart0
         uart0_provider = provider.UARTProvider("uart", 0)
         m.submodules += [uart0_provider, self.uart0]
@@ -335,9 +341,16 @@ class Soc(Component):
             self.cpu.jtag_tck     .eq(jtag0_io.tck.i),
         ]
 
+        # debug
+        debug_io = platform.request("debug", 0)
+        m.d.comb += [
+            debug_io.a.o .eq(self.uart0.pins.tx),
+            debug_io.b.o .eq(self.uart1.pins.tx),
+        ]
+
         return DomainRenamer({
             "sync": self.domain,
-            "fast": "sync",
+            "fast": "sync", # cynthion hyperram only works at 120 MHz ?
         })(m)
 
 
