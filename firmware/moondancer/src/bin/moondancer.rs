@@ -501,15 +501,12 @@ impl<'a> Firmware<'a> {
                     "dispatch_libgreat_request error: failed to dispatch command {:?} 0x{:X} {}",
                     class_id, verb_number, e
                 );
+
                 self.libgreat_response = None;
                 self.libgreat_response_last_error = Some(e);
 
-                // TODO this is... weird...
+                // stall endpoint to trigger dispatch_libgreat_abort from control host
                 self.usb2.stall_endpoint_in(0);
-                unsafe {
-                    riscv::asm::delay(2000);
-                }
-                self.usb2.ep_in.reset().write(|w| w.reset().bit(true));
             }
         }
 
@@ -521,49 +518,44 @@ impl<'a> Firmware<'a> {
 
         // do we have a response ready?
         if let Some(response) = &mut self.libgreat_response {
+            // prime to receive host zlp
+            self.usb2.ep_out_prime_receive(0);
+
             // send response
             self.usb2.write_requested(0, requested_length, response);
 
-            // clear cached response
+            // clear any queued responses
             self.libgreat_response = None;
 
-            // prime to receive host zlp - aka ep_out_prime_receive() TODO should control do this in send_complete?
-            self.usb2.ep_out_prime_receive(0);
         } else if let Some(error) = self.libgreat_response_last_error {
             warn!("dispatch_libgreat_response error result: {:?}", error);
 
-            // prime to receive host zlp - TODO should control do this in send_complete?
-            self.usb2.ep_out_prime_receive(0);
-
-            // write error
-            self.usb2.write(0, (error as u32).to_le_bytes().into_iter());
-
-            // clear cached error
-            self.libgreat_response_last_error = None;
         } else {
-            // TODO figure out what to do if we don't have a response or error
-            error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");
             self.usb2.stall_endpoint_in(0);
+            error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");
         }
 
         Ok(())
     }
 
-    fn dispatch_libgreat_abort(&mut self, _setup_packet: SetupPacket) -> GreatResult<()> {
-        // send an arbitrary error code if we're aborting mid-response
-        if let Some(_response) = &self.libgreat_response {
-            // prime to receive host zlp - TODO should control do this in send_complete?
-            self.usb2.ep_out_prime_receive(0);
+    fn dispatch_libgreat_abort(&mut self, setup_packet: SetupPacket) -> GreatResult<()> {
+        let requested_length = setup_packet.length as usize;
 
-            // TODO send last error code?
-            self.usb2.write(0, 0_u32.to_le_bytes().into_iter());
+        // prime to receive host zlp
+        self.usb2.ep_out_prime_receive(0);
+
+        // send error response
+        if let Some(error) = self.libgreat_response_last_error {
+            self.usb2.write_requested(0, requested_length, (error as u32).to_le_bytes().into_iter());
+            warn!("dispatch_libgreat_abort: {:?}", error);
+        } else {
+            self.usb2.write_requested(0, requested_length, (GreatError::StateNotRecoverable as u32).to_le_bytes().into_iter());
+            warn!("dispatch_libgreat_abort: libgreat abort requested but no error queued");
         }
 
-        // cancel any queued response
+        // clear any queued responses
         self.libgreat_response = None;
         self.libgreat_response_last_error = None;
-
-        error!("dispatch_libgreat_response abort");
 
         Ok(())
     }

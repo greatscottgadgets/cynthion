@@ -236,12 +236,14 @@ macro_rules! impl_usb {
 
                 /// Stall the given IN endpoint number.
                 fn stall_endpoint_in(&self, endpoint_number: u8) {
+                    self.ep_in.reset().write(|w| w.reset().bit(true));
                     self.ep_in.stall().write(|w| w.stall().bit(true));
                     self.ep_in.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
                 }
 
                 /// Stall the given OUT endpoint number.
                 fn stall_endpoint_out(&self, endpoint_number: u8) {
+                    self.ep_out.reset().write(|w| w.reset().bit(true));
                     self.ep_out.epno().write(|w| unsafe { w.epno().bits(endpoint_number) });
                     self.ep_out.stall().write(|w| w.stall().bit(true));
                 }
@@ -512,7 +514,7 @@ macro_rules! impl_usb {
                     //      - no need to prime, fifo is empty
                     //   d. A full packet is sent, followed by a zlp
                     //      - fifo is empty, but need to prime to send a zlp so host know it's EOT
-                    //   e. An emptry packet is sent, followed by a zlp
+                    //   e. An empty packet is sent, followed by a zlp
                     //      - fifo is empty, but need to prime to send a zlp so host know it's EOT
                     //
                     let is_partial_packet = bytes_written % packet_size != 0;
