@@ -2,6 +2,9 @@
 Using Cynthion with Facedancer
 ==============================
 
+Together with `Facedancer <https://facedancer.readthedocs.io>`__,
+Cynthion can be used to quickly and easily emulate USB devices controlled from Python running on the host computer.
+
 Before proceeding, please ensure you have completed all steps in the :doc:`getting_started` section.
 
 

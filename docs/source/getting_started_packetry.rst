@@ -2,6 +2,10 @@
 Using Cynthion with Packetry
 ============================
 
+Together with `Packetry <https://packetry.readthedocs.io/en/latest/what_is_packetry.html>`__,
+Cynthion can be used as a USB 2.0 protocol analyzer capable of capturing and analyzing traffic
+between a host and any Low, Full, and High Speed USB device.
+
 Before proceeding, please ensure you have completed all steps in the :doc:`getting_started` section.
 
 Prerequisites
@@ -9,7 +13,7 @@ Prerequisites
 
 To use Cynthion's USB Analyzer you will need to ensure the following software is installed:
 
-* `Packetry <https://github.com/greatscottgadgets/packetry/>`__
+* `Packetry <https://packetry.readthedocs.io/en/latest/quick_start.html#install-packetry>`__
 
 
 USB Analyzer Bitstream
@@ -51,3 +55,7 @@ Connect Hardware
 .. image:: ../images/cynthion-connections-packetry.svg
   :width: 800
   :alt: Connection diagram for using Cynthion with Packetry.
+
+
+Next, see the `Packetry documentation <https://packetry.readthedocs.io/en/latest/quick_start.html#connect-cynthion>`__ for more detail,
+or the tutorial :doc:`tutorial_usb_analysis` for a worked example.

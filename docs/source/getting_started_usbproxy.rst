@@ -2,6 +2,9 @@
 Using Cynthion with USB Proxy
 =============================
 
+Together with `USB Proxy <https://facedancer.readthedocs.io/en/latest/using_usb_proxy.html>`__,
+Cynthion can proxy packets between a target host and a target device attached to the control computer.
+
 Before proceeding, please ensure you have completed all steps in the :doc:`getting_started` and :doc:`getting_started_facedancer` sections.
 
 
