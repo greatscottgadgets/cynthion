@@ -8,6 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.1.7] - 2024-10-10
+### Fixed
+- Shorten connect delay.
+- Prime to receive host zlp before writing respone.
+- Fix libgreat command abort handling.
+
 ## [0.1.6] - 2024-09-19
 ### Fixed
 - Moondancer bulk write operations would fail if the host responded with a halt condition.

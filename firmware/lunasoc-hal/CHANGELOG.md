@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.1.7] - 2024-10-10
+### Fixed
+- Reset USB Endpoint FIFO's before issuing stall.
+
 ## [0.1.6] - 2024-09-19
 ### Added
 - Support USB Low-speed operation.
