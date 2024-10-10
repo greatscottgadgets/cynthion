@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.1.7] - 2024-10-10
+### Added
+* [USB Analysis Tutorial](https://cynthion.readthedocs.io/en/latest/tutorial_usb_analysis.html)
+### Fixed:
+* Fix Facedancer USB Timeout error. (#188)
+### Changed
+* General documentation improvements. (tx for the suggestions @x0rloser!)
+
 
 ## [0.1.6] - 2024-09-19
 ### Added
@@ -27,11 +35,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.4] - 2024-08-19
 ### Added
 * Prevent running or flashing Facedancer on Windows until full support is enabled.
-
 ### Changed
 * Moondancer firmware serial example replaced with an acm serial example that works on all platforms.
 * Updated libgreat to v2024.0.2
-
 ### Fixed
 * Cynthion LED B would activate when taken offline.
 * `cynthion setup` required udev rules to be installed in order to install udev rules.
@@ -44,10 +50,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Documentation updates:
   - Documented the requirement to install libusb on macOS.
   - Developer instructions for Windows.
-
 ### Changed
 * Updated the microcontroller firmware to [`apollo v1.1.0`].
-
 ### Fixed
 * Flash UID returns Zeros after using `--force-offline`.
 * `cynthion update` becomes unreliable when device enumeration is slow.
@@ -76,7 +80,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.5...HEAD
+
+[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.7...HEAD
+[0.1.7]: https://github.com/greatscottgadgets/cynthion/compare/0.1.6...0.1.7
+[0.1.6]: https://github.com/greatscottgadgets/cynthion/compare/0.1.5...0.1.6
 [0.1.5]: https://github.com/greatscottgadgets/cynthion/compare/0.1.4...0.1.5
 [0.1.4]: https://github.com/greatscottgadgets/cynthion/compare/0.1.3...0.1.4
 [0.1.3]: https://github.com/greatscottgadgets/cynthion/compare/0.1.2...0.1.3
