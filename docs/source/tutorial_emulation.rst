@@ -343,9 +343,9 @@ Based on the ``--suggest`` output, add the following to ``hackrf_emulation.py``:
     @vendor_request_handler(number=1, direction=USBDirection.OUT)
     @to_device
     def handle_control_request_1(self, request):
-        request.reply([])
+        request.ack()
 
-Notice that this time the direction of the vendor request is ``OUT`` instead of ``IN``. This means that the host is sending data to the device, not asking the device to send data to the host. We acknowledge the request by replying with no data.
+Notice that this time the direction of the vendor request is ``OUT`` instead of ``IN``. This means that the host is sending data to the device, not asking the device to send data to the host. We acknowledge the request instead of replying with data.
 
 Execute the program:
 
