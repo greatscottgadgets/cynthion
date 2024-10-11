@@ -12,7 +12,7 @@ selftest:
 	python3 -m cynthion.gateware.selftest.top --output build/$@.bit
 
 facedancer:
-	mkdir -p build/
+	mkdir -p build/gensvd/
 	python3 -m cynthion.gateware.facedancer.top --output build/$@.bit
 
 svd:
