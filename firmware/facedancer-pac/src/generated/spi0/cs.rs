@@ -2,17 +2,8 @@
 pub type R = crate::R<CS_SPEC>;
 #[doc = "Register `cs` writer"]
 pub type W = crate::W<CS_SPEC>;
-#[doc = "Field `select` reader - TODO amaranth_soc/csr/reg.py:471"]
-pub type SELECT_R = crate::BitReader;
 #[doc = "Field `select` writer - TODO amaranth_soc/csr/reg.py:471"]
 pub type SELECT_W<'a, REG> = crate::BitWriter<'a, REG>;
-impl R {
-    #[doc = "Bit 0 - TODO amaranth_soc/csr/reg.py:471"]
-    #[inline(always)]
-    pub fn select(&self) -> SELECT_R {
-        SELECT_R::new((self.bits & 1) != 0)
-    }
-}
 impl W {
     #[doc = "Bit 0 - TODO amaranth_soc/csr/reg.py:471"]
     #[inline(always)]
