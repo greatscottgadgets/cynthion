@@ -38,11 +38,10 @@ class Soc(Component):
         # configuration
         self.blockram_base        = 0x00000000
         self.blockram_size        = 0x00010000  # 65536 bytes
-        #self.blockram_size        = 0x00004000
-        self.hyperram_base        = 0x20000000  # Winbond W956A8MBYA6I
-        self.hyperram_size        = 0x08000000  # 8 * 1024 * 1024
         self.spiflash_base        = 0x10000000
         self.spiflash_size        = 0x00400000  # 4 MiB
+        self.hyperram_base        = 0x20000000  # Winbond W956A8MBYA6I
+        self.hyperram_size        = 0x08000000  # 8 * 1024 * 1024
 
         self.csr_base             = 0xf0000000
         self.leds_base            = 0x00000000
@@ -85,7 +84,7 @@ class Soc(Component):
         # cpu
         self.cpu = VexRiscv(
             variant="cynthion+jtag",
-            reset_addr=self.blockram_base
+            reset_addr=self.spiflash_base + self.firmware_start
         )
 
         # interrupt controller
@@ -134,7 +133,7 @@ class Soc(Component):
         self.csr_decoder = csr.Decoder(addr_width=28, data_width=8)
 
         # spi0
-        self.csr_decoder.add(self.spiflash.spi_controller.bus, addr=self.spi0_base, name="spi0")
+        self.csr_decoder.add(self.spiflash.csr, addr=self.spi0_base, name="spi0")
 
         # leds
         self.led_count = 6
@@ -240,7 +239,7 @@ class Soc(Component):
 
         # interrupt controller
         m.submodules += self.interrupt_controller
-        # TODO wiring.connect(m, self.cpu.irq_external, self.irqs.pending)
+        # TODO wiring.connect(m, self.cpu.irq_external, self.interrupt_controller)
         m.d.comb += self.cpu.irq_external.eq(self.interrupt_controller.pending)
 
         # blockram
@@ -250,7 +249,7 @@ class Soc(Component):
         m.submodules += self.hyperram
 
         # spiflash
-        m.submodules += [self.spiflash_provider, self.spiflash]
+        m.submodules += [self.spiflash_provider, self.spiflash, self.spiflash_bus, self.spiflash_phy]
 
         # csr decoder
         m.submodules += self.csr_decoder
@@ -307,7 +306,7 @@ class Soc(Component):
         m.d.comb += self.usb1.attach(usb1_device) # TODO wiring.connect() ?
         m.submodules += [ulpi1_provider, self.usb1, usb1_device]
 
-        # # usb2 - target_phy
+        # usb2 - target_phy
         ulpi2_provider = provider.ULPIProvider(["control_phy", "sideband_phy"])
         usb2_device = USBDevice(bus=ulpi2_provider.bus)
         usb2_device.add_endpoint(self.usb2_ep_control)
@@ -343,14 +342,17 @@ class Soc(Component):
 
         # debug
         debug_io = platform.request("debug", 0)
+        #pmoda    = platform.request("user_pmod", 0)
         m.d.comb += [
-            debug_io.a.o .eq(self.uart0.pins.tx),
-            debug_io.b.o .eq(self.uart1.pins.tx),
+            debug_io.a.o  .eq(self.spiflash_provider.pins.dq.i != 0),
+            debug_io.b.o  .eq(self.spiflash_provider.pins.dq.o != 0),
+            #pmoda.oe     .eq(1),
+            #pmoda.o[0] .eq(ClockSignal("usb")),
         ]
 
         return DomainRenamer({
             "sync": self.domain,
-            "fast": "sync", # cynthion hyperram only works at 120 MHz ?
+            "fast": "sync", # force hyperram interface to sync domain @ 120 MHz
         })(m)
 
 
@@ -398,13 +400,6 @@ class Top(Elaboratable):
 
         # generate our domain clocks/resets
         m.submodules.car = platform.clock_domain_generator()
-        # clock_frequencies = {
-        #     "fast": 120,
-        #     "sync": 60,
-        #     "usb":  60,
-        # }
-        # from luna.gateware.architecture.car import LunaECP5DomainGenerator
-        # m.submodules.car = LunaECP5DomainGenerator(clock_frequencies=clock_frequencies)
 
         # add soc to design
         m.submodules += self.soc
@@ -439,13 +434,13 @@ if __name__ == "__main__":
     design = Top(clock_frequency=clock_frequency, domain=domain)
 
     # generate soc sdk
-    from tutorials.gateware.soc.generate import GenerateSVD
+    from luna_soc.generate.svd import GenerateSVD
     with open("build/gensvd/facedancer.svd", "w") as f:
         GenerateSVD = GenerateSVD(design).generate(file=f)
 
     # invoke cli
     _overrides = {
-        "debug_verilog": True,
+        "debug_verilog": False,
         "verbose": False,
     }
     top_level_cli(design, **_overrides)
