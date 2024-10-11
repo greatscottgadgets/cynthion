@@ -26,6 +26,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0</name>
@@ -83,6 +84,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0</name>
@@ -140,6 +142,7 @@
           <addressOffset>0x0003</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0</name>
@@ -197,6 +200,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0_set</name>
@@ -314,6 +318,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0</name>
@@ -387,6 +392,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0</name>
@@ -460,6 +466,7 @@
           <addressOffset>0x0003</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0</name>
@@ -533,6 +540,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0_set</name>
@@ -682,6 +690,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0</name>
@@ -755,6 +764,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0</name>
@@ -828,6 +838,7 @@
           <addressOffset>0x0003</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0</name>
@@ -901,6 +912,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>pin_0_set</name>
@@ -1050,6 +1062,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>data</name>
@@ -1067,6 +1080,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>data</name>
@@ -1084,6 +1098,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>txe</name>
@@ -1101,6 +1116,7 @@
           <addressOffset>0x000c</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>rxe</name>
@@ -1118,6 +1134,7 @@
           <addressOffset>0x0010</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>div</name>
@@ -1147,6 +1164,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>data</name>
@@ -1164,6 +1182,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>data</name>
@@ -1181,6 +1200,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>txe</name>
@@ -1198,6 +1218,7 @@
           <addressOffset>0x000c</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>rxe</name>
@@ -1215,6 +1236,7 @@
           <addressOffset>0x0010</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>div</name>
@@ -1248,6 +1270,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>value</name>
@@ -1265,6 +1288,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>enable</name>
@@ -1282,6 +1306,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>value</name>
@@ -1299,6 +1324,7 @@
           <addressOffset>0x0010</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -1316,6 +1342,7 @@
           <addressOffset>0x0011</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -1349,6 +1376,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>value</name>
@@ -1366,6 +1394,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>enable</name>
@@ -1383,6 +1412,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>value</name>
@@ -1400,6 +1430,7 @@
           <addressOffset>0x0010</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -1417,6 +1448,7 @@
           <addressOffset>0x0011</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -1436,7 +1468,7 @@
       <baseAddress>0xf0000700</baseAddress>
       <addressBlock>
         <offset>0</offset>
-        <size>0x18</size>
+        <size>0x10</size>
         <usage>registers</usage>
       </addressBlock>
       <registers>
@@ -1446,6 +1478,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>length</name>
@@ -1479,6 +1512,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>select</name>
@@ -1486,19 +1520,46 @@
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <bitRange>[0:0]</bitRange>
-              <access>read-write</access>
+              <access>write-only</access>
             </field>
           </fields>
         </register>
         <register>
-          <name>rx</name>
+          <name>status</name>
+          <description>TODO amaranth_soc/csr/reg.py:471</description>
+          <addressOffset>0x0005</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>rx_ready</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-only</access>
+            </field>
+            <field>
+              <name>tx_ready</name>
+              <description>TODO amaranth_soc/csr/reg.py:471</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[1:1]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>data</name>
           <description>TODO amaranth_soc/csr/reg.py:471</description>
           <addressOffset>0x0008</addressOffset>
           <size>64</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
-              <name>data</name>
+              <name>rx</name>
               <description>TODO amaranth_soc/csr/reg.py:471</description>
               <bitOffset>0</bitOffset>
               <bitWidth>32</bitWidth>
@@ -1506,37 +1567,12 @@
               <access>read-only</access>
             </field>
             <field>
-              <name>ready</name>
+              <name>tx</name>
               <description>TODO amaranth_soc/csr/reg.py:471</description>
               <bitOffset>32</bitOffset>
-              <bitWidth>1</bitWidth>
-              <bitRange>[32:32]</bitRange>
-              <access>read-only</access>
-            </field>
-          </fields>
-        </register>
-        <register>
-          <name>tx</name>
-          <description>TODO amaranth_soc/csr/reg.py:471</description>
-          <addressOffset>0x0010</addressOffset>
-          <size>64</size>
-          <resetValue>0x00</resetValue>
-          <fields>
-            <field>
-              <name>data</name>
-              <description>TODO amaranth_soc/csr/reg.py:471</description>
-              <bitOffset>0</bitOffset>
               <bitWidth>32</bitWidth>
-              <bitRange>[31:0]</bitRange>
+              <bitRange>[63:32]</bitRange>
               <access>write-only</access>
-            </field>
-            <field>
-              <name>ready</name>
-              <description>TODO amaranth_soc/csr/reg.py:471</description>
-              <bitOffset>32</bitOffset>
-              <bitWidth>1</bitWidth>
-              <bitRange>[32:32]</bitRange>
-              <access>read-only</access>
             </field>
           </fields>
         </register>
@@ -1562,6 +1598,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>connect</name>
@@ -1611,6 +1648,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>speed</name>
@@ -1636,6 +1674,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -1653,6 +1692,7 @@
           <addressOffset>0x0009</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -1686,6 +1726,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>address</name>
@@ -1703,6 +1744,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>address</name>
@@ -1744,6 +1786,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>high</name>
@@ -1769,6 +1812,7 @@
           <addressOffset>0x0005</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>byte</name>
@@ -1786,6 +1830,7 @@
           <addressOffset>0x0010</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -1803,6 +1848,7 @@
           <addressOffset>0x0011</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -1836,6 +1882,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>number</name>
@@ -1861,6 +1908,7 @@
           <addressOffset>0x0001</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>stalled</name>
@@ -1886,6 +1934,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>toggle</name>
@@ -1911,6 +1960,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>nak</name>
@@ -1976,6 +2026,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>high</name>
@@ -2001,6 +2052,7 @@
           <addressOffset>0x0009</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>byte</name>
@@ -2018,6 +2070,7 @@
           <addressOffset>0x0010</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -2035,6 +2088,7 @@
           <addressOffset>0x0011</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -2068,6 +2122,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>address</name>
@@ -2085,6 +2140,7 @@
           <addressOffset>0x0001</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>number</name>
@@ -2110,6 +2166,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>enabled</name>
@@ -2135,6 +2192,7 @@
           <addressOffset>0x0003</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>primed</name>
@@ -2160,6 +2218,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>stalled</name>
@@ -2185,6 +2244,7 @@
           <addressOffset>0x0005</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>toggle</name>
@@ -2210,6 +2270,7 @@
           <addressOffset>0x0006</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>epno</name>
@@ -2259,6 +2320,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>high</name>
@@ -2284,6 +2346,7 @@
           <addressOffset>0x0009</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>byte</name>
@@ -2301,6 +2364,7 @@
           <addressOffset>0x0020</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -2318,6 +2382,7 @@
           <addressOffset>0x0021</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -2351,6 +2416,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>connect</name>
@@ -2400,6 +2466,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>speed</name>
@@ -2425,6 +2492,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -2442,6 +2510,7 @@
           <addressOffset>0x0009</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -2475,6 +2544,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>address</name>
@@ -2492,6 +2562,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>address</name>
@@ -2533,6 +2604,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>high</name>
@@ -2558,6 +2630,7 @@
           <addressOffset>0x0005</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>byte</name>
@@ -2575,6 +2648,7 @@
           <addressOffset>0x0010</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -2592,6 +2666,7 @@
           <addressOffset>0x0011</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -2625,6 +2700,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>number</name>
@@ -2650,6 +2726,7 @@
           <addressOffset>0x0001</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>stalled</name>
@@ -2675,6 +2752,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>toggle</name>
@@ -2700,6 +2778,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>nak</name>
@@ -2765,6 +2844,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>high</name>
@@ -2790,6 +2870,7 @@
           <addressOffset>0x0009</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>byte</name>
@@ -2807,6 +2888,7 @@
           <addressOffset>0x0010</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -2824,6 +2906,7 @@
           <addressOffset>0x0011</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -2857,6 +2940,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>address</name>
@@ -2874,6 +2958,7 @@
           <addressOffset>0x0001</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>number</name>
@@ -2899,6 +2984,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>enabled</name>
@@ -2924,6 +3010,7 @@
           <addressOffset>0x0003</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>primed</name>
@@ -2949,6 +3036,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>stalled</name>
@@ -2974,6 +3062,7 @@
           <addressOffset>0x0005</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>toggle</name>
@@ -2999,6 +3088,7 @@
           <addressOffset>0x0006</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>epno</name>
@@ -3048,6 +3138,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>high</name>
@@ -3073,6 +3164,7 @@
           <addressOffset>0x0009</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>byte</name>
@@ -3090,6 +3182,7 @@
           <addressOffset>0x0020</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -3107,6 +3200,7 @@
           <addressOffset>0x0021</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -3140,6 +3234,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>connect</name>
@@ -3189,6 +3284,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>speed</name>
@@ -3214,6 +3310,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -3231,6 +3328,7 @@
           <addressOffset>0x0009</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -3264,6 +3362,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>address</name>
@@ -3281,6 +3380,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>address</name>
@@ -3322,6 +3422,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>high</name>
@@ -3347,6 +3448,7 @@
           <addressOffset>0x0005</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>byte</name>
@@ -3364,6 +3466,7 @@
           <addressOffset>0x0010</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -3381,6 +3484,7 @@
           <addressOffset>0x0011</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -3414,6 +3518,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>number</name>
@@ -3439,6 +3544,7 @@
           <addressOffset>0x0001</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>stalled</name>
@@ -3464,6 +3570,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>toggle</name>
@@ -3489,6 +3596,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>32</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>nak</name>
@@ -3554,6 +3662,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>high</name>
@@ -3579,6 +3688,7 @@
           <addressOffset>0x0009</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>byte</name>
@@ -3596,6 +3706,7 @@
           <addressOffset>0x0010</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -3613,6 +3724,7 @@
           <addressOffset>0x0011</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -3646,6 +3758,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>address</name>
@@ -3663,6 +3776,7 @@
           <addressOffset>0x0001</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>number</name>
@@ -3688,6 +3802,7 @@
           <addressOffset>0x0002</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>enabled</name>
@@ -3713,6 +3828,7 @@
           <addressOffset>0x0003</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>primed</name>
@@ -3738,6 +3854,7 @@
           <addressOffset>0x0004</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>stalled</name>
@@ -3763,6 +3880,7 @@
           <addressOffset>0x0005</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>toggle</name>
@@ -3788,6 +3906,7 @@
           <addressOffset>0x0006</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>epno</name>
@@ -3837,6 +3956,7 @@
           <addressOffset>0x0008</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>high</name>
@@ -3862,6 +3982,7 @@
           <addressOffset>0x0009</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>byte</name>
@@ -3879,6 +4000,7 @@
           <addressOffset>0x0020</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -3896,6 +4018,7 @@
           <addressOffset>0x0021</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>mask</name>
@@ -3925,6 +4048,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>enable</name>
@@ -3954,6 +4078,7 @@
           <addressOffset>0x0000</addressOffset>
           <size>16</size>
           <resetValue>0x00</resetValue>
+          <access>read-write</access>
           <fields>
             <field>
               <name>major</name>
