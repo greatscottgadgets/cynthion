@@ -18,22 +18,23 @@ from luna.gateware.usb.usb2.device   import USBDevice
 
 from luna.gateware.utils.cdc         import synchronize
 
-from luna_soc.gateware.core          import advertiser, blockram, info, psram, spiflash, timer, uart, usb2
+from luna_soc.gateware.core          import blockram, psram, spiflash, timer, uart, usb2
 from luna_soc.gateware.core.spiflash import ECP5ConfigurationFlashInterface, SPIPHYController
 from luna_soc.gateware.cpu           import InterruptController, VexRiscv
 from luna_soc.gateware.provider      import cynthion as provider
 
+from . import advertiser, info
 
 
 # - component: Soc ------------------------------------------------------------
 
 class Soc(Component):
-    def __init__(self, clock_frequency, domain="sync"):
+    def __init__(self, clock_frequency_hz, domain="sync"):
         super().__init__({})
 
-        self.clock_frequency = clock_frequency
-        self.domain          = domain
-        self.firmware_start  = 0x000b0000
+        self.clock_frequency_hz = clock_frequency_hz
+        self.domain             = domain
+        self.firmware_start     = 0x000b0000
 
         # configuration
         self.blockram_base        = 0x00000000
@@ -117,11 +118,11 @@ class Soc(Component):
         self.spiflash = spiflash.Peripheral(
             self.spiflash_phy,
             with_controller = True,
-            controller_name = "spi0",      # TODO lose
+            controller_name = "spi0",
             with_mmap       = True,
             mmap_size       = self.spiflash_size,
-            mmap_name       = "spiflash",  # TODO lose
-            domain          = self.domain, # TODO lose
+            mmap_name       = "spiflash",
+            domain          = self.domain,
         )
         self.wb_decoder.add(self.spiflash.bus, addr=self.spiflash_base, name="spiflash")
 
@@ -150,13 +151,13 @@ class Soc(Component):
 
         # uart0
         uart_baud_rate = 115200
-        divisor = int(clock_frequency // uart_baud_rate)
+        divisor = int(clock_frequency_hz // uart_baud_rate)
         self.uart0 = uart.Peripheral(divisor=divisor)
         self.csr_decoder.add(self.uart0.bus, addr=self.uart0_base, name="uart0")
 
         # uart1
         uart_baud_rate = 115200
-        divisor = int(clock_frequency // uart_baud_rate)
+        divisor = int(clock_frequency_hz // uart_baud_rate)
         self.uart1 = uart.Peripheral(divisor=divisor)
         self.csr_decoder.add(self.uart1.bus, addr=self.uart1_base, name="uart1")
 
@@ -214,7 +215,7 @@ class Soc(Component):
 
         # apollo advertiser
         self.advertiser_provider = provider.ApolloAdvertiserProvider("int")
-        self.advertiser = advertiser.Peripheral(pad=self.advertiser_provider.pins)
+        self.advertiser = advertiser.Peripheral(pad=self.advertiser_provider.pins, clk_freq_hz=clock_frequency_hz)
         self.csr_decoder.add(self.advertiser.bus, addr=self.advertiser_base, name="advertiser")
 
         # soc info
@@ -294,7 +295,7 @@ class Soc(Component):
         usb0_device.add_endpoint(self.usb0_ep_control)
         usb0_device.add_endpoint(self.usb0_ep_in)
         usb0_device.add_endpoint(self.usb0_ep_out)
-        m.d.comb += self.usb0.attach(usb0_device) # TODO wiring.connect() ?
+        m.d.comb += self.usb0.attach(usb0_device)
         m.submodules += [ulpi0_provider, self.usb0, usb0_device]
 
         # usb1 - target_phy
@@ -303,7 +304,7 @@ class Soc(Component):
         usb1_device.add_endpoint(self.usb1_ep_control)
         usb1_device.add_endpoint(self.usb1_ep_in)
         usb1_device.add_endpoint(self.usb1_ep_out)
-        m.d.comb += self.usb1.attach(usb1_device) # TODO wiring.connect() ?
+        m.d.comb += self.usb1.attach(usb1_device)
         m.submodules += [ulpi1_provider, self.usb1, usb1_device]
 
         # usb2 - target_phy
@@ -312,11 +313,11 @@ class Soc(Component):
         usb2_device.add_endpoint(self.usb2_ep_control)
         usb2_device.add_endpoint(self.usb2_ep_in)
         usb2_device.add_endpoint(self.usb2_ep_out)
-        m.d.comb += self.usb2.attach(usb2_device) # TODO wiring.connect() ?
+        m.d.comb += self.usb2.attach(usb2_device)
         m.submodules += [ulpi2_provider, self.usb2, usb2_device]
 
         # advertiser
-        m.submodules += self.advertiser
+        m.submodules += [self.advertiser, self.advertiser_provider]
 
         # info
         m.submodules += self.info
@@ -341,14 +342,14 @@ class Soc(Component):
         ]
 
         # debug
-        debug_io = platform.request("debug", 0)
-        #pmoda    = platform.request("user_pmod", 0)
-        m.d.comb += [
-            debug_io.a.o  .eq(self.spiflash_provider.pins.dq.i != 0),
-            debug_io.b.o  .eq(self.spiflash_provider.pins.dq.o != 0),
-            #pmoda.oe     .eq(1),
-            #pmoda.o[0] .eq(ClockSignal("usb")),
-        ]
+        # debug_io = platform.request("debug", 0)
+        # pmoda    = platform.request("user_pmod", 0)
+        # m.d.comb += [
+        #     debug_io.a.o  .eq(ClockSignal("usb")),
+        #     debug_io.b.o  .eq(ClockSignal("fast")),
+        #     pmoda.oe      .eq(1),
+        #     pmoda.o[0]    .eq(self.advertiser.advertiser.clk),
+        # ]
 
         return DomainRenamer({
             "sync": self.domain,
@@ -384,11 +385,11 @@ class Top(Elaboratable):
         ),
     ]
 
-    def __init__(self, clock_frequency, domain="sync"):
-        self.clock_frequency = clock_frequency
+    def __init__(self, clock_frequency_hz, domain="sync"):
+        self.clock_frequency_hz = clock_frequency_hz
         self.domain = domain
 
-        self.soc = Soc(clock_frequency=self.clock_frequency, domain=self.domain)
+        self.soc = Soc(clock_frequency_hz=self.clock_frequency_hz, domain=self.domain)
         self.sysclk = Signal()
 
     def elaborate(self, platform):
@@ -427,11 +428,11 @@ if __name__ == "__main__":
     domain = "usb"
 
     # configure clock frequency
-    clock_frequency = int(platform.DEFAULT_CLOCK_FREQUENCIES_MHZ[domain] * 1e6)
-    logging.info(f"Building for {platform} with domain {domain} and clock frequency: {clock_frequency}")
+    clock_frequency_hz = int(platform.DEFAULT_CLOCK_FREQUENCIES_MHZ[domain] * 1e6)
+    logging.info(f"Building for {platform} with domain {domain} and clock frequency: {clock_frequency_hz}")
 
     # create design
-    design = Top(clock_frequency=clock_frequency, domain=domain)
+    design = Top(clock_frequency_hz=clock_frequency_hz, domain=domain)
 
     # generate soc sdk
     from luna_soc.generate.svd import GenerateSVD
