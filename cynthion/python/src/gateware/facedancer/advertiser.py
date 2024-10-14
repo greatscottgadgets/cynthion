@@ -4,52 +4,60 @@
 # Copyright (c) 2024 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from amaranth               import Cat, Elaboratable, Module, Signal, Record
-from luna.gateware.platform import NullPin
-from luna_soc.gateware.csr  import Peripheral
+from amaranth              import *
+from amaranth.lib          import wiring
+from amaranth.lib.wiring   import In, flipped, connect
 
-from apollo_fpga.gateware   import ApolloAdvertiser
+from amaranth_soc          import csr
 
-class ApolloAdvertiserPeripheral(Peripheral, Elaboratable):
-    """ Controller peripheral for ApolloAdvertiser
+from apollo_fpga.gateware  import ApolloAdvertiser
 
-    CSR registers
-    -------------
-    enable : read/write
-        Set this bit to '1' to start ApolloAdvertiser and disconnect the Cynthion USB control port from Apollo.
-    """
 
-    def __init__(self, clk_freq_hz=None, pad=None):
-        super().__init__()
+class Peripheral(wiring.Component):
+    """ Controller peripheral for ApolloAdvertiser"""
 
+    class Control(csr.Register, access="w"):
+        """Control register
+
+            enable : Set this bit to '1' to start ApolloAdvertiser and disconnect the
+                     Cynthion USB control port from Apollo.
+        """
+        enable : csr.Field(csr.action.W, unsigned(1))
+
+
+    def __init__(self, pad=None, clk_freq_hz=None):
+        # advertiser
         self.advertiser = ApolloAdvertiser(pad=pad, clk_freq_hz=clk_freq_hz)
 
-        #
-        # Registers
-        #
+        # registers
+        regs = csr.Builder(addr_width=1, data_width=8)
+        self._control = regs.add("control", self.Control())
 
-        regs         = self.csr_bank()
-        self._enable = regs.csr(1, "rw", desc="""
-            Set this bit to '1' to start ApolloAdvertiser and disconnect the Cynthion USB control port from Apollo.
-        """)
+        # bridge
+        self._bridge = csr.Bridge(regs.as_memory_map())
 
-        # wishbone connection
-        self._bridge = self.bridge(data_width=32, granularity=8, alignment=2)
-        self.bus     = self._bridge.bus
+        # bus
+        super().__init__({
+            "bus" : In(self._bridge.bus.signature),
+        })
+        self.bus.memory_map = self._bridge.bus.memory_map
 
 
     def elaborate(self, platform):
         m = Module()
-        m.submodules.bridge = self._bridge
+        m.submodules += self._bridge
+
+        # bus
+        connect(m, self.bus, self._bridge.bus)
 
         # advertiser stop signal is enabled by default
         stop = Signal(reset=1)
 
         # update advertiser stop signal on register write
-        with m.If(self._enable.w_stb):
-            m.d.sync += stop.eq(~self._enable.w_data)
+        with m.If(self._control.f.enable.w_stb):
+            m.d.sync += stop.eq(~self._control.f.enable.w_data)
 
-        # create advertiser
+        # advertiser
         m.submodules.advertiser = self.advertiser
         m.d.comb += self.advertiser.stop.eq(stop)
 

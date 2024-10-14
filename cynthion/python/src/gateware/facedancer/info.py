@@ -4,52 +4,58 @@
 # Copyright (c) 2024 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from amaranth               import Cat, Elaboratable, Module, Signal, Record
-from luna.gateware.platform import NullPin
-from luna_soc.gateware.csr  import Peripheral
+from amaranth              import *
+from amaranth.lib          import wiring
+from amaranth.lib.wiring   import In, flipped, connect
 
-from apollo_fpga.gateware   import ApolloAdvertiser
+from amaranth_soc          import csr
 
-class CynthionInformationPeripheral(Peripheral, Elaboratable):
+
+class Peripheral(wiring.Component):
     """ Peripheral for retrieving Cynthion hardware information at runtime.
 
-    CSR registers
-    -------------
+    Registers
+    ---------
     version_major : read
         Cynthion hardware major revision number.
     version_minor : read
         Cynthion hardware minor revision number.
     """
 
+    class Version(csr.Register, access="r"):
+        """Version register
+
+            major : Contains the Cynthion hardware major revision number.
+            minor : Contains the Cynthion hardware minor revision number.
+        """
+        major : csr.Field(csr.action.R, unsigned(8))
+        minor : csr.Field(csr.action.R, unsigned(8))
+
     def __init__(self):
-        super().__init__()
+        # registers
+        regs = csr.Builder(addr_width=4, data_width=8)
+        self._version = regs.add("version", self.Version())
 
-        #
-        # Registers
-        #
+        # bridge
+        self._bridge = csr.Bridge(regs.as_memory_map())
 
-        regs         = self.csr_bank()
-        self._version_major = regs.csr(8, "r", desc="""
-            Contains the Cynthion hardware major revision number.
-        """)
-        self._version_minor = regs.csr(8, "r", desc="""
-            Contains the Cynthion hardware minor revision number.
-        """)
-
-        # wishbone connection
-        self._bridge = self.bridge(data_width=32, granularity=8, alignment=2)
-        self.bus     = self._bridge.bus
-
+        # bus
+        super().__init__({
+            "bus" : In(self._bridge.bus.signature),
+        })
+        self.bus.memory_map = self._bridge.bus.memory_map
 
     def elaborate(self, platform):
         m = Module()
-        m.submodules.bridge = self._bridge
+        m.submodules += self._bridge
+
+        connect(m, self.bus, self._bridge.bus)
 
         # Cynthion hardware revision numbers
         major, minor = platform.version
         m.d.comb += [
-            self._version_major.r_data.eq(major),
-            self._version_minor.r_data.eq(minor),
+            self._version.f.major.r_data.eq(major),
+            self._version.f.minor.r_data.eq(minor),
         ]
 
         return m
