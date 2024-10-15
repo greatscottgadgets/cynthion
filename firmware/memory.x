@@ -1,6 +1,6 @@
 MEMORY {
-    spiflash : ORIGIN = 0x100b0000, LENGTH = 0x00400000
     blockram : ORIGIN = 0x00000000, LENGTH = 0x00010000
+    spiflash : ORIGIN = 0x100b0000, LENGTH = 0x00400000
 }
 
 REGION_ALIAS("REGION_TEXT",   spiflash);
