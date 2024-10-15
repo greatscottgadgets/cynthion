@@ -22,6 +22,7 @@ Cynthion Documentation
   :caption: Tutorials
 
   tutorial_usb_analysis
+  tutorial_emulation
 
 .. toctree::
   :maxdepth: 2
