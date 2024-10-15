@@ -205,7 +205,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                 .ev_pending()
                 .modify(|r, w| w.mask().bit(r.mask().bit()));
 
-            let endpoint_number = usb2.ep_out.data().read().byte().bits() as u8;
+            let endpoint_number = usb2.ep_out.status().read().epno().bits() as u8;
             InterruptEvent::Usb(Control, UsbEvent::ReceivePacket(endpoint_number))
         }
 

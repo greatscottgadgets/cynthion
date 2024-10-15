@@ -147,15 +147,16 @@ macro_rules! impl_usb {
                             self.device.control().modify(|_, w| {
                                 w.full_speed_only().bit(false).low_speed_only().bit(false)
                             });
-                            //self.device.control().modify(|_, w| w.low_speed_only().bit(false));
                         },
                         Speed::Full => {
-                            self.device.control().modify(|_, w| w.full_speed_only().bit(true));
-                            self.device.control().modify(|_, w| w.low_speed_only().bit(false));
+                            self.device.control().modify(|_, w| {
+                                w.full_speed_only().bit(true).low_speed_only().bit(false)
+                            });
                         },
                         Speed::Low => {
-                            self.device.control().modify(|_, w| w.full_speed_only().bit(false));
-                            self.device.control().modify(|_, w| w.low_speed_only().bit(true));
+                            self.device.control().modify(|_, w| {
+                                w.full_speed_only().bit(false).low_speed_only().bit(true)
+                            });
                         }
                         _ => {
                             log::warn!("Requested unsupported device speed '{:?}'. Ignoring request and setting device to 'Speed::High'.", device_speed);
