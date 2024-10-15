@@ -1,5 +1,5 @@
 #
-# This file is part of LUNA.
+# This file is part of Cynthion.
 #
 # Copyright (c) 2020-2024 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
@@ -18,7 +18,7 @@ from luna.gateware.usb.usb2.device   import USBDevice
 
 from luna.gateware.utils.cdc         import synchronize
 
-from luna_soc.gateware.core          import blockram, psram, spiflash, timer, uart, usb2
+from luna_soc.gateware.core          import blockram, spiflash, timer, uart, usb2
 from luna_soc.gateware.core.spiflash import ECP5ConfigurationFlashInterface, SPIPHYController
 from luna_soc.gateware.cpu           import InterruptController, VexRiscv
 from luna_soc.gateware.provider      import cynthion as provider
@@ -127,8 +127,8 @@ class Soc(Component):
         self.wb_decoder.add(self.spiflash.bus, addr=self.spiflash_base, name="spiflash")
 
         # hyperram
-        self.hyperram = psram.Peripheral(size=self.hyperram_size)
-        self.wb_decoder.add(self.hyperram.bus, addr=self.hyperram_base, name="hyperram")
+        # TODO self.hyperram = psram.Peripheral(size=self.hyperram_size)
+        # TODO self.wb_decoder.add(self.hyperram.bus, addr=self.hyperram_base, name="hyperram")
 
         # csr decoder
         self.csr_decoder = csr.Decoder(addr_width=28, data_width=8)
@@ -247,7 +247,7 @@ class Soc(Component):
         m.submodules += self.blockram
 
         # hyperram
-        m.submodules += self.hyperram
+        # TODO m.submodules += self.hyperram
 
         # spiflash
         m.submodules += [self.spiflash_provider, self.spiflash, self.spiflash_bus, self.spiflash_phy]
