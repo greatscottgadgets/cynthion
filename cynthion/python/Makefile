@@ -12,12 +12,12 @@ selftest:
 	python3 -m cynthion.gateware.selftest.top --output build/$@.bit
 
 facedancer:
-	mkdir -p build/
+	mkdir -p build/gensvd/
 	python3 -m cynthion.gateware.facedancer.top --output build/$@.bit
 
 svd:
 	mkdir -p build/gensvd/
-	python3 -m cynthion.gateware.facedancer.top --generate-svd > build/gensvd/lunasoc.svd
+	python3 -m cynthion.gateware.facedancer.top --generate-svd > build/gensvd/facedancer.svd
 
 
 # - helpers -------------------------------------------------------------------

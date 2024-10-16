@@ -1,0 +1,38 @@
+[package]
+name = "facedancer-pac"
+version = "0.1.1"
+authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
+license = "BSD-3-Clause"
+description = "A peripheral access crate for the Cynthion Moondancer SoC"
+categories = ["embedded", "hardware-support", "no-std"]
+keywords = ["cynthion", "luna", "riscv", "peripheral", "usb"]
+repository = "https://github.com/greatscottgadgets/cynthion"
+documentation = "https://docs.rs/facedancer-pac"
+edition = "2021"
+rust-version = "1.68"
+include = ["src/**/*", "README.md", "device.x", "build.rs"]
+
+[package.metadata.docs.rs]
+default-target = "riscv32imac-unknown-none-elf"
+targets = [
+    "riscv32i-unknown-none-elf",
+    "riscv32imac-unknown-none-elf",
+]
+
+[lib]
+test = false
+bench = false
+
+[features]
+default = [
+    "vexriscv",
+]
+rt = ["riscv-rt"]
+minerva = []
+vexriscv = []
+
+[dependencies]
+critical-section = { version = "=1.1.1", optional = true }
+riscv = "=0.10.1"
+riscv-rt = { version = "=0.11.0", optional = true }
+vcell = "=0.1.3"
