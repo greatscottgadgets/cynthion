@@ -38,10 +38,10 @@ ladybug = ["ladybug/enable"]
 
 # select softcore
 minerva = [
-    "moondancer-pac/minerva",
+    "facedancer-pac/minerva",
 ]
 vexriscv = [
-    "moondancer-pac/vexriscv",
+    "facedancer-pac/vexriscv",
 ]
 vexriscv_dcache = []
 
@@ -61,7 +61,7 @@ cynthion = { version = "0.1.1", path = "../../cynthion/rust" }
 ladybug = { version = "0.1.6", path = "../ladybug" }
 libgreat = { version = "0.1.1", path = "../libgreat", features = ["errno_minimal"] }
 lunasoc-hal = { version = "0.1.7", path = "../lunasoc-hal", default-features = false, features = ["usb"]}
-moondancer-pac = { version = "0.1.1", path = "../moondancer-pac", default-features = false, features = ["critical-section"]}
+facedancer-pac = { version = "0.1.1", path = "../facedancer-pac", default-features = false, features = ["critical-section"]}
 
 riscv = { version = "=0.10.1", features = ["critical-section-single-hart"] }
 riscv-rt = { version = "=0.11.0" }
@@ -92,6 +92,9 @@ name = "hello"
 
 [[example]]
 name = "interrupts"
+
+[[example]]
+name = "irq"
 
 [[example]]
 name = "spiflash"
