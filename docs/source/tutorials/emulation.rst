@@ -7,9 +7,9 @@ This tutorial walks through the whole process of emulating a USB device with Cyn
 Prerequisites
 -------------
 
- * Install the Cynthion tools by following :doc:`getting_started`.
+ * Install the Cynthion tools by following :doc:`/getting_started`.
  * Install HackRF Tools by following `Installing HackRF Software <https://hackrf.readthedocs.io/en/latest/installing_hackrf_software.html>`__.
- * Install the Facedancer library and run the Facedancer bitstream and firmware as described in :doc:`getting_started_facedancer`.
+ * Install the Facedancer library and run the Facedancer bitstream and firmware as described in :doc:`/getting_started_facedancer`.
 
     .. note::
 
@@ -41,7 +41,7 @@ We need to connect our Cynthion before we can use it to emulate a HackRF One. If
 
 Now also connect the **TARGET C** port to your computer. Facedancer software uses **CONTROL** to control the Cynthion and **TARGET C** to connect to the target host, the computer which we'll try to fool into thinking that there is a HackRF One connected. The control host and target host can be two separate computers, but in this tutorial we will use the same computer as both the control host and the target host.
 
-.. image:: ../images/cynthion-connections-facedancer-single-host.svg
+.. image:: ../../images/cynthion-connections-facedancer-single-host.svg
   :alt: Connection diagram for using Cynthion with Facedancer on a single host computer.
 
 
@@ -204,7 +204,7 @@ While the program is running, execute ``hackrf_info`` in another terminal:
     Serial number: 1234
     Board ID Number: 2 (HackRF One)
     hackrf_version_string_read() failed: Pipe error (-1000)
- 
+
 We did it! Our new board ID represents HackRF One! In this example we guessed low numbers for the board ID byte, but we could have discovered that ``2`` represents HackRF One by observing the behavior of an actual HackRF One or by reading the `libhackrf source code <https://github.com/greatscottgadgets/hackrf/blob/17f394331d16e11d835092bed14a5b7feb4f47e0/host/libhackrf/src/hackrf.h#L660>`__ or `HackRF firmware source code <https://github.com/greatscottgadgets/hackrf/blob/17f394331d16e11d835092bed14a5b7feb4f47e0/host/libhackrf/src/hackrf.h#L660>`__.
 
 

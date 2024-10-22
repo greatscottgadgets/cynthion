@@ -21,8 +21,11 @@ Cynthion Documentation
   :maxdepth: 2
   :caption: Tutorials
 
-  tutorial_usb_analysis
-  tutorial_emulation
+  tutorials/usb_analysis
+  tutorials/emulation
+  tutorials/gateware_blinky
+  tutorials/gateware_simple_usb_device
+  tutorials/gateware_usb_audio_device
 
 .. toctree::
   :maxdepth: 2
