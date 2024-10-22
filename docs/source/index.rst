@@ -23,6 +23,9 @@ Cynthion Documentation
 
   tutorials/usb_analysis
   tutorials/emulation
+  tutorials/gateware_blinky
+  tutorials/gateware_simple_usb_device
+  tutorials/gateware_usb_audio_device
 
 .. toctree::
   :maxdepth: 2
