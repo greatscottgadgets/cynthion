@@ -6,6 +6,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 <!--
 ## [Unreleased]
+### Changed
+- Bump `critical-section` to version `=1.2.0` as older versions have been yanked from crates.io. (tx @goo99x!)
+
 -->
 
 ## [0.1.1] - 2024-07-08
