@@ -1,6 +1,6 @@
 [package]
 name = "moondancer-pac"
-version = "0.1.1"
+version = "0.1.8"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
 description = "A peripheral access crate for the Cynthion Moondancer SoC"
@@ -32,7 +32,7 @@ minerva = []
 vexriscv = []
 
 [dependencies]
-critical-section = { version = "=1.1.1", optional = true }
+critical-section = { version = "=1.2.0", optional = true }
 riscv = "=0.10.1"
 riscv-rt = { version = "=0.11.0", optional = true }
 vcell = "=0.1.3"
