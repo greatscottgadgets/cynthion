@@ -43,7 +43,7 @@ pipeline {
             }
             steps {
                 sh '''#!/bin/bash
-                    git clone https://github.com/grvvy/cynthion-test
+                    git clone https://github.com/greatscottgadgets/cynthion-test
                     cd cynthion-test/
                     cp /tmp/calibration.dat calibration.dat
                     make
