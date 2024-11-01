@@ -3,8 +3,8 @@ pipeline {
     stages {
         stage('Build Docker Images') {
             steps {
-                sh 'docker build -t cynthion https://github.com/grvvy/cynthion.git#ppps_update'
-                sh 'docker build -t cynthion-test https://github.com/grvvy/cynthion-test.git#ppps_update'
+                sh 'docker build -t cynthion https://github.com/greatscottgadgets/cynthion'
+                sh 'docker build -t cynthion-test https://github.com/greatscottgadgets/cynthion'
             }
         }
         stage('Cynthion selftest') {
