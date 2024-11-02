@@ -1,28 +1,69 @@
 pipeline {
-    agent {
-        dockerfile {
-            additionalBuildArgs '--build-arg CACHEBUST=$(date +%s)'
-            args '--group-add=46 --device-cgroup-rule="c 189:* rmw" -v /dev/bus/usb:/dev/bus/usb'
-        }
-    }
+    agent any
     stages {
-        stage('Build') {
+        stage('Build Docker Images') {
             steps {
-                sh './ci/build.sh'
+                sh 'docker build -t cynthion github.com/greatscottgadgets/cynthion'
+                sh 'docker build -t cynthion-test github.com/greatscottgadgets/cynthion-test'
             }
         }
-        stage('Test') {
+        stage('Cynthion selftest') {
+            agent{
+                docker {
+                    image 'cynthion'
+                    reuseNode true
+                    args '--name cynthion_container --group-add=46 --device-cgroup-rule="c 189:* rmw" --device /dev/bus/usb'
+                }
+            }
             steps {
-                sh './ci/configure-hubs.sh --off'
+                sh './ci/build.sh'
+                sh 'hubs all off'
                 retry(3) {
                     sh './ci/test.sh'
                 }
+                sh 'hubs all reset'
+            }
+        }
+        stage('Cynthion-test') {
+            agent{
+                docker {
+                    image 'cynthion-test'
+                    reuseNode true
+                    args '''
+                            --name cynthion-test_container
+                            --group-add=20
+                            --group-add=46
+                            --device-cgroup-rule="c 166:* rmw"
+                            --device-cgroup-rule="c 189:* rmw"
+                            --device /dev/bus/usb
+                            --volume /run/udev/control:/run/udev/control
+                            --net=host
+                        '''
+                }
+            }
+            steps {
+                sh '''#!/bin/bash
+                    git clone https://github.com/greatscottgadgets/cynthion-test
+                    cd cynthion-test/
+                    cp /tmp/calibration.dat calibration.dat
+                    make
+                    environment/bin/pip install --upgrade dependencies/cynthion/cynthion/python/.
+                    make analyzer.bit
+                '''
+                sh 'hubs all off'
+                retry(3) {
+                    sh '''#!/bin/bash
+                        hubs cyntest_tycho cyntest_greatfet cyntest_bmp reset
+                        cd cynthion-test/
+                        make unattended
+                    '''
+                }
+                sh 'hubs all reset'
             }
         }
     }
     post {
         always {
-            sh './ci/configure-hubs.sh --reset'
             cleanWs(cleanWhenNotBuilt: false,
                     deleteDirs: true,
                     disableDeferredWipeout: true,
