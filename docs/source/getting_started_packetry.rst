@@ -58,4 +58,4 @@ Connect Hardware
 
 
 Next, see the `Packetry documentation <https://packetry.readthedocs.io/en/latest/quick_start.html#connect-cynthion>`__ for more detail,
-or the tutorial :doc:`tutorial_usb_analysis` for a worked example.
+or the tutorial :doc:`tutorials/usb_analysis` for a worked example.
