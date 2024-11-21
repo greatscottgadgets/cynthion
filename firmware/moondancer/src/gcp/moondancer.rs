@@ -114,21 +114,6 @@ impl Moondancer {
                     // send ZLP to host to end status stage
                     self.usb0.ack(endpoint_number, Direction::HostToDevice);
                     return;
-                } else if matches!(
-                    (direction, request_type, request),
-                    (
-                        Direction::HostToDevice,
-                        RequestType::Standard,
-                        Request::SetInterface,
-                    )
-                ) {
-                    // reset PID for all endpoints
-                    for endpoint_number in 1..16 {
-                        self.usb0
-                            .clear_feature_endpoint_halt(endpoint_number, Direction::HostToDevice);
-                        self.usb0
-                            .clear_feature_endpoint_halt(endpoint_number, Direction::DeviceToHost);
-                    }
                 }
 
                 // queue setup packet and convert to a control event
