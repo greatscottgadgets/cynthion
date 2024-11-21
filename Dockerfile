@@ -35,10 +35,10 @@ RUN apt-get update && apt-get install -y \
     zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# install latest from oss-cad-suite
-RUN curl -L $(curl -s "https://api.github.com/repos/YosysHQ/oss-cad-suite-build/releases/latest" \
-    | jq --raw-output '.assets[].browser_download_url' | grep "linux-x64") --output oss-cad-suite-linux-x64.tgz \
-    && tar zxvf oss-cad-suite-linux-x64.tgz
+# install oss-cad-suite 2024-11-01
+RUN curl -L $(curl -s "https://api.github.com/repos/YosysHQ/oss-cad-suite-build/releases/183038843" \
+    | jq --raw-output '.assets[].browser_download_url' | grep "linux-x64") --output oss-cad-suite-linux-x64-20241101.tgz \
+    && tar zxvf oss-cad-suite-linux-x64-20241101.tgz
 
 # Install USB hub PPPS dependencies
 RUN pip3 install python-dotenv git+https://github.com/CapableRobot/CapableRobot_USBHub_Driver --upgrade
