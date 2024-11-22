@@ -155,6 +155,15 @@ macro_rules! impl_usb {
                     // disable endpoint events
                     self.disable_events();
 
+                    // un-prime all OUT endpoints and disable interface
+                    for endpoint_number in 0..smolusb::EP_MAX_ENDPOINTS as u8 {
+                        self.ep_out
+                            .epno()
+                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                        self.ep_out.prime().write(|w| w.prime().bit(false));
+                    }
+                    self.ep_out.enable().write(|w| w.enable().bit(false));
+
                     // reset FIFOs
                     self.ep_control.reset().write(|w| w.reset().bit(true));
                     self.ep_in.reset().write(|w| w.reset().bit(true));
@@ -179,6 +188,15 @@ macro_rules! impl_usb {
 
                     // disconnect device controller
                     self.controller.connect().write(|w| w.connect().bit(false));
+
+                    // un-prime all OUT endpoints and disable interface
+                    for endpoint_number in 0..smolusb::EP_MAX_ENDPOINTS as u8 {
+                        self.ep_out
+                            .epno()
+                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                        self.ep_out.prime().write(|w| w.prime().bit(false));
+                    }
+                    self.ep_out.enable().write(|w| w.enable().bit(false));
 
                     // reset FIFOs
                     self.ep_control.reset().write(|w| w.reset().bit(true));

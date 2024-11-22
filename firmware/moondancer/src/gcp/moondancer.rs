@@ -96,6 +96,7 @@ impl Moondancer {
                 let direction = setup_packet.direction();
                 let request_type = setup_packet.request_type();
                 let request = setup_packet.request();
+
                 if matches!(
                     (direction, request_type, request),
                     (
@@ -586,6 +587,24 @@ impl Moondancer {
         Ok([].into_iter())
     }
 
+    pub fn ep_out_interface_enable(
+        &mut self,
+        _arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
+        // 0. clear receive fifo in case the previous transaction wasn't handled
+        if self.usb0.ep_out.have().read().have().bit() {
+            log::warn!("Re-enabling interface with unread data: Usb0");
+            self.usb0.ep_out.reset().write(|w| w.reset().bit(true));
+        }
+
+        // 1. re-enable ep_out interface
+        self.usb0.ep_out.enable().write(|w| w.enable().bit(true));
+
+        debug!("MD moondancer::ep_out_interface_enable()");
+
+        Ok([].into_iter())
+    }
+
     pub fn write_control_endpoint(
         &mut self,
         arguments: &[u8],
@@ -885,7 +904,7 @@ pub static CLASS_DOCS: &str = "API for fine-grained control of the Target USB po
 ///
 /// Fields are `"\0"`  where C implementation has `""`
 /// Fields are `"*\0"` where C implementation has `NULL`
-pub static VERBS: [Verb; 18] = [
+pub static VERBS: [Verb; 19] = [
     // - device connection --
     Verb {
         id: 0x00,
@@ -1024,6 +1043,15 @@ pub static VERBS: [Verb; 18] = [
         in_param_names: "*\0",
         out_signature: "<H\0",
         out_param_names: "bitmask\0",
+    },
+    Verb {
+        id: 0x0f,
+        name: "ep_out_interface_enable\0",
+        doc: "\0", //"Enable OUT endpoints to resume receiving packets.\0",
+        in_signature: "\0",
+        in_param_names: "*\0",
+        out_signature: "\0",
+        out_param_names: "*\0",
     },
     // - tests --
     Verb {
@@ -1164,6 +1192,12 @@ impl GreatDispatch for Moondancer {
             0x0e => {
                 // moondancer::get_nak_status
                 let iter = self.get_nak_status(arguments)?;
+                let response = iter_to_response(iter, response_buffer);
+                Ok(response)
+            }
+            0x0f => {
+                // moondancer::ep_out_interface_enable
+                let iter = self.ep_out_interface_enable(arguments)?;
                 let response = iter_to_response(iter, response_buffer);
                 Ok(response)
             }
