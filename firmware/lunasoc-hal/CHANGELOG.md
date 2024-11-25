@@ -8,6 +8,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.1.8] - 2024-11-25
+### Fixed
+- Un-prime all OUT endpoints and disable interface when connecting or disconnecting the device controller.
+
 ## [0.1.7] - 2024-10-10
 ### Fixed
 - Reset USB Endpoint FIFO's before issuing stall.
@@ -28,7 +32,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.6...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.8...HEAD
+[0.1.8]: https://github.com/greatscottgadgets/cynthion/compare/0.1.6...0.1.8
 [0.1.6]: https://github.com/greatscottgadgets/cynthion/compare/0.1.5...0.1.6
 [0.1.5]: https://github.com/greatscottgadgets/cynthion/compare/0.1.4...0.1.5
 [0.1.1]: https://github.com/greatscottgadgets/cynthion/releases/tag/0.1.1
