@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 * [USB Emulation Tutorial](https://cynthion.readthedocs.io/en/latest/tutorials/emulation.html)
 ### Changed
+* Apollo firmware has been updated to [1.1.1](https://github.com/greatscottgadgets/apollo/releases/tag/v1.1.1).
 * Tutorials have been moved to `docs/source/tutorials/`.
 * Bumped `critical-section` crate to version `=1.2.0`.
 ### Fixed
