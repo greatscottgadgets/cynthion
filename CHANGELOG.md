@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.1.8] - 2024-11-25
+### Added
+* [USB Emulation Tutorial](https://cynthion.readthedocs.io/en/latest/tutorials/emulation.html)
+### Changed
+* Tutorials have been moved to `docs/source/tutorials/`.
+* Bumped `critical-section` crate to version `=1.2.0`.
+### Fixed
+* Moondancer reliability improvements.
+
+
 ## [0.1.7] - 2024-10-10
 ### Added
 * [USB Analysis Tutorial](https://cynthion.readthedocs.io/en/latest/tutorial_usb_analysis.html)
@@ -81,7 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release
 
 
-[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.7...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.8...HEAD
+[0.1.8]: https://github.com/greatscottgadgets/cynthion/compare/0.1.7...0.1.8
 [0.1.7]: https://github.com/greatscottgadgets/cynthion/compare/0.1.6...0.1.7
 [0.1.6]: https://github.com/greatscottgadgets/cynthion/compare/0.1.5...0.1.6
 [0.1.5]: https://github.com/greatscottgadgets/cynthion/compare/0.1.4...0.1.5
