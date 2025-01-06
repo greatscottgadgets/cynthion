@@ -1789,7 +1789,7 @@
           <access>read-write</access>
           <fields>
             <field>
-              <name>high</name>
+              <name>fifo</name>
               <description>TODO amaranth_soc/csr/reg.py:471</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -2029,7 +2029,7 @@
           <access>read-write</access>
           <fields>
             <field>
-              <name>high</name>
+              <name>fifo</name>
               <description>TODO amaranth_soc/csr/reg.py:471</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -2323,7 +2323,7 @@
           <access>read-write</access>
           <fields>
             <field>
-              <name>high</name>
+              <name>fifo</name>
               <description>TODO amaranth_soc/csr/reg.py:471</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -2607,7 +2607,7 @@
           <access>read-write</access>
           <fields>
             <field>
-              <name>high</name>
+              <name>fifo</name>
               <description>TODO amaranth_soc/csr/reg.py:471</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -2847,7 +2847,7 @@
           <access>read-write</access>
           <fields>
             <field>
-              <name>high</name>
+              <name>fifo</name>
               <description>TODO amaranth_soc/csr/reg.py:471</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -3141,7 +3141,7 @@
           <access>read-write</access>
           <fields>
             <field>
-              <name>high</name>
+              <name>fifo</name>
               <description>TODO amaranth_soc/csr/reg.py:471</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -3425,7 +3425,7 @@
           <access>read-write</access>
           <fields>
             <field>
-              <name>high</name>
+              <name>fifo</name>
               <description>TODO amaranth_soc/csr/reg.py:471</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -3665,7 +3665,7 @@
           <access>read-write</access>
           <fields>
             <field>
-              <name>high</name>
+              <name>fifo</name>
               <description>TODO amaranth_soc/csr/reg.py:471</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
@@ -3959,7 +3959,7 @@
           <access>read-write</access>
           <fields>
             <field>
-              <name>high</name>
+              <name>fifo</name>
               <description>TODO amaranth_soc/csr/reg.py:471</description>
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>

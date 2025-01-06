@@ -7,7 +7,7 @@ use panic_halt as _;
 use riscv_rt::entry;
 
 use lunasoc_hal as hal;
-use facedancer_pac as pac;
+use moondancer_pac as pac;
 
 lunasoc_hal::impl_serial! {
     Serial: pac::UART0,
