@@ -5,19 +5,19 @@ UART	?= /dev/ttyACM0
 # - gateware ------------------------------------------------------------------
 
 analyzer:
-	python3 -m cynthion.gateware.analyzer.top --output build/$@.bit
+	python -m cynthion.gateware.analyzer.top --output build/$@.bit
 
 selftest:
 	mkdir -p build/
-	python3 -m cynthion.gateware.selftest.top --output build/$@.bit
+	python -m cynthion.gateware.selftest.top --output build/$@.bit
 
 facedancer:
 	mkdir -p build/gensvd/
-	python3 -m cynthion.gateware.facedancer.top --output build/$@.bit
+	python -m cynthion.gateware.facedancer.top --output build/$@.bit
 
 svd:
 	mkdir -p build/gensvd/
-	python3 -m cynthion.gateware.facedancer.top --generate-svd > build/gensvd/facedancer.svd
+	python -m cynthion.gateware.facedancer.top --generate-svd > build/gensvd/moondancer.svd
 
 
 # - helpers -------------------------------------------------------------------

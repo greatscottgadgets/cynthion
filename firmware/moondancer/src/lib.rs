@@ -20,7 +20,7 @@ pub mod util;
 pub use error::FirmwareError;
 pub use libgreat::error::GreatResult;
 pub use libgreat::firmware::BoardInformation;
-pub use facedancer_pac as pac;
+pub use moondancer_pac as pac;
 
 // - constants ----------------------------------------------------------------
 

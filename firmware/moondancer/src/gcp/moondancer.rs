@@ -592,13 +592,13 @@ impl Moondancer {
         _arguments: &[u8],
     ) -> GreatResult<impl Iterator<Item = u8>> {
         // 0. clear receive fifo in case the previous transaction wasn't handled
-        if self.usb0.ep_out.have().read().have().bit() {
+        if self.usb0.ep_out.status().read().have().bit() {
             log::warn!("Re-enabling interface with unread data: Usb0");
-            self.usb0.ep_out.reset().write(|w| w.reset().bit(true));
+            self.usb0.ep_out.reset().write(|w| w.fifo().bit(true));
         }
 
         // 1. re-enable ep_out interface
-        self.usb0.ep_out.enable().write(|w| w.enable().bit(true));
+        self.usb0.ep_out.enable().write(|w| w.enabled().bit(true));
 
         debug!("MD moondancer::ep_out_interface_enable()");
 

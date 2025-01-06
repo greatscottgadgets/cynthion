@@ -7,7 +7,7 @@ use panic_halt as _;
 use riscv_rt::entry;
 
 use lunasoc_hal as hal;
-use facedancer_pac as pac;
+use moondancer_pac as pac;
 
 use hal::hal::delay::DelayUs;
 

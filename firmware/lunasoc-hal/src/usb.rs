@@ -173,16 +173,16 @@ macro_rules! impl_usb {
                     // un-prime all OUT endpoints and disable interface
                     for endpoint_number in 0..smolusb::EP_MAX_ENDPOINTS as u8 {
                         self.ep_out
-                            .epno()
-                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
-                        self.ep_out.prime().write(|w| w.prime().bit(false));
+                            .endpoint()
+                            .write(|w| unsafe { w.number().bits(endpoint_number) });
+                        self.ep_out.prime().write(|w| w.primed().bit(false));
                     }
-                    self.ep_out.enable().write(|w| w.enable().bit(false));
+                    self.ep_out.enable().write(|w| w.enabled().bit(false));
 
                     // reset FIFOs
-                    self.ep_control.reset().write(|w| w.high().bit(true));
-                    self.ep_in.reset()     .write(|w| w.high().bit(true));
-                    self.ep_out.reset()    .write(|w| w.high().bit(true));
+                    self.ep_control.reset().write(|w| w.fifo().bit(true));
+                    self.ep_in.reset()     .write(|w| w.fifo().bit(true));
+                    self.ep_out.reset()    .write(|w| w.fifo().bit(true));
 
                     // connect device
                     self.device.control().modify(|_, w| w.connect().bit(true));
@@ -207,16 +207,16 @@ macro_rules! impl_usb {
                     // un-prime all OUT endpoints and disable interface
                     for endpoint_number in 0..smolusb::EP_MAX_ENDPOINTS as u8 {
                         self.ep_out
-                            .epno()
-                            .write(|w| unsafe { w.epno().bits(endpoint_number) });
-                        self.ep_out.prime().write(|w| w.prime().bit(false));
+                            .endpoint()
+                            .write(|w| unsafe { w.number().bits(endpoint_number) });
+                        self.ep_out.prime().write(|w| w.primed().bit(false));
                     }
-                    self.ep_out.enable().write(|w| w.enable().bit(false));
+                    self.ep_out.enable().write(|w| w.enabled().bit(false));
 
                     // reset FIFOs
-                    self.ep_control.reset().write(|w| w.high().bit(true));
-                    self.ep_in.reset()     .write(|w| w.high().bit(true));
-                    self.ep_out.reset()    .write(|w| w.high().bit(true));
+                    self.ep_control.reset().write(|w| w.fifo().bit(true));
+                    self.ep_in.reset()     .write(|w| w.fifo().bit(true));
+                    self.ep_out.reset()    .write(|w| w.fifo().bit(true));
                 }
 
                 /// Perform a bus reset of the device.
@@ -228,9 +228,9 @@ macro_rules! impl_usb {
                     self.set_address(0);
 
                     // reset FIFOs
-                    self.ep_control.reset().write(|w| w.high().bit(true));
-                    self.ep_in.reset()     .write(|w| w.high().bit(true));
-                    self.ep_out.reset()    .write(|w| w.high().bit(true));
+                    self.ep_control.reset().write(|w| w.fifo().bit(true));
+                    self.ep_in.reset()     .write(|w| w.fifo().bit(true));
+                    self.ep_out.reset()    .write(|w| w.fifo().bit(true));
 
                     // clear status for all IN endpoints
                     for endpoint in 0..(smolusb::EP_MAX_ENDPOINTS as u8) {
@@ -269,14 +269,14 @@ macro_rules! impl_usb {
 
                 /// Stall the given IN endpoint number.
                 fn stall_endpoint_in(&self, endpoint_number: u8) {
-                    self.ep_in.reset().write(|w| w.high().bit(true));
+                    self.ep_in.reset().write(|w| w.fifo().bit(true));
                     self.ep_in.stall().write(|w| w.stalled().bit(true));
                     self.ep_in.endpoint().write(|w| unsafe { w.number().bits(endpoint_number) });
                 }
 
                 /// Stall the given OUT endpoint number.
                 fn stall_endpoint_out(&self, endpoint_number: u8) {
-                    self.ep_out.reset().write(|w| w.high().bit(true));
+                    self.ep_out.reset().write(|w| w.fifo().bit(true));
                     self.ep_out.endpoint().write(|w| unsafe { w.number().bits(endpoint_number) });
                     self.ep_out.stall().write(|w| w.stalled().bit(true));
                 }
@@ -415,7 +415,7 @@ macro_rules! impl_usb {
                     // 0. clear receive fifo in case the previous transaction wasn't handled
                     if self.ep_out.status().read().have().bit() {
                         log::warn!("  {} priming out endpoint {} with unread data", stringify!($USBX), endpoint_number);
-                        self.ep_out.reset().write(|w| w.high().bit(true));
+                        self.ep_out.reset().write(|w| w.fifo().bit(true));
                     }
 
                     // 1. select endpoint

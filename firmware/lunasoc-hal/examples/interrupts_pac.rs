@@ -4,7 +4,7 @@
 use panic_halt as _;
 use riscv_rt::entry;
 
-use facedancer_pac as pac;
+use moondancer_pac as pac;
 use pac::csr;
 
 #[entry]
