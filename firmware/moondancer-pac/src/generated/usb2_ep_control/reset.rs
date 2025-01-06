@@ -2,8 +2,8 @@
 pub type R = crate::R<RESET_SPEC>;
 #[doc = "Register `reset` writer"]
 pub type W = crate::W<RESET_SPEC>;
-#[doc = "Field `high` writer - TODO amaranth_soc/csr/reg.py:471"]
-pub type HIGH_W<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `fifo` writer - TODO amaranth_soc/csr/reg.py:471"]
+pub type FIFO_W<'a, REG> = crate::BitWriter<'a, REG>;
 #[doc = "Field `_0` reader - TODO amaranth_soc/csr/reg.py:471"]
 pub type _0_R = crate::FieldReader;
 #[doc = "Field `_0` writer - TODO amaranth_soc/csr/reg.py:471"]
@@ -19,8 +19,8 @@ impl W {
     #[doc = "Bit 0 - TODO amaranth_soc/csr/reg.py:471"]
     #[inline(always)]
     #[must_use]
-    pub fn high(&mut self) -> HIGH_W<RESET_SPEC> {
-        HIGH_W::new(self, 0)
+    pub fn fifo(&mut self) -> FIFO_W<RESET_SPEC> {
+        FIFO_W::new(self, 0)
     }
     #[doc = "Bits 1:7 - TODO amaranth_soc/csr/reg.py:471"]
     #[inline(always)]

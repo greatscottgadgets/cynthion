@@ -16,8 +16,6 @@ from amaranth_soc.csr.wishbone       import WishboneCSRBridge
 
 from luna.gateware.usb.usb2.device   import USBDevice
 
-from luna.gateware.utils.cdc         import synchronize
-
 from luna_soc.gateware.core          import blockram, spiflash, timer, uart, usb2
 from luna_soc.gateware.core.spiflash import ECP5ConfigurationFlashInterface, SPIPHYController
 from luna_soc.gateware.cpu           import InterruptController, VexRiscv
@@ -411,8 +409,10 @@ class Top(Elaboratable):
 # - build ---------------------------------------------------------------------
 
 if __name__ == "__main__":
-    from luna                    import configure_default_logging, top_level_cli
+    from luna                    import configure_default_logging
     from luna.gateware.platform  import get_appropriate_platform
+    #from luna                    import top_level_cli
+    from luna_soc                import top_level_cli
 
     # configure logging
     configure_default_logging()
@@ -435,9 +435,9 @@ if __name__ == "__main__":
     design = Top(clock_frequency_hz=clock_frequency_hz, domain=domain)
 
     # generate soc sdk
-    from luna_soc.generate.svd import GenerateSVD
-    with open("build/gensvd/facedancer.svd", "w") as f:
-        GenerateSVD = GenerateSVD(design).generate(file=f)
+    #from luna_soc.generate.svd import GenerateSVD
+    #with open("build/gensvd/moondancer.svd", "w") as f:
+    #    GenerateSVD = GenerateSVD(design).generate(file=f)
 
     # invoke cli
     _overrides = {
