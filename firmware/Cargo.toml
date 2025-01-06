@@ -3,7 +3,7 @@ members = [
     "ladybug",
     "libgreat",
     "lunasoc-hal",
-    "facedancer-pac",
+    "moondancer-pac",
     "moondancer",
     "smolusb",
 ]
