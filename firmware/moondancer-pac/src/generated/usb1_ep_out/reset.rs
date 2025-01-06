@@ -2,9 +2,15 @@
 pub type R = crate::R<RESET_SPEC>;
 #[doc = "Register `reset` writer"]
 pub type W = crate::W<RESET_SPEC>;
+<<<<<<<< HEAD:firmware/moondancer-pac/src/generated/usb1_ep_out/reset.rs
 #[doc = "Field `fifo` writer - fifo field"]
 pub type FIFO_W<'a, REG> = crate::BitWriter<'a, REG>;
 #[doc = "Field `_0` reader - _0 field"]
+========
+#[doc = "Field `fifo` writer - TODO amaranth_soc/csr/reg.py:471"]
+pub type FIFO_W<'a, REG> = crate::BitWriter<'a, REG>;
+#[doc = "Field `_0` reader - TODO amaranth_soc/csr/reg.py:471"]
+>>>>>>>> 0fd62aa (repo: post-rebase fixes):firmware/moondancer-pac/src/generated/usb1_ep_control/reset.rs
 pub type _0_R = crate::FieldReader;
 #[doc = "Field `_0` writer - _0 field"]
 pub type _0_W<'a, REG> = crate::FieldWriter<'a, REG, 7>;

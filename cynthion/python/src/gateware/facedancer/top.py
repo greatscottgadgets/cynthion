@@ -392,6 +392,10 @@ class Top(Elaboratable):
 if __name__ == "__main__":
     from luna                    import configure_default_logging
     from luna.gateware.platform  import get_appropriate_platform
+<<<<<<< HEAD
+=======
+    #from luna                    import top_level_cli
+>>>>>>> 0fd62aa (repo: post-rebase fixes)
     from luna_soc                import top_level_cli
 
     # configure logging
@@ -414,6 +418,14 @@ if __name__ == "__main__":
     # create design
     design = Top(clock_frequency_hz=clock_frequency_hz, domain=domain)
 
+<<<<<<< HEAD
+=======
+    # generate soc sdk
+    #from luna_soc.generate.svd import GenerateSVD
+    #with open("build/gensvd/moondancer.svd", "w") as f:
+    #    GenerateSVD = GenerateSVD(design).generate(file=f)
+
+>>>>>>> 0fd62aa (repo: post-rebase fixes)
     # invoke cli
     _overrides = {
         "debug_verilog": False,
