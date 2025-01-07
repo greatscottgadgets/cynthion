@@ -4,13 +4,13 @@
 # Copyright (c) 2024 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from amaranth              import *
-from amaranth.lib          import wiring
-from amaranth.lib.wiring   import In, flipped, connect
+from amaranth                      import *
+from amaranth.lib                  import wiring
+from amaranth.lib.wiring           import In, flipped, connect
 
-from amaranth_soc          import csr
+from amaranth_soc  import csr
 
-from apollo_fpga.gateware  import ApolloAdvertiser
+from apollo_fpga.gateware          import ApolloAdvertiser
 
 
 class Peripheral(wiring.Component):
