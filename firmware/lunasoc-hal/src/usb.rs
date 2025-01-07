@@ -518,7 +518,6 @@ macro_rules! impl_usb {
                                         stringify!($USBX),
                                         bytes_written
                                     );
-                                    // TODO return an error
                                     return bytes_written;
                                 }
                             }
