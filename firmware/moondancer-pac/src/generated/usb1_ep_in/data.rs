@@ -2,17 +2,17 @@
 pub type R = crate::R<DATA_SPEC>;
 #[doc = "Register `data` writer"]
 pub type W = crate::W<DATA_SPEC>;
-#[doc = "Field `byte` writer - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `byte` writer - byte field"]
 pub type BYTE_W<'a, REG> = crate::FieldWriter<'a, REG, 8>;
 impl W {
-    #[doc = "Bits 0:7 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bits 0:7 - byte field"]
     #[inline(always)]
     #[must_use]
     pub fn byte(&mut self) -> BYTE_W<DATA_SPEC> {
         BYTE_W::new(self, 0)
     }
 }
-#[doc = "TODO amaranth_soc/csr/reg.py:471\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`data::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`data::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Data register Each write enqueues a byte to be transmitted; gradually building a single packet to be transmitted. This queue should only ever contain a single packet; it is the software's responsibility to handle breaking requests down into packets.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`data::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`data::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct DATA_SPEC;
 impl crate::RegisterSpec for DATA_SPEC {
     type Ux = u8;
