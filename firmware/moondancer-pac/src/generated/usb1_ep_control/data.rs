@@ -2,17 +2,17 @@
 pub type R = crate::R<DATA_SPEC>;
 #[doc = "Register `data` writer"]
 pub type W = crate::W<DATA_SPEC>;
-#[doc = "Field `byte` reader - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `byte` reader - byte field"]
 pub type BYTE_R = crate::FieldReader;
 impl R {
-    #[doc = "Bits 0:7 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bits 0:7 - byte field"]
     #[inline(always)]
     pub fn byte(&self) -> BYTE_R {
         BYTE_R::new(self.bits)
     }
 }
 impl W {}
-#[doc = "TODO amaranth_soc/csr/reg.py:471\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`data::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`data::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Data register A FIFO that returns the bytes from the most recently captured SETUP packet. Reading a byte from this register advances the FIFO. The first eight bytes read from this contain the core SETUP packet.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`data::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`data::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct DATA_SPEC;
 impl crate::RegisterSpec for DATA_SPEC {
     type Ux = u8;

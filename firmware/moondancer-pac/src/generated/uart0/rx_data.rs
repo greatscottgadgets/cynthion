@@ -2,17 +2,17 @@
 pub type R = crate::R<RX_DATA_SPEC>;
 #[doc = "Register `rx_data` writer"]
 pub type W = crate::W<RX_DATA_SPEC>;
-#[doc = "Field `data` reader - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `data` reader - data field"]
 pub type DATA_R = crate::FieldReader;
 impl R {
-    #[doc = "Bits 0:7 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bits 0:7 - data field"]
     #[inline(always)]
     pub fn data(&self) -> DATA_R {
         DATA_R::new(self.bits)
     }
 }
 impl W {}
-#[doc = "TODO amaranth_soc/csr/reg.py:471\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`rx_data::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`rx_data::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "valid to read from when rx_avail is high, last received byte\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`rx_data::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`rx_data::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct RX_DATA_SPEC;
 impl crate::RegisterSpec for RX_DATA_SPEC {
     type Ux = u8;

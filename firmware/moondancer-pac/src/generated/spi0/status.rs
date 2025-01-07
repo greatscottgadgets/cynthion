@@ -2,24 +2,24 @@
 pub type R = crate::R<STATUS_SPEC>;
 #[doc = "Register `status` writer"]
 pub type W = crate::W<STATUS_SPEC>;
-#[doc = "Field `rx_ready` reader - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `rx_ready` reader - rx_ready field"]
 pub type RX_READY_R = crate::BitReader;
-#[doc = "Field `tx_ready` reader - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `tx_ready` reader - tx_ready field"]
 pub type TX_READY_R = crate::BitReader;
 impl R {
-    #[doc = "Bit 0 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bit 0 - rx_ready field"]
     #[inline(always)]
     pub fn rx_ready(&self) -> RX_READY_R {
         RX_READY_R::new((self.bits & 1) != 0)
     }
-    #[doc = "Bit 1 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bit 1 - tx_ready field"]
     #[inline(always)]
     pub fn tx_ready(&self) -> TX_READY_R {
         TX_READY_R::new(((self.bits >> 1) & 1) != 0)
     }
 }
 impl W {}
-#[doc = "TODO amaranth_soc/csr/reg.py:471\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`status::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`status::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Status register rx_ready : RX FIFO contains data. tx_ready : TX FIFO ready to receive data.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`status::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`status::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct STATUS_SPEC;
 impl crate::RegisterSpec for STATUS_SPEC {
     type Ux = u8;

@@ -2,26 +2,26 @@
 pub type R = crate::R<ENABLE_SPEC>;
 #[doc = "Register `enable` writer"]
 pub type W = crate::W<ENABLE_SPEC>;
-#[doc = "Field `enable` reader - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `enable` reader - enable field"]
 pub type ENABLE_R = crate::BitReader;
-#[doc = "Field `enable` writer - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `enable` writer - enable field"]
 pub type ENABLE_W<'a, REG> = crate::BitWriter<'a, REG>;
 impl R {
-    #[doc = "Bit 0 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bit 0 - enable field"]
     #[inline(always)]
     pub fn enable(&self) -> ENABLE_R {
         ENABLE_R::new((self.bits & 1) != 0)
     }
 }
 impl W {
-    #[doc = "Bit 0 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bit 0 - enable field"]
     #[inline(always)]
     #[must_use]
     pub fn enable(&mut self) -> ENABLE_W<ENABLE_SPEC> {
         ENABLE_W::new(self, 0)
     }
 }
-#[doc = "TODO amaranth_soc/csr/reg.py:471\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`enable::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`enable::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Counter enable\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`enable::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`enable::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct ENABLE_SPEC;
 impl crate::RegisterSpec for ENABLE_SPEC {
     type Ux = u8;

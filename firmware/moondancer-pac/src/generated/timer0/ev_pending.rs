@@ -2,26 +2,26 @@
 pub type R = crate::R<EV_PENDING_SPEC>;
 #[doc = "Register `ev_pending` writer"]
 pub type W = crate::W<EV_PENDING_SPEC>;
-#[doc = "Field `mask` reader - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `mask` reader - mask field"]
 pub type MASK_R = crate::FieldReader;
-#[doc = "Field `mask` writer - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `mask` writer - mask field"]
 pub type MASK_W<'a, REG> = crate::FieldWriter<'a, REG, 2>;
 impl R {
-    #[doc = "Bits 0:1 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bits 0:1 - mask field"]
     #[inline(always)]
     pub fn mask(&self) -> MASK_R {
         MASK_R::new(self.bits & 3)
     }
 }
 impl W {
-    #[doc = "Bits 0:1 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bits 0:1 - mask field"]
     #[inline(always)]
     #[must_use]
     pub fn mask(&mut self) -> MASK_W<EV_PENDING_SPEC> {
         MASK_W::new(self, 0)
     }
 }
-#[doc = "TODO amaranth_soc/csr/reg.py:471\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`ev_pending::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`ev_pending::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "A CSR register. Parameters ---------- fields : :class:`dict` or :class:`list` or :class:`Field` Collection of register fields. If ``None`` (default), a dict is populated from Python :term:`variable annotations &lt;python:variable annotations>`. ``fields`` is used to create a :class:`FieldActionMap`, :class:`FieldActionArray`, or :class:`FieldAction`, depending on its type (dict, list, or Field). Interface attributes -------------------- element : :class:`Element` Interface between this register and a CSR bus primitive. Attributes ---------- field : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Collection of field instances. f : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Shorthand for :attr:`Register.field`. Raises ------ :exc:`TypeError` If ``fields`` is neither ``None``, a :class:`dict`, a :class:`list`, or a :class:`Field`. :exc:`ValueError` If ``fields`` is not ``None`` and at least one variable annotation is a :class:`Field`. :exc:`ValueError` If ``element.access`` is not readable and at least one field is readable. :exc:`ValueError` If ``element.access`` is not writable and at least one field is writable.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`ev_pending::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`ev_pending::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct EV_PENDING_SPEC;
 impl crate::RegisterSpec for EV_PENDING_SPEC {
     type Ux = u8;
