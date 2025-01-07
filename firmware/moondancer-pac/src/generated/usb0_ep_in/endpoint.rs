@@ -2,34 +2,34 @@
 pub type R = crate::R<ENDPOINT_SPEC>;
 #[doc = "Register `endpoint` writer"]
 pub type W = crate::W<ENDPOINT_SPEC>;
-#[doc = "Field `number` writer - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `number` writer - number field"]
 pub type NUMBER_W<'a, REG> = crate::FieldWriter<'a, REG, 4>;
-#[doc = "Field `_0` reader - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `_0` reader - _0 field"]
 pub type _0_R = crate::FieldReader;
-#[doc = "Field `_0` writer - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `_0` writer - _0 field"]
 pub type _0_W<'a, REG> = crate::FieldWriter<'a, REG, 4>;
 impl R {
-    #[doc = "Bits 4:7 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bits 4:7 - _0 field"]
     #[inline(always)]
     pub fn _0(&self) -> _0_R {
         _0_R::new((self.bits >> 4) & 0x0f)
     }
 }
 impl W {
-    #[doc = "Bits 0:3 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bits 0:3 - number field"]
     #[inline(always)]
     #[must_use]
     pub fn number(&mut self) -> NUMBER_W<ENDPOINT_SPEC> {
         NUMBER_W::new(self, 0)
     }
-    #[doc = "Bits 4:7 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bits 4:7 - _0 field"]
     #[inline(always)]
     #[must_use]
     pub fn _0(&mut self) -> _0_W<ENDPOINT_SPEC> {
         _0_W::new(self, 4)
     }
 }
-#[doc = "TODO amaranth_soc/csr/reg.py:471\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`endpoint::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`endpoint::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Endpoint register number: Contains the endpoint the enqueued packet is to be transmitted on. Writing to this field marks the relevant packet as ready to transmit; and thus should only be written after a full packet has been written into the FIFO. If no data has been placed into the DATA FIFO, a zero-length packet is generated. Note that any IN requests that do not match the endpoint number are automatically NAK'd.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`endpoint::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`endpoint::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct ENDPOINT_SPEC;
 impl crate::RegisterSpec for ENDPOINT_SPEC {
     type Ux = u8;

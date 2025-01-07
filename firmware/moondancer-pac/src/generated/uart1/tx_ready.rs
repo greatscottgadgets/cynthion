@@ -2,17 +2,17 @@
 pub type R = crate::R<TX_READY_SPEC>;
 #[doc = "Register `tx_ready` writer"]
 pub type W = crate::W<TX_READY_SPEC>;
-#[doc = "Field `txe` reader - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `txe` reader - txe field"]
 pub type TXE_R = crate::BitReader;
 impl R {
-    #[doc = "Bit 0 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bit 0 - txe field"]
     #[inline(always)]
     pub fn txe(&self) -> TXE_R {
         TXE_R::new((self.bits & 1) != 0)
     }
 }
 impl W {}
-#[doc = "TODO amaranth_soc/csr/reg.py:471\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`tx_ready::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`tx_ready::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "is '1' when 1-byte transmit buffer is empty\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`tx_ready::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`tx_ready::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct TX_READY_SPEC;
 impl crate::RegisterSpec for TX_READY_SPEC {
     type Ux = u8;
