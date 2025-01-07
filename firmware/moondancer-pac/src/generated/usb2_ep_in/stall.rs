@@ -2,34 +2,34 @@
 pub type R = crate::R<STALL_SPEC>;
 #[doc = "Register `stall` writer"]
 pub type W = crate::W<STALL_SPEC>;
-#[doc = "Field `stalled` writer - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `stalled` writer - stalled field"]
 pub type STALLED_W<'a, REG> = crate::BitWriter<'a, REG>;
-#[doc = "Field `_0` reader - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `_0` reader - _0 field"]
 pub type _0_R = crate::FieldReader;
-#[doc = "Field `_0` writer - TODO amaranth_soc/csr/reg.py:471"]
+#[doc = "Field `_0` writer - _0 field"]
 pub type _0_W<'a, REG> = crate::FieldWriter<'a, REG, 7>;
 impl R {
-    #[doc = "Bits 1:7 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bits 1:7 - _0 field"]
     #[inline(always)]
     pub fn _0(&self) -> _0_R {
         _0_R::new((self.bits >> 1) & 0x7f)
     }
 }
 impl W {
-    #[doc = "Bit 0 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bit 0 - stalled field"]
     #[inline(always)]
     #[must_use]
     pub fn stalled(&mut self) -> STALLED_W<STALL_SPEC> {
         STALLED_W::new(self, 0)
     }
-    #[doc = "Bits 1:7 - TODO amaranth_soc/csr/reg.py:471"]
+    #[doc = "Bits 1:7 - _0 field"]
     #[inline(always)]
     #[must_use]
     pub fn _0(&mut self) -> _0_W<STALL_SPEC> {
         _0_W::new(self, 1)
     }
 }
-#[doc = "TODO amaranth_soc/csr/reg.py:471\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`stall::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`stall::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Stall register stalled: When this field contains '1', any IN tokens targeting `epno` will be responded to with a STALL token, rather than DATA or a NAK. For EP0, this field will automatically be cleared when a new SETUP token is received.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`stall::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`stall::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct STALL_SPEC;
 impl crate::RegisterSpec for STALL_SPEC {
     type Ux = u8;
