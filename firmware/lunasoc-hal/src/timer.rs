@@ -94,7 +94,7 @@ macro_rules! impl_timer {
                 pub fn listen(&mut self, event: $crate::timer::Event) {
                     match event {
                         $crate::timer::Event::TimeOut => {
-                            self.registers.ev_enable().write(|w| unsafe { w.mask().bits(1) });
+                            self.registers.ev_enable().write(|w| unsafe { w.mask().bit(true) });
                         }
                     }
                 }
@@ -103,19 +103,19 @@ macro_rules! impl_timer {
                 pub fn unlisten(&mut self, event: $crate::timer::Event) {
                     match event {
                         $crate::timer::Event::TimeOut => {
-                            self.registers.ev_enable().write(|w| unsafe { w.mask().bits(0) });
+                            self.registers.ev_enable().write(|w| unsafe { w.mask().bit(false) });
                         }
                     }
                 }
 
                 /// Check if the interrupt flag is pending
                 pub fn is_pending(&self) -> bool {
-                    self.registers.ev_pending().read().mask() != 0
+                    self.registers.ev_pending().read().mask().bit()
                 }
 
                 /// Clear the interrupt flag
                 pub fn clear_pending(&self) {
-                    self.registers.ev_pending().modify(|r, w| unsafe { w.mask().bits(r.mask().bits()) });
+                    self.registers.ev_pending().modify(|r, w| unsafe { w.mask().bit(r.mask().bit()) });
                 }
             }
 
@@ -131,7 +131,7 @@ macro_rules! impl_timer {
                     self.registers.enable().write(|w| w.enable().bit(true));
 
                     // wait for timer to hit zero
-                    while self.registers.counter().read().value().bits() > 0 {}
+                    while self.registers.counter().read().value().bits() != 0 {}
 
                     // reset timer
                     self.registers.enable().write(|w| w.enable().bit(false));
