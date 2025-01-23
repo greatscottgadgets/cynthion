@@ -266,10 +266,10 @@ class Soc(Component):
             wiring.connect(m, self.gpio0.pins[n], gpio0_provider.pins[n])
 
         # gpio1
-        #gpio1_provider = provider.GPIOProvider("user_pmod", 1)
-        #m.submodules += [gpio1_provider, self.gpio1]
-        #for n in range(8):
-        #    wiring.connect(m, self.gpio1.pins[n], gpio1_provider.pins[n])
+        # gpio1_provider = provider.GPIOProvider("user_pmod", 1)
+        # m.submodules += [gpio1_provider, self.gpio1]
+        # for n in range(8):
+        #     wiring.connect(m, self.gpio1.pins[n], gpio1_provider.pins[n])
 
         # uart0
         uart0_provider = provider.UARTProvider("uart", 0)
@@ -340,13 +340,13 @@ class Soc(Component):
         ]
 
         # debug
-        # debug_io = platform.request("debug", 0)
         # pmoda    = platform.request("user_pmod", 0)
+        # debug_io = platform.request("debug", 0)
         # m.d.comb += [
+        #    pmoda.oe      .eq(1),
+        #    pmoda.o       .eq(self.cpu.irq_external),
         #     debug_io.a.o  .eq(ClockSignal("usb")),
         #     debug_io.b.o  .eq(ClockSignal("fast")),
-        #     pmoda.oe      .eq(1),
-        #     pmoda.o[0]    .eq(self.advertiser.advertiser.clk),
         # ]
 
         return DomainRenamer({
