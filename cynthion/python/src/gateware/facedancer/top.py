@@ -388,7 +388,6 @@ class Top(Elaboratable):
         self.domain = domain
 
         self.soc = Soc(clock_frequency_hz=self.clock_frequency_hz, domain=self.domain)
-        self.sysclk = Signal()
 
     def elaborate(self, platform):
         # add additional resources (only supported on platforms > r0.4)
