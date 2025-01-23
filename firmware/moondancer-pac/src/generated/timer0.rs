@@ -1,24 +1,30 @@
 #[repr(C)]
 #[doc = "Register block"]
 pub struct RegisterBlock {
-    reload: RELOAD,
     enable: ENABLE,
-    _reserved2: [u8; 0x03],
+    mode: MODE,
+    _reserved2: [u8; 0x02],
+    reload: RELOAD,
     counter: COUNTER,
-    _reserved3: [u8; 0x04],
+    _reserved4: [u8; 0x04],
     ev_enable: EV_ENABLE,
     ev_pending: EV_PENDING,
 }
 impl RegisterBlock {
-    #[doc = "0x00 - Reload value of counter. When counter reaches 0 is is automatically reloaded with this value."]
-    #[inline(always)]
-    pub const fn reload(&self) -> &RELOAD {
-        &self.reload
-    }
-    #[doc = "0x04 - Counter enable"]
+    #[doc = "0x00 - Counter enable"]
     #[inline(always)]
     pub const fn enable(&self) -> &ENABLE {
         &self.enable
+    }
+    #[doc = "0x01 - Timer mode. When ``periodic`` is set to 1 the counter will automatically be reset to the reload value."]
+    #[inline(always)]
+    pub const fn mode(&self) -> &MODE {
+        &self.mode
+    }
+    #[doc = "0x04 - Reload value of counter."]
+    #[inline(always)]
+    pub const fn reload(&self) -> &RELOAD {
+        &self.reload
     }
     #[doc = "0x08 - A CSR register. Parameters ---------- fields : :class:`dict` or :class:`list` or :class:`Field` Collection of register fields. If ``None`` (default), a dict is populated from Python :term:`variable annotations &lt;python:variable annotations>`. ``fields`` is used to create a :class:`FieldActionMap`, :class:`FieldActionArray`, or :class:`FieldAction`, depending on its type (dict, list, or Field). Interface attributes -------------------- element : :class:`Element` Interface between this register and a CSR bus primitive. Attributes ---------- field : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Collection of field instances. f : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Shorthand for :attr:`Register.field`. Raises ------ :exc:`TypeError` If ``fields`` is neither ``None``, a :class:`dict`, a :class:`list`, or a :class:`Field`. :exc:`ValueError` If ``fields`` is not ``None`` and at least one variable annotation is a :class:`Field`. :exc:`ValueError` If ``element.access`` is not readable and at least one field is readable. :exc:`ValueError` If ``element.access`` is not writable and at least one field is writable."]
     #[inline(always)]
@@ -36,18 +42,24 @@ impl RegisterBlock {
         &self.ev_pending
     }
 }
-#[doc = "reload (rw) register accessor: Reload value of counter. When counter reaches 0 is is automatically reloaded with this value.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`reload::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`reload::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@reload`]
-module"]
-#[doc(alias = "reload")]
-pub type RELOAD = crate::Reg<reload::RELOAD_SPEC>;
-#[doc = "Reload value of counter. When counter reaches 0 is is automatically reloaded with this value."]
-pub mod reload;
 #[doc = "enable (rw) register accessor: Counter enable\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`enable::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`enable::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@enable`]
 module"]
 #[doc(alias = "enable")]
 pub type ENABLE = crate::Reg<enable::ENABLE_SPEC>;
 #[doc = "Counter enable"]
 pub mod enable;
+#[doc = "mode (rw) register accessor: Timer mode. When ``periodic`` is set to 1 the counter will automatically be reset to the reload value.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`mode::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`mode::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@mode`]
+module"]
+#[doc(alias = "mode")]
+pub type MODE = crate::Reg<mode::MODE_SPEC>;
+#[doc = "Timer mode. When ``periodic`` is set to 1 the counter will automatically be reset to the reload value."]
+pub mod mode;
+#[doc = "reload (rw) register accessor: Reload value of counter.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`reload::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`reload::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@reload`]
+module"]
+#[doc(alias = "reload")]
+pub type RELOAD = crate::Reg<reload::RELOAD_SPEC>;
+#[doc = "Reload value of counter."]
+pub mod reload;
 #[doc = "counter (rw) register accessor: A CSR register. Parameters ---------- fields : :class:`dict` or :class:`list` or :class:`Field` Collection of register fields. If ``None`` (default), a dict is populated from Python :term:`variable annotations &lt;python:variable annotations>`. ``fields`` is used to create a :class:`FieldActionMap`, :class:`FieldActionArray`, or :class:`FieldAction`, depending on its type (dict, list, or Field). Interface attributes -------------------- element : :class:`Element` Interface between this register and a CSR bus primitive. Attributes ---------- field : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Collection of field instances. f : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Shorthand for :attr:`Register.field`. Raises ------ :exc:`TypeError` If ``fields`` is neither ``None``, a :class:`dict`, a :class:`list`, or a :class:`Field`. :exc:`ValueError` If ``fields`` is not ``None`` and at least one variable annotation is a :class:`Field`. :exc:`ValueError` If ``element.access`` is not readable and at least one field is readable. :exc:`ValueError` If ``element.access`` is not writable and at least one field is writable.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`counter::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`counter::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@counter`]
 module"]
 #[doc(alias = "counter")]
