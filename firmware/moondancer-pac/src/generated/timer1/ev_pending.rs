@@ -3,18 +3,18 @@ pub type R = crate::R<EV_PENDING_SPEC>;
 #[doc = "Register `ev_pending` writer"]
 pub type W = crate::W<EV_PENDING_SPEC>;
 #[doc = "Field `mask` reader - mask field"]
-pub type MASK_R = crate::FieldReader;
+pub type MASK_R = crate::BitReader;
 #[doc = "Field `mask` writer - mask field"]
-pub type MASK_W<'a, REG> = crate::FieldWriter<'a, REG, 2>;
+pub type MASK_W<'a, REG> = crate::BitWriter<'a, REG>;
 impl R {
-    #[doc = "Bits 0:1 - mask field"]
+    #[doc = "Bit 0 - mask field"]
     #[inline(always)]
     pub fn mask(&self) -> MASK_R {
-        MASK_R::new(self.bits & 3)
+        MASK_R::new((self.bits & 1) != 0)
     }
 }
 impl W {
-    #[doc = "Bits 0:1 - mask field"]
+    #[doc = "Bit 0 - mask field"]
     #[inline(always)]
     #[must_use]
     pub fn mask(&mut self) -> MASK_W<EV_PENDING_SPEC> {
