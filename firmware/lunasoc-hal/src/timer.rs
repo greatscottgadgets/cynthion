@@ -6,6 +6,11 @@ pub enum Event {
     TimeOut,
 }
 
+pub enum Mode {
+    OneShot,
+    Periodic,
+}
+
 #[macro_export]
 macro_rules! impl_timer {
     ($(
@@ -77,6 +82,18 @@ macro_rules! impl_timer {
                     ).unwrap_or(u32::max_value());
 
                     self.set_timeout_ticks(ticks.max(1));
+                }
+
+                /// Set timer mode
+                pub fn set_mode(&mut self, mode: $crate::timer::Mode) {
+                    let mode = match mode {
+                        $crate::timer::Mode::OneShot  => false,
+                        $crate::timer::Mode::Periodic => true,
+                    };
+                    self.registers.mode().write(|w| unsafe {
+                        w.periodic().bit(mode)
+                    });
+
                 }
 
                 /// Set timeout using system ticks
