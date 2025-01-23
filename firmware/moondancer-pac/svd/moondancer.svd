@@ -1595,27 +1595,9 @@
       </interrupt>
       <registers>
         <register>
-          <name>reload</name>
-          <description>Reload value of counter. When counter reaches 0 is is automatically reloaded with this value.</description>
-          <addressOffset>0x0000</addressOffset>
-          <size>32</size>
-          <resetValue>0x00</resetValue>
-          <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>value field</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <bitRange>[31:0]</bitRange>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
           <name>enable</name>
           <description>Counter enable</description>
-          <addressOffset>0x0004</addressOffset>
+          <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
           <access>read-write</access>
@@ -1626,6 +1608,42 @@
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>mode</name>
+          <description>Timer mode. When ``periodic`` is set to 1 the counter will automatically be reset to the reload value.</description>
+          <addressOffset>0x0001</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>periodic</name>
+              <description>periodic field</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reload</name>
+          <description>Reload value of counter.</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>value</name>
+              <description>value field</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>32</bitWidth>
+              <bitRange>[31:0]</bitRange>
               <access>read-write</access>
             </field>
           </fields>
@@ -1728,8 +1746,8 @@
               <name>mask</name>
               <description>mask field</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>2</bitWidth>
-              <bitRange>[1:0]</bitRange>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
               <access>read-write</access>
             </field>
           </fields>
@@ -1780,8 +1798,8 @@
               <name>mask</name>
               <description>mask field</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>2</bitWidth>
-              <bitRange>[1:0]</bitRange>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
               <access>read-write</access>
             </field>
           </fields>
@@ -1803,27 +1821,9 @@
       </interrupt>
       <registers>
         <register>
-          <name>reload</name>
-          <description>Reload value of counter. When counter reaches 0 is is automatically reloaded with this value.</description>
-          <addressOffset>0x0000</addressOffset>
-          <size>32</size>
-          <resetValue>0x00</resetValue>
-          <access>read-write</access>
-          <fields>
-            <field>
-              <name>value</name>
-              <description>value field</description>
-              <bitOffset>0</bitOffset>
-              <bitWidth>32</bitWidth>
-              <bitRange>[31:0]</bitRange>
-              <access>read-write</access>
-            </field>
-          </fields>
-        </register>
-        <register>
           <name>enable</name>
           <description>Counter enable</description>
-          <addressOffset>0x0004</addressOffset>
+          <addressOffset>0x0000</addressOffset>
           <size>8</size>
           <resetValue>0x00</resetValue>
           <access>read-write</access>
@@ -1834,6 +1834,42 @@
               <bitOffset>0</bitOffset>
               <bitWidth>1</bitWidth>
               <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>mode</name>
+          <description>Timer mode. When ``periodic`` is set to 1 the counter will automatically be reset to the reload value.</description>
+          <addressOffset>0x0001</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>periodic</name>
+              <description>periodic field</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>reload</name>
+          <description>Reload value of counter.</description>
+          <addressOffset>0x0004</addressOffset>
+          <size>32</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>value</name>
+              <description>value field</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>32</bitWidth>
+              <bitRange>[31:0]</bitRange>
               <access>read-write</access>
             </field>
           </fields>
@@ -1936,8 +1972,8 @@
               <name>mask</name>
               <description>mask field</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>2</bitWidth>
-              <bitRange>[1:0]</bitRange>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
               <access>read-write</access>
             </field>
           </fields>
@@ -1988,8 +2024,8 @@
               <name>mask</name>
               <description>mask field</description>
               <bitOffset>0</bitOffset>
-              <bitWidth>2</bitWidth>
-              <bitRange>[1:0]</bitRange>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
               <access>read-write</access>
             </field>
           </fields>
