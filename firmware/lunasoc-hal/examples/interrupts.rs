@@ -9,11 +9,11 @@ use riscv_rt::entry;
 use lunasoc_hal as hal;
 use moondancer_pac as pac;
 
-lunasoc_hal::impl_serial! {
+hal::impl_serial! {
     Serial: pac::UART0,
 }
 
-lunasoc_hal::impl_timer! {
+hal::impl_timer! {
     Timer: pac::TIMER0,
 }
 
@@ -25,6 +25,7 @@ fn main() -> ! {
     // configure and enable timer
     let one_second = pac::clock::sysclk();
     let mut timer = Timer::new(peripherals.TIMER0, one_second);
+    timer.set_mode(hal::timer::Mode::Periodic);
     timer.set_timeout_ticks(one_second / 2);
     timer.enable();
 

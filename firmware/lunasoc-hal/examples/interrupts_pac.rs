@@ -12,14 +12,11 @@ fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
     let timer = &peripherals.TIMER0;
 
-    // configure and enable timer
+    // configure timer
+    timer.mode().write(|w| w.periodic().bit(true));
     timer
         .reload()
         .write(|w| unsafe { w.value().bits(pac::clock::sysclk() / 2) });
-    timer.enable().write(|w| w.enable().bit(true));
-
-    // enable timer events
-    timer.ev_enable().write(|w| unsafe { w.mask().bits(1) });
 
     // enable interrupts
     unsafe {
@@ -32,6 +29,13 @@ fn main() -> ! {
         // write csr: enable timer interrupt
         csr::interrupt::enable(pac::Interrupt::TIMER0)
     }
+
+    // enable timer events
+    timer.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
+    timer.ev_enable().write(|w| w.mask().bit(true));
+
+    // enable timer
+    timer.enable().write(|w| w.enable().bit(true));
 
     loop {
         unsafe {
@@ -54,7 +58,7 @@ unsafe fn MachineExternal() {
 
     if csr::interrupt::is_pending(pac::Interrupt::TIMER0) {
         // clear interrupt
-        timer.ev_pending().modify(|r, w| w.mask().bits(r.mask().bits()));
+        timer.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
 
         // blinkenlights
         if TOGGLE {
