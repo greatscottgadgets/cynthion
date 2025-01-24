@@ -121,8 +121,8 @@ impl<'a> Firmware<'a> {
 
         // get Cynthion hardware revision information from the SoC
         let info = &peripherals.INFO;
-        let board_major = info.version().read().major().bits() as u8;
-        let board_minor = info.version().read().minor().bits() as u8;
+        let board_major = info.version().read().major().bits();
+        let board_minor = info.version().read().minor().bits();
 
         // initialize logging
         moondancer::log::set_port(moondancer::log::Port::Both);
