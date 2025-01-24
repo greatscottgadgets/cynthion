@@ -17,8 +17,6 @@ extern "C" fn MachineExternal() {
         let timer = unsafe { hal::Timer0::summon() };
         timer.clear_pending();
 
-        //writeln!(serial, "MachineExternal - timer interrupt").unwrap();
-
         // blinkenlights
         let peripherals = unsafe { pac::Peripherals::steal() };
         let leds = &peripherals.LEDS;
@@ -41,11 +39,13 @@ fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
 
     // initialize logging
+    moondancer::log::set_port(moondancer::log::Port::Both);
     moondancer::log::init();
 
     // configure and enable timer
     let one_second = pac::clock::sysclk();
     let mut timer = hal::Timer0::new(peripherals.TIMER0, one_second);
+    timer.set_mode(hal::timer::Mode::Periodic);
     timer.set_timeout_ticks(one_second / 2);
     timer.enable();
 

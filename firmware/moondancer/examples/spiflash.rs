@@ -15,7 +15,7 @@ unsafe fn pre_main() {
     pac::cpu::vexriscv::flush_dcache();
 }
 
-const FLASH_ADDR: usize = 0x100b0000;
+const FLASH_ADDR: usize = 0x100b0000; // SoC firmware's flash address
 const READ_LENGTH: usize = 32;
 
 #[entry]
@@ -50,9 +50,8 @@ fn main() -> ! {
 
 fn read_flash_uuid(spi0: &pac::SPI0) {
     // configure spi0 phy
-    spi0.phy().write(|w| unsafe {
-        w.length().bits(8).width().bits(1).mask().bits(1)
-    });
+    spi0.phy()
+        .write(|w| unsafe { w.length().bits(8).width().bits(1).mask().bits(1) });
 
     // chip-select
     spi0.cs().write(|w| w.select().bit(false));
@@ -66,7 +65,8 @@ fn read_flash_uuid(spi0: &pac::SPI0) {
     // write flash id command to spi0
     let command: [u8; 13] = [0x4b, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
     for byte in command {
-        spi0.data().write(|w| unsafe { w.tx().bits(u32::from(byte)) });
+        spi0.data()
+            .write(|w| unsafe { w.tx().bits(u32::from(byte)) });
     }
 
     // check if we can read from spi0

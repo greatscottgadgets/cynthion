@@ -1,45 +1,45 @@
 #![allow(dead_code)]
-
 #![no_std]
 #![no_main]
 
-//use panic_halt as _;
 use riscv_rt::entry;
 
-use log::{info, error};
+use log::{error, info};
 
-use moondancer::{hal, pac};
+use moondancer::pac;
 
 // - interrupt handler --------------------------------------------------------
 
 #[allow(non_snake_case)]
 #[no_mangle]
 fn MachineExternal() {
-    let leds   = unsafe { pac::LEDS::steal() };
+    let leds = unsafe { pac::LEDS::steal() };
     let timer0 = unsafe { pac::TIMER0::steal() };
     let timer1 = unsafe { pac::TIMER1::steal() };
 
     if pac::csr::interrupt::is_pending(pac::Interrupt::TIMER0) {
-        timer0.ev_pending().modify(|r, w| unsafe { w.mask().bits(r.mask().bits()) });
+        timer0
+            .ev_pending()
+            .modify(|r, w| w.mask().bit(r.mask().bit()));
         leds.output().write(|w| unsafe { w.bits(0b11_1000) });
     } else if pac::csr::interrupt::is_pending(pac::Interrupt::TIMER1) {
-        timer1.ev_pending().modify(|r, w| unsafe { w.mask().bits(r.mask().bits()) });
+        timer1
+            .ev_pending()
+            .modify(|r, w| w.mask().bit(r.mask().bit()));
         leds.output().write(|w| unsafe { w.bits(0b00_0111) });
     } else {
         error!("MachineExternal - unknown interrupt");
     }
 }
 
-
-
 // - riscv_rt::main -----------------------------------------------------------
 
 #[entry]
 fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
-    let leds      = &peripherals.LEDS;
-    let timer0    = &peripherals.TIMER0;
-    let timer1    = &peripherals.TIMER1;
+    let leds = &peripherals.LEDS;
+    let timer0 = &peripherals.TIMER0;
+    let timer1 = &peripherals.TIMER1;
 
     // initialize logging
     moondancer::log::init();
@@ -54,14 +54,20 @@ fn main() -> ! {
 
     // configure timers
     let t = pac::clock::sysclk() as f32 / 3.2;
-    timer0.reload().write(|w| unsafe { w.value().bits(t as u32) });
+    timer0.mode().write(|w| w.periodic().bit(true));
+    timer0
+        .reload()
+        .write(|w| unsafe { w.value().bits(t as u32) });
     timer0.enable().write(|w| w.enable().bit(true));
-    timer1.reload().write(|w| unsafe { w.value().bits(pac::clock::sysclk()) });
+    timer1.mode().write(|w| w.periodic().bit(true));
+    timer1
+        .reload()
+        .write(|w| unsafe { w.value().bits(pac::clock::sysclk()) });
     timer1.enable().write(|w| w.enable().bit(true));
 
     // enable timer events
-    timer0.ev_enable().write(|w| unsafe { w.mask().bits(0b11) }); // event: sub_0
-    timer1.ev_enable().write(|w| unsafe { w.mask().bits(0b11) }); // event: sub_0 TODO sub_1
+    timer0.ev_enable().write(|w| w.mask().bit(true));
+    timer1.ev_enable().write(|w| w.mask().bit(true));
 
     // enable interrupts
     unsafe {
