@@ -20,6 +20,7 @@ pub const EP_MAX_ENDPOINTS: usize = 16;
 pub const EP_MAX_PACKET_SIZE: usize = 512;
 
 /// Returns the max packet size for a given device speed and endpoint number.
+#[must_use]
 pub fn max_packet_size(device_speed: device::Speed, endpoint_number: u8) -> usize {
     match (device_speed, endpoint_number) {
         (_, 0) => 64,
