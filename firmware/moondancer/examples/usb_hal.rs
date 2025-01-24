@@ -185,8 +185,8 @@ fn main_loop() -> GreatResult<()> {
             device_qualifier_descriptor: Some(USB_DEVICE_QUALIFIER_DESCRIPTOR),
             string_descriptor_zero: USB_STRING_DESCRIPTOR_0,
             string_descriptors: USB_STRING_DESCRIPTORS,
-            microsoft10: None, // TODO
-        }, //.set_total_lengths() // TODO figure out a better solution
+            microsoft10: None,
+        }.set_total_lengths()
     );
 
     // connect device
@@ -345,9 +345,6 @@ where
 
             // send requested data
             let bytes_written = usb.write(endpoint_number, test_data.copied());
-
-            // prime endpoint to receive zlp ack from host - this makes no sense or does bulk have a zlp???
-            //usb.ack(endpoint_number, Direction::DeviceToHost);
 
             if bytes_written == payload_length {
                 debug!("VENDOR_BULK_IN wrote {} bytes", bytes_written);
