@@ -94,7 +94,10 @@ name = "hello"
 name = "interrupts"
 
 [[example]]
-name = "irq"
+name = "interrupts_pac"
+
+[[example]]
+name = "smollest"
 
 [[example]]
 name = "spiflash"

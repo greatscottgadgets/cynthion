@@ -270,8 +270,7 @@ fn main_loop() -> GreatResult<()> {
                     let bytes_read = usb0.read(endpoint, &mut rx_buffer);
 
                     if endpoint == 1 {
-                        leds.output()
-                            .write(|w| unsafe { w.bits(0b11_1000) });
+                        leds.output().write(|w| unsafe { w.bits(0b11_1000) });
                         if counter % 100 == 0 {
                             log::trace!(
                                 "{:?} .. {:?}",
@@ -325,8 +324,7 @@ fn main_loop() -> GreatResult<()> {
 
                 // Usb0 transfer complete
                 Usb(Target, SendComplete(_endpoint)) => {
-                    leds.output()
-                        .write(|w| unsafe { w.bits(0b00_0111) });
+                    leds.output().write(|w| unsafe { w.bits(0b00_0111) });
                 }
 
                 // Error Message
@@ -609,8 +607,7 @@ static USB_STRING_DESCRIPTOR_1: StringDescriptor =
     StringDescriptor::new(cynthion::shared::usb::bManufacturerString::bulk_speed_test);
 static USB_STRING_DESCRIPTOR_2: StringDescriptor =
     StringDescriptor::new(cynthion::shared::usb::bProductString::bulk_speed_test);
-static USB_STRING_DESCRIPTOR_3: StringDescriptor =
-    StringDescriptor::new("0000000000000000");
+static USB_STRING_DESCRIPTOR_3: StringDescriptor = StringDescriptor::new("0000000000000000");
 
 static USB_STRING_DESCRIPTORS: &[&StringDescriptor] = &[
     &USB_STRING_DESCRIPTOR_1,

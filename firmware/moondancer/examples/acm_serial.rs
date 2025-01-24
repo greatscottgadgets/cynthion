@@ -7,7 +7,6 @@
 ///
 ///     picocom --imap crcrlf -b 115200 /dev/ttyACM0
 ///
-
 use log::{error, info};
 
 use moondancer::event::InterruptEvent;
@@ -20,8 +19,8 @@ use smolusb::control::Control;
 use smolusb::device::{Descriptors, Speed};
 use smolusb::event::UsbEvent;
 use smolusb::setup::{Direction, Request, RequestType, SetupPacket};
-use smolusb::traits::{ReadControl, ReadEndpoint, UsbDriverOperations, WriteEndpoint};
 use smolusb::traits::UnsafeUsbDriverOperations;
+use smolusb::traits::{ReadControl, ReadEndpoint, UsbDriverOperations, WriteEndpoint};
 
 use pac::csr::interrupt;
 
@@ -107,7 +106,9 @@ extern "C" fn MachineExternal() {
         pac::Interrupt::USB0_EP_IN => {
             let endpoint = usb0.ep_in.status().read().epno().bits() as u8;
 
-            unsafe { usb0.clear_tx_ack_active(endpoint); }
+            unsafe {
+                usb0.clear_tx_ack_active(endpoint);
+            }
 
             dispatch_event(InterruptEvent::Usb(
                 Target,
@@ -181,7 +182,9 @@ fn main() -> ! {
 
     // disconnect device
     usb0.disconnect();
-    unsafe { riscv::asm::delay(6_000_000); }
+    unsafe {
+        riscv::asm::delay(6_000_000);
+    }
 
     // connect device
     usb0.connect(DEVICE_SPEED);
@@ -208,9 +211,9 @@ fn main() -> ! {
 
     loop {
         if let Some(event) = EVENT_QUEUE.dequeue() {
+            use smolusb::event::UsbEvent::*;
             use InterruptEvent::Usb;
             use UsbInterface::Target;
-            use smolusb::event::UsbEvent::*;
 
             match event {
                 // Usb0 received a control event
@@ -278,7 +281,8 @@ where
             // seems to be happy as long as SET_LINE_CODING is implemented. We'll implement only
             // that, and stall every other handler.
             match (direction, class_request) {
-                (Direction::HostToDevice, SetLineCoding) => { // 32 - comes with 7 bytes of data
+                (Direction::HostToDevice, SetLineCoding) => {
+                    // 32 - comes with 7 bytes of data
                     usb.ep_out_prime_receive(4);
                 }
                 // we can just stall the reset
