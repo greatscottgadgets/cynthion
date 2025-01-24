@@ -54,7 +54,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                     .modify(|r, w| w.mask().bit(r.mask().bit()));
 
                 // read setup packet in interrupt handler for lowest latency
-                let endpoint_number = usb0.ep_control.status().read().epno().bits() as u8;
+                let endpoint_number = usb0.ep_control.status().read().epno().bits();
                 let mut setup_packet_buffer = [0_u8; 8];
                 let bytes_read = usb0.read_control(&mut setup_packet_buffer);
                 let setup_packet = SetupPacket::from(setup_packet_buffer);
@@ -75,7 +75,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                 .ev_pending()
                 .modify(|r, w| w.mask().bit(r.mask().bit()));
 
-            let endpoint_number = usb0.ep_in.status().read().epno().bits() as u8;
+            let endpoint_number = usb0.ep_in.status().read().epno().bits();
             unsafe {
                 usb0.clear_tx_ack_active(endpoint_number);
             }
@@ -89,7 +89,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                 .ev_pending()
                 .modify(|r, w| w.mask().bit(r.mask().bit()));
 
-            let endpoint_number = usb0.ep_out.status().read().epno().bits() as u8;
+            let endpoint_number = usb0.ep_out.status().read().epno().bits();
             InterruptEvent::Usb(Target, UsbEvent::ReceivePacket(endpoint_number))
         }),
 
@@ -113,7 +113,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                 .modify(|r, w| w.mask().bit(r.mask().bit()));
 
             // read setup packet in interrupt handler for lowest latency
-            let endpoint_number = usb1.ep_control.status().read().epno().bits() as u8;
+            let endpoint_number = usb1.ep_control.status().read().epno().bits();
             let mut setup_packet_buffer = [0_u8; 8];
             let bytes_read = usb1.read_control(&mut setup_packet_buffer);
             let setup_packet = SetupPacket::from(setup_packet_buffer);
@@ -133,7 +133,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                 .ev_pending()
                 .modify(|r, w| w.mask().bit(r.mask().bit()));
 
-            let endpoint_number = usb1.ep_in.status().read().epno().bits() as u8;
+            let endpoint_number = usb1.ep_in.status().read().epno().bits();
             unsafe {
                 usb1.clear_tx_ack_active(endpoint_number);
             }
@@ -147,7 +147,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                 .ev_pending()
                 .modify(|r, w| w.mask().bit(r.mask().bit()));
 
-            let endpoint_number = usb1.ep_out.status().read().epno().bits() as u8;
+            let endpoint_number = usb1.ep_out.status().read().epno().bits();
             InterruptEvent::Usb(Aux, UsbEvent::ReceivePacket(endpoint_number))
         }
 
@@ -171,7 +171,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                 .modify(|r, w| w.mask().bit(r.mask().bit()));
 
             // read setup packet in interrupt handler for lowest latency
-            let endpoint_number = usb2.ep_control.status().read().epno().bits() as u8;
+            let endpoint_number = usb2.ep_control.status().read().epno().bits();
             let mut setup_packet_buffer = [0_u8; 8];
             let bytes_read = usb2.read_control(&mut setup_packet_buffer);
             let setup_packet = SetupPacket::from(setup_packet_buffer);
@@ -191,7 +191,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                 .ev_pending()
                 .modify(|r, w| w.mask().bit(r.mask().bit()));
 
-            let endpoint_number = usb2.ep_in.status().read().epno().bits() as u8;
+            let endpoint_number = usb2.ep_in.status().read().epno().bits();
             unsafe {
                 usb2.clear_tx_ack_active(endpoint_number);
             }
@@ -205,7 +205,7 @@ pub fn get_usb_interrupt_event() -> InterruptEvent {
                 .ev_pending()
                 .modify(|r, w| w.mask().bit(r.mask().bit()));
 
-            let endpoint_number = usb2.ep_out.status().read().epno().bits() as u8;
+            let endpoint_number = usb2.ep_out.status().read().epno().bits();
             InterruptEvent::Usb(Control, UsbEvent::ReceivePacket(endpoint_number))
         }
 

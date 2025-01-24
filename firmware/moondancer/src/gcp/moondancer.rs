@@ -844,7 +844,7 @@ impl Moondancer {
     ///
     /// bitmask
     pub fn get_nak_status(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        let nak_status = (self.usb0.ep_in.status().read().nak().bits() & 0xffff) as u16;
+        let nak_status = self.usb0.ep_in.status().read().nak().bits();
         Ok(nak_status.to_le_bytes().into_iter())
     }
 }
@@ -1045,6 +1045,7 @@ pub static VERBS: [Verb; 19] = [
 
 // - dispatch -----------------------------------------------------------------
 
+#[allow(clippy::too_many_lines)]
 impl GreatDispatch for Moondancer {
     fn dispatch(
         &mut self,
