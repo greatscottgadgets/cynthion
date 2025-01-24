@@ -31,7 +31,9 @@ fn main() -> ! {
     }
 
     // enable timer events
-    timer.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
+    timer
+        .ev_pending()
+        .modify(|r, w| w.mask().bit(r.mask().bit()));
     timer.ev_enable().write(|w| w.mask().bit(true));
 
     // enable timer
@@ -58,7 +60,9 @@ unsafe fn MachineExternal() {
 
     if csr::interrupt::is_pending(pac::Interrupt::TIMER0) {
         // clear interrupt
-        timer.ev_pending().modify(|r, w| w.mask().bit(r.mask().bit()));
+        timer
+            .ev_pending()
+            .modify(|r, w| w.mask().bit(r.mask().bit()));
 
         // blinkenlights
         if TOGGLE {
@@ -93,7 +97,6 @@ fn uart_tx(string: &str) {
                 riscv::asm::nop();
             }
         }
-        uart.tx_data()
-            .write(|w| unsafe { w.data().bits(c as u8) })
+        uart.tx_data().write(|w| unsafe { w.data().bits(c as u8) })
     }
 }

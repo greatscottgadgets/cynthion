@@ -231,9 +231,7 @@ impl<'a> Firmware<'a> {
 
     fn initialize(&mut self) -> GreatResult<()> {
         // leds: starting up
-        self.leds
-            .output()
-            .write(|w| unsafe { w.bits(1 << 2) });
+        self.leds.output().write(|w| unsafe { w.bits(1 << 2) });
 
         // connect usb2
         self.usb2.connect(DEVICE_SPEED);
@@ -295,9 +293,7 @@ impl<'a> Firmware<'a> {
                 queue_length += 1;
 
                 // leds: event loop is active
-                self.leds
-                    .output()
-                    .write(|w| unsafe { w.bits(1 << 0) });
+                self.leds.output().write(|w| unsafe { w.bits(1 << 0) });
 
                 match interrupt_event {
                     // - misc event handlers --
@@ -526,10 +522,8 @@ impl<'a> Firmware<'a> {
 
             // clear any queued responses
             self.libgreat_response = None;
-
         } else if let Some(error) = self.libgreat_response_last_error {
             warn!("dispatch_libgreat_response error result: {:?}", error);
-
         } else {
             self.usb2.stall_endpoint_in(0);
             error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");
@@ -546,10 +540,20 @@ impl<'a> Firmware<'a> {
 
         // send error response
         if let Some(error) = self.libgreat_response_last_error {
-            self.usb2.write_requested(0, requested_length, (error as u32).to_le_bytes().into_iter());
+            self.usb2.write_requested(
+                0,
+                requested_length,
+                (error as u32).to_le_bytes().into_iter(),
+            );
             warn!("dispatch_libgreat_abort: {:?}", error);
         } else {
-            self.usb2.write_requested(0, requested_length, (GreatError::StateNotRecoverable as u32).to_le_bytes().into_iter());
+            self.usb2.write_requested(
+                0,
+                requested_length,
+                (GreatError::StateNotRecoverable as u32)
+                    .to_le_bytes()
+                    .into_iter(),
+            );
             warn!("dispatch_libgreat_abort: libgreat abort requested but no error queued");
         }
 
