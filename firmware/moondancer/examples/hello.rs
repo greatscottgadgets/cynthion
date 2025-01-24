@@ -51,8 +51,7 @@ fn main() -> ! {
             }
         }
 
-        leds.output()
-            .write(|w| unsafe { w.bits(led_state) });
+        leds.output().write(|w| unsafe { w.bits(led_state) });
         counter += 1;
     }
 }
