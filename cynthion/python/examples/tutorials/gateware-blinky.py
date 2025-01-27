@@ -14,9 +14,9 @@ class Top(Elaboratable):
         leds: Signal(6) = Cat(platform.request("led", n).o for n in range(0, 6))
 
         half_freq: int    = int(60e6 // 2)
-        timer: Signal(25) = Signal(range(half_freq + 1))
+        timer: Signal(25) = Signal(range(half_freq))
 
-        with m.If(timer == half_freq):
+        with m.If(timer == half_freq - 1):
             m.d.sync += leds.eq(~leds)
             m.d.sync += timer.eq(0)
 
