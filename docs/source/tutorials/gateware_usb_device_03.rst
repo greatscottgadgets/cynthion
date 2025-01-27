@@ -111,7 +111,7 @@ To implement vendor requests, begin by adding a ``VendorRequestHandler`` to our 
             descriptors = self.create_standard_descriptors()
             control_endpoint = usb.add_standard_control_endpoint(
                 descriptors,
-                avoid_blockram=True # allow dynamic string descriptors
+                avoid_blockram=True,
             )
 
             # add microsoft os 1.0 descriptors and request handler

@@ -222,7 +222,10 @@ class GatewareUSBDevice(Elaboratable):
         descriptors = self.create_standard_descriptors()
         control_endpoint = usb.add_standard_control_endpoint(
             descriptors,
-            avoid_blockram=True # allow dynamic string descriptors
+            # the blockram descriptor handler lacks support for
+            # non-contiguous string descriptor indices, which is
+            # required for the Microsoft OS string descriptor at 0xEE
+            avoid_blockram=True,
         )
 
         # add microsoft os 1.0 descriptors and request handler

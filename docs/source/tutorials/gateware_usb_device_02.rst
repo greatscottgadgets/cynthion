@@ -45,7 +45,7 @@ To start with, edit your ``gateware-usb-device.py`` file from the previous tutor
 .. code-block :: python
     :caption: gateware-usb-device.py
     :linenos:
-    :emphasize-lines: 5, 24-33
+    :emphasize-lines: 5, 24-35
 
     from amaranth                                    import *
     from luna.usb2                                   import USBDevice
@@ -74,8 +74,10 @@ To start with, edit your ``gateware-usb-device.py`` file from the previous tutor
             descriptors = self.create_standard_descriptors()
             control_endpoint = usb.add_standard_control_endpoint(
                 descriptors,
-                # add the parameter below to allow dynamic string descriptors
-                avoid_blockram=True
+                # the blockram descriptor handler lacks support for
+                # non-contiguous string descriptor indices, which is
+                # required for the Microsoft OS string descriptor at 0xEE.
+                avoid_blockram=True,
             )
 
             # add the microsoft os string descriptor
