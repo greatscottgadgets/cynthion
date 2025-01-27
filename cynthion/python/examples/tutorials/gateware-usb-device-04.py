@@ -6,6 +6,7 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from amaranth                                    import *
+from amaranth.lib.fifo                           import SyncFIFO
 from luna.usb2                                   import USBDevice
 from usb_protocol.emitters                       import DeviceDescriptorCollection
 
@@ -24,7 +25,6 @@ from luna.gateware.usb.usb2.transfer             import USBInStreamInterface
 from usb_protocol.types                          import USBRequestType
 
 from luna.usb2                                   import USBStreamInEndpoint, USBStreamOutEndpoint
-from luna.gateware.stream                        import StreamInterface
 from usb_protocol.types                          import USBDirection, USBTransferType
 
 VENDOR_ID  = 0x1209 # https://pid.codes/1209/
@@ -102,68 +102,6 @@ class VendorRequestHandler(ControlRequestHandler):
                     # automatically advances the FSM back to the 'IDLE' state on
                     # completion
                     self.handle_simple_data_request(m, serializer, data)
-
-        return m
-
-
-class StreamingMemoryStore(Elaboratable):
-    """ A simple memory storage module that exposes a read/write streaming interface. """
-
-    def __init__(self, stream_out: StreamInterface, stream_in: StreamInterface):
-        self.stream_out = stream_out
-        self.stream_in  = stream_in
-
-        # high when a memory write is in process
-        self.write_active = Signal()
-
-    def elaborate(self, platform):
-        m = Module()
-
-        # create a memory we will use as a data source/sink for our bulk endpoints
-        m.submodules.ram = ram = Memory(
-            width = 8,
-            depth = MAX_PACKET_SIZE,
-            init  = [0] * MAX_PACKET_SIZE
-        )
-        w_port = ram.write_port(domain="usb")
-        r_port = ram.read_port(domain="usb")
-
-        # set the write_active status to the write port's enable status
-        m.d.comb += self.write_active.eq(w_port.en)
-
-        # shortcuts
-        stream_out  = self.stream_out
-        stream_in   = self.stream_in
-
-        # - EP 0x01 OUT logic  ------------------------------------------------
-
-        # let the stream know we're always ready to start reading
-        m.d.comb += stream_out.ready.eq(1)
-
-        # wire the payload from the host up to our memory write port
-        m.d.comb += w_port.data.eq(stream_out.payload)
-
-        # read each byte coming in on the stream and write it to memory
-        with m.If(stream_out.valid & stream_out.ready):
-            m.d.comb += w_port.en.eq(1)
-            m.d.usb += w_port.addr.eq(w_port.addr + 1);
-        with m.Else():
-            m.d.comb += w_port.en.eq(0)
-            m.d.usb += w_port.addr.eq(0)
-
-        # - EP 0x82 IN logic  -------------------------------------------------
-
-        # wire the payload to the host up to our memory read port
-        m.d.comb += stream_in.payload.eq(r_port.data)
-
-        # when the stream is ready and the write port is not active,
-        # read each byte from memory and write it out to the stream
-        with m.If(stream_in.ready & ~w_port.en):
-            m.d.usb += stream_in.valid.eq(1)
-            m.d.usb += r_port.addr.eq(r_port.addr + 1)
-        with m.Else():
-            m.d.usb += stream_in.valid.eq(0)
-            m.d.usb += r_port.addr.eq(0)
 
         return m
 
@@ -258,11 +196,23 @@ class GatewareUSBDevice(Elaboratable):
         )
         usb.add_endpoint(ep_in)
 
-        # create a simple streaming memory storage module
-        m.submodules.store = store = StreamingMemoryStore(ep_out.stream, ep_in.stream)
+        # create a FIFO queue we'll connect to the stream interfaces of our
+        # IN & OUT endpoints
+        m.submodules.fifo = fifo = DomainRenamer("usb")(
+            SyncFIFO(width=8, depth=MAX_PACKET_SIZE)
+        )
 
-        # invalidate any data queued on ep_in when the memory performs a write operation
-        m.d.comb += ep_in.discard.eq(store.write_active)
+        # connect our Bulk OUT endpoint's stream interface to the FIFO's write port
+        stream_out = ep_out.stream
+        m.d.comb += fifo.w_data.eq(stream_out.payload)
+        m.d.comb += fifo.w_en.eq(stream_out.valid)
+        m.d.comb += stream_out.ready.eq(fifo.w_rdy)
+
+        # connect our Bulk IN endpoint's stream interface to the FIFO's read port
+        stream_in  = ep_in.stream
+        m.d.comb += stream_in.payload.eq(fifo.r_data)
+        m.d.comb += stream_in.valid.eq(fifo.r_rdy)
+        m.d.comb += fifo.r_en.eq(stream_in.ready)
 
         # configure the device to connect by default when plugged into a host
         m.d.comb += usb.connect.eq(1)
