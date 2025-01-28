@@ -82,10 +82,6 @@ extern "C" fn MachineExternal() {
         // - Usb0 (Target) interrupts --
         pac::Interrupt::USB0 => {
             usb0.bus_reset();
-
-            // prime the usb OUT endpoints we'll be using
-            //usb0.ep_out_prime_receive(4);
-
             usb0.device
                 .ev_pending()
                 .modify(|r, w| w.mask().bit(r.mask().bit()));
@@ -166,16 +162,14 @@ fn main() -> ! {
     let mut control_usb0 = Control::<_, MAX_CONTROL_RESPONSE_SIZE>::new(
         0,
         Descriptors {
-            // required
             device_speed: DEVICE_SPEED,
             device_descriptor: acm::DEVICE_DESCRIPTOR,
             configuration_descriptor: acm::CONFIGURATION_DESCRIPTOR_0,
             string_descriptor_zero: acm::STRING_DESCRIPTOR_0,
             string_descriptors: acm::STRING_DESCRIPTORS,
-            // optional
             other_speed_configuration_descriptor: Some(acm::OTHER_SPEED_CONFIGURATION_DESCRIPTOR_0),
             device_qualifier_descriptor: Some(acm::DEVICE_QUALIFIER_DESCRIPTOR),
-            microsoft10: None, // TODO
+            microsoft10: None,
         }
         .set_total_lengths(),
     );
