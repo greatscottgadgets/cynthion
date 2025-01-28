@@ -115,12 +115,11 @@ extern "C" fn MachineExternal() {
 
             // discard packets from Bulk OUT transfer endpoint
             /*if endpoint == 1 {
-                /*while usb0.ep_out.have.read().have().bit() {
-                    let _b = usb0.ep_out.data.read().data().bits();
-                }*/
-                //usb0.ep_out.reset().write(|w| w.reset().bit(true));
+                //while usb0.ep_out.status().read().have().bit() {
+                //    let _b = usb0.ep_out.data().read().byte().bits();
+                //}
+                usb0.ep_out.reset().write(|w| w.fifo().bit(true));
                 usb0.ep_out_prime_receive(1);
-                usb0.clear_pending(pac::Interrupt::USB0_EP_OUT);
                 return;
             }*/
 
@@ -189,12 +188,14 @@ fn main_loop() -> GreatResult<()> {
             device_qualifier_descriptor: Some(USB_DEVICE_QUALIFIER_DESCRIPTOR),
             string_descriptor_zero: USB_STRING_DESCRIPTOR_0,
             string_descriptors: USB_STRING_DESCRIPTORS,
-            microsoft10: None, // TODO
+            microsoft10: None,
         }
-        .set_total_lengths(), // TODO figure out a better solution
+        .set_total_lengths()
     );
 
     // connect device
+    usb0.disconnect();
+    unsafe { riscv::asm::delay(60_000_000); }
     usb0.connect(DEVICE_SPEED);
     info!("Connected USB0 device.");
 
@@ -248,8 +249,6 @@ fn main_loop() -> GreatResult<()> {
 
             leds.output().write(|w| unsafe { w.bits(0) });
 
-            //log::info!("{:?}", event);
-
             match event {
                 // - usb0 event handlers --
 
@@ -263,11 +262,18 @@ fn main_loop() -> GreatResult<()> {
                     | SendComplete(0)),
                 ) => {
                     control.dispatch_event(&usb0, event);
+                    if matches!(event, ReceivePacket(_)) {
+                        // re-enable ep_out interface
+                        usb0.ep_out_enable();
+                    }
                 }
 
                 // Usb0 received packet
                 Usb(Target, ReceivePacket(endpoint)) => {
                     let bytes_read = usb0.read(endpoint, &mut rx_buffer);
+                    if bytes_read == 0 {
+                        continue;
+                    }
 
                     if endpoint == 1 {
                         leds.output().write(|w| unsafe { w.bits(0b11_1000) });
@@ -279,6 +285,7 @@ fn main_loop() -> GreatResult<()> {
                             );
                         }
                         counter += 1;
+
                     } else if endpoint == 2 {
                         info!("received command data from host: {} bytes", bytes_read);
                         let command = rx_buffer[0].into();
@@ -293,7 +300,7 @@ fn main_loop() -> GreatResult<()> {
                                 test_stats.reset();
                                 test_command = TestCommand::Out;
                             }
-                            (1, command) => {
+                            (1, TestCommand::Stop) => {
                                 info!("stopping test: {:?}", command);
                                 info!("  max write time: {}", test_stats.max_write_time);
                                 info!("  min write time: {}", test_stats.min_write_time);
@@ -315,11 +322,13 @@ fn main_loop() -> GreatResult<()> {
                                 );
                             }
                         }
+
                     } else {
                         error!("received data on unknown endpoint: {}", endpoint);
                     }
 
-                    usb0.ep_out_prime_receive(endpoint);
+                    // re-enable ep_out interface
+                    usb0.ep_out_enable();
                 }
 
                 // Usb0 transfer complete
@@ -375,7 +384,7 @@ fn test_in_speed(
     ) -> bool {
         let mut did_reset = false;
         if usb0.ep_in.status().read().have().bit() {
-            usb0.ep_in.reset().write(|w| w.high().bit(true));
+            usb0.ep_in.reset().write(|w| w.fifo().bit(true));
             did_reset = true;
         }
         // 5.033856452242371MB/s.
