@@ -8,7 +8,6 @@
 from amaranth import Signal, Elaboratable, Module, Cat, ClockDomain, ClockSignal, ResetSignal
 from amaranth.lib.cdc import FFSynchronizer
 
-from luna.gateware.utils.cdc          import synchronize
 from luna.gateware.architecture.car   import LunaECP5DomainGenerator
 from luna.gateware.interface.jtag     import JTAGRegisterInterface
 from luna.gateware.interface.ulpi     import ULPIRegisterWindow
@@ -40,7 +39,7 @@ class SelftestDevice(Elaboratable):
         registers.add_read_only_register(REGISTER_ID, read=0x54455354)
 
         # LED test register.
-        led_reg = registers.add_register(REGISTER_LEDS, size=6, name="leds", reset=0b111111)
+        led_reg = registers.add_register(REGISTER_LEDS, size=6, name="leds", init=0b111111)
         led_out   = Cat([platform.request("led", i, dir="o").o for i in range(0, 6)])
         m.d.comb += led_out.eq(led_reg)
 
