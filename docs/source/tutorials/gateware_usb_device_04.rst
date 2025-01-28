@@ -202,7 +202,7 @@ We're only working in a single clock-domain so we can use a `SyncFIFO <https://a
             # create a FIFO queue we'll connect to the stream interfaces of our
             # IN & OUT endpoints
             m.submodules.fifo = fifo = DomainRenamer("usb")(
-                fifo.SyncFIFO(width=8, depth=MAX_PACKET_SIZE)
+                SyncFIFO(width=8, depth=MAX_PACKET_SIZE)
             )
 
             # connect our Bulk OUT endpoint's stream interface to the FIFO's write port
@@ -221,6 +221,24 @@ We're only working in a single clock-domain so we can use a `SyncFIFO <https://a
             m.d.comb += usb.connect.eq(1)
 
             return m
+
+.. note::
+
+    Something to take note off is the use of an Amaranth `DomainRenamer <https://amaranth-lang.org/docs/amaranth/latest/guide.html#renaming-domains>`__ component to wrap ``SyncFIFO`` in the following lines:
+
+    .. code-block :: python
+
+        m.submodules.fifo = fifo = DomainRenamer("usb")(
+            fifo.SyncFIFO(width=8, depth=MAX_PACKET_SIZE)
+        )
+
+    Any moderately complex FPGA hardware & gateware design will usually consist of multiple clock-domains running at different frequencies. Cynthion, for example, has three clock domains:
+
+    * ``sync`` - the default clock domain, running at 120 MHz.
+    * ``usb``  - the clock domain for USB components and gateware, running at 60 MHz.
+    * ``fast`` - a fast clock domain used for the HyperRAM, running at 240 MHz.
+
+    Because our designs so far have all been interfacing with Cynthion's USB components we've only needed to use the ``usb`` clock domain. However, reusable Amaranth components such as ``SyncFIFO`` are usually implemented using the default ``sync`` domain. We therefore need to be able to rename its clock domain to match the domain used in our design. This is what ``DomainRenamer`` does.
 
 And that's it, we've defined our endpoint functions! Let's try it out.
 
