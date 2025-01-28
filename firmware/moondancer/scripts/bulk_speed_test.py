@@ -100,7 +100,7 @@ _messages = {
 # - Bulk Speed Test -----------------------------------------------------------
 
 def run_speed_test(direction=usb1.ENDPOINT_IN):
-    """ Runs a simple IN speed test, and reports throughput. """
+    """ Runs a simple speed test in the given direction, and reports throughput. """
 
     test_data = bytearray([x % 256 for x in range(512)])
     total_data_exchanged = 0

@@ -430,6 +430,10 @@ macro_rules! impl_usb {
                     self.ep_out.enable().write(|w| w.enabled().bit(true));
                 }
 
+                fn ep_out_enable(&self) {
+                    self.ep_out.enable().write(|w| w.enabled().bit(true));
+                }
+
                 #[inline(always)]
                 fn read(&self, endpoint_number: u8, buffer: &mut [u8]) -> usize {
                     let mut bytes_read = 0;

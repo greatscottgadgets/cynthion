@@ -77,8 +77,11 @@ pub trait ReadControl {
 }
 
 pub trait ReadEndpoint {
-    /// Prepare the given OUT endpoint to receive a single packet.
+    /// Prime the given OUT endpoint for reception.
     fn ep_out_prime_receive(&self, endpoint_number: u8);
+
+    /// Re-enable all primed OUT endpoints for reception after receipt of a packet.
+    fn ep_out_enable(&self);
 
     /// Read a packet from the given endpoint.
     ///
