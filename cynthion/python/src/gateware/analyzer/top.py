@@ -27,7 +27,6 @@ from luna                                import top_level_cli
 from luna.gateware.usb.request.control   import ControlRequestHandler
 from luna.gateware.usb.stream            import USBInStreamInterface
 from luna.gateware.stream.generator      import StreamSerializer
-from luna.gateware.utils.cdc             import synchronize
 from luna.gateware.architecture.car      import LunaECP5DomainGenerator
 from luna.gateware.architecture.flash_sn import ECP5FlashUIDStringDescriptor
 from luna.gateware.interface.ulpi        import UTMITranslator
