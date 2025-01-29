@@ -12,7 +12,7 @@ This guide highlights the installation and setup process for setting up a local 
 Prerequisites
 -------------
 
-- `Python <https://wiki.python.org/moin/BeginnersGuide/Download>`__ v3.8, or later.
+- `Python <https://wiki.python.org/moin/BeginnersGuide/Download>`__ v3.9, or later.
 - A working FPGA toolchain. We only officially support a toolchain
   composed of the `Project Trellis <https://github.com/YosysHQ/prjtrellis>`__
   ECP5 tools, the `yosys <https://github.com/YosysHQ/yosys>`__
