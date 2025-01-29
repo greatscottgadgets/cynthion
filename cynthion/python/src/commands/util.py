@@ -16,10 +16,7 @@ import sys
 import textwrap
 import usb
 
-try:
-    from importlib_resources import files # <= 3.8
-except:
-    from importlib.resources import files # >= 3.9
+from importlib.resources       import files
 
 from cynthion                  import shared
 from fwup.dfu                  import DFUTarget

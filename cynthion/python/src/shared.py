@@ -11,15 +11,10 @@ directory.
 import glob
 import tomli
 
-from collections import namedtuple
-try:
-    # <= 3.8
-    from importlib_resources import files
-except:
-    # >= 3.9
-    from importlib.resources import files
-from os import path
-from pathlib import Path
+from collections          import namedtuple
+from importlib.resources  import files
+from os                   import path
+from pathlib              import Path
 
 
 SHARED_TOML_PATH = Path(files("cynthion").joinpath("shared"))
