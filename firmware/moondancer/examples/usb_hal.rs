@@ -186,7 +186,8 @@ fn main_loop() -> GreatResult<()> {
             string_descriptor_zero: USB_STRING_DESCRIPTOR_0,
             string_descriptors: USB_STRING_DESCRIPTORS,
             microsoft10: None,
-        }.set_total_lengths()
+        }
+        .set_total_lengths(),
     );
 
     // connect device
