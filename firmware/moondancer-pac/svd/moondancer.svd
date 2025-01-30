@@ -3056,10 +3056,17 @@
                     select the endpoint with the `epno` register; and then write a '1' into the prime and
                     enable register. This prepares our FIFO to receive data; and the next OUT transaction will
                     be captured into the FIFO.
+
                     When a transaction is complete, the `enable` bit is reset; the `prime` is not. This
                     effectively means that `enable` controls receiving on _any_ of the primed endpoints;
                     while `prime` can be used to build a collection of endpoints willing to participate in
                     receipt.
+
+                    Note that this does not apply to the control endpoint. Once the control endpoint has
+                    received a packet it will be un-primed and need to be re-primed before it can receive
+                    again. This is to ensure that we can establish an order on the receipt of the setup
+                    packet and any associated data.
+
                     Only one transaction / data packet is captured per `enable` write; repeated enabling is
                     necessary to capture multiple packets.
         </description>
@@ -4254,10 +4261,17 @@
                     select the endpoint with the `epno` register; and then write a '1' into the prime and
                     enable register. This prepares our FIFO to receive data; and the next OUT transaction will
                     be captured into the FIFO.
+
                     When a transaction is complete, the `enable` bit is reset; the `prime` is not. This
                     effectively means that `enable` controls receiving on _any_ of the primed endpoints;
                     while `prime` can be used to build a collection of endpoints willing to participate in
                     receipt.
+
+                    Note that this does not apply to the control endpoint. Once the control endpoint has
+                    received a packet it will be un-primed and need to be re-primed before it can receive
+                    again. This is to ensure that we can establish an order on the receipt of the setup
+                    packet and any associated data.
+
                     Only one transaction / data packet is captured per `enable` write; repeated enabling is
                     necessary to capture multiple packets.
         </description>
@@ -5452,10 +5466,17 @@
                     select the endpoint with the `epno` register; and then write a '1' into the prime and
                     enable register. This prepares our FIFO to receive data; and the next OUT transaction will
                     be captured into the FIFO.
+
                     When a transaction is complete, the `enable` bit is reset; the `prime` is not. This
                     effectively means that `enable` controls receiving on _any_ of the primed endpoints;
                     while `prime` can be used to build a collection of endpoints willing to participate in
                     receipt.
+
+                    Note that this does not apply to the control endpoint. Once the control endpoint has
+                    received a packet it will be un-primed and need to be re-primed before it can receive
+                    again. This is to ensure that we can establish an order on the receipt of the setup
+                    packet and any associated data.
+
                     Only one transaction / data packet is captured per `enable` write; repeated enabling is
                     necessary to capture multiple packets.
         </description>

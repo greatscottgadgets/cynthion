@@ -1,7 +1,7 @@
 #
 # This file is part of Cynthion.
 #
-# Copyright (c) 2020-2024 Great Scott Gadgets <info@greatscottgadgets.com>
+# Copyright (c) 2020-2025 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
 import logging, os, sys
@@ -104,8 +104,6 @@ class Soc(Component):
         )
 
         # blockram
-        # TODO given that we now have it at our disposal, consider using:
-        #   https://github.com/amaranth-lang/amaranth-soc/blob/main/amaranth_soc/wishbone/sram.py
         self.blockram = blockram.Peripheral(size=self.blockram_size)
         self.wb_decoder.add(self.blockram.bus, addr=self.blockram_base, name="blockram")
 
@@ -123,10 +121,6 @@ class Soc(Component):
             domain          = self.domain,
         )
         self.wb_decoder.add(self.spiflash.bus, addr=self.spiflash_base, name="spiflash")
-
-        # hyperram
-        # TODO self.hyperram = psram.Peripheral(size=self.hyperram_size)
-        # TODO self.wb_decoder.add(self.hyperram.bus, addr=self.hyperram_base, name="hyperram")
 
         # csr decoder
         self.csr_decoder = csr.Decoder(addr_width=28, data_width=8)
@@ -238,14 +232,10 @@ class Soc(Component):
 
         # interrupt controller
         m.submodules += self.interrupt_controller
-        # TODO wiring.connect(m, self.cpu.irq_external, self.interrupt_controller)
         m.d.comb += self.cpu.irq_external.eq(self.interrupt_controller.pending)
 
         # blockram
         m.submodules += self.blockram
-
-        # hyperram
-        # TODO m.submodules += self.hyperram
 
         # spiflash
         m.submodules += [self.spiflash_provider, self.spiflash, self.spiflash_bus, self.spiflash_phy]
@@ -339,19 +329,8 @@ class Soc(Component):
             self.cpu.jtag_tck     .eq(jtag0_io.tck.i),
         ]
 
-        # debug
-        # pmoda    = platform.request("user_pmod", 0)
-        # debug_io = platform.request("debug", 0)
-        # m.d.comb += [
-        #    pmoda.oe      .eq(1),
-        #    pmoda.o       .eq(self.cpu.irq_external),
-        #     debug_io.a.o  .eq(ClockSignal("usb")),
-        #     debug_io.b.o  .eq(ClockSignal("fast")),
-        # ]
-
         return DomainRenamer({
             "sync": self.domain,
-            "fast": "sync", # force hyperram interface to sync domain @ 120 MHz
         })(m)
 
 

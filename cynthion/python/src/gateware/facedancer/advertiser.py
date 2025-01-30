@@ -51,7 +51,7 @@ class Peripheral(wiring.Component):
         connect(m, self.bus, self._bridge.bus)
 
         # advertiser stop signal is enabled by default
-        stop = Signal(reset=1)
+        stop = Signal(init=1)
 
         # update advertiser stop signal on register write
         with m.If(self._control.f.enable.w_stb):

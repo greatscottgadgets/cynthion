@@ -190,12 +190,14 @@ fn main_loop() -> GreatResult<()> {
             string_descriptors: USB_STRING_DESCRIPTORS,
             microsoft10: None,
         }
-        .set_total_lengths()
+        .set_total_lengths(),
     );
 
     // connect device
     usb0.disconnect();
-    unsafe { riscv::asm::delay(60_000_000); }
+    unsafe {
+        riscv::asm::delay(60_000_000);
+    }
     usb0.connect(DEVICE_SPEED);
     info!("Connected USB0 device.");
 
@@ -285,7 +287,6 @@ fn main_loop() -> GreatResult<()> {
                             );
                         }
                         counter += 1;
-
                     } else if endpoint == 2 {
                         info!("received command data from host: {} bytes", bytes_read);
                         let command = rx_buffer[0].into();
@@ -322,7 +323,6 @@ fn main_loop() -> GreatResult<()> {
                                 );
                             }
                         }
-
                     } else {
                         error!("received data on unknown endpoint: {}", endpoint);
                     }
