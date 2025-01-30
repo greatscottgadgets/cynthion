@@ -1,14 +1,9 @@
 #![no_std]
 #![no_main]
 
-use moondancer::pac;
-
-use hal::hal::delay::DelayUs;
-use moondancer::hal;
-
-use log::{error, info};
-
 use riscv_rt::entry;
+
+use moondancer::pac;
 
 // - main entry point ---------------------------------------------------------
 
@@ -43,7 +38,7 @@ fn main() -> ! {
             .bits(0b01)
     });
 
-    info!("Peripherals initialized, entering main loop.");
+    log::info!("Peripherals initialized, entering main loop.");
 
     let mut counter = 0;
 
