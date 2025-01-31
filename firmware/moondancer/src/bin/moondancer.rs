@@ -149,6 +149,7 @@ impl<'a> Firmware<'a> {
         let string_descriptors = {
             static mut UUID: heapless::String<16> = heapless::String::new();
             static mut ISERIALNUMBER: StringDescriptor = StringDescriptor::new("0000000000000000");
+            #[allow(static_mut_refs)]
             unsafe {
                 UUID = uuid.clone();
                 ISERIALNUMBER = StringDescriptor::new(UUID.as_str());
