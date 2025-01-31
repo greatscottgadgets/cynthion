@@ -5,7 +5,7 @@
 # Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-import logging, os, sys, traceback, unittest
+import logging, os, platform, sys, traceback, unittest
 
 import usb1
 
@@ -78,8 +78,9 @@ class TestLibgreatEndpoints(unittest.TestCase):
             device_handle = context.openByVendorIDAndProductID(VENDOR_ID, PRODUCT_ID)
             device = device_handle.getDevice()
             logging.debug(f"device: {device}")
-            logging.debug(f"  manufacturer: {device.getManufacturer()}")
-            logging.debug(f"  product: {device.getProduct()}")
+            if platform.system() != "Windows":
+                logging.debug(f"  manufacturer: {device.getManufacturer()}")
+                logging.debug(f"  product: {device.getProduct()}")
 
             for configuration in device.iterConfigurations():
                 logging.debug(f"configuration: {configuration}")
