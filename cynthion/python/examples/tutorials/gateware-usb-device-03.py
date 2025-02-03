@@ -52,9 +52,6 @@ class VendorRequestHandler(ControlRequestHandler):
 
         # we've received a setup packet containing a vendor request.
         with m.If(setup.type == USBRequestType.VENDOR):
-            # take ownership of the interface
-            m.d.comb += interface.claim.eq(1)
-
             # use a state machine to sequence our request handling
             with m.FSM(domain="usb"):
                 with m.State("IDLE"):
@@ -64,16 +61,11 @@ class VendorRequestHandler(ControlRequestHandler):
                                 m.next = "HANDLE_SET_FPGA_LEDS"
                             with m.Case(self.VENDOR_GET_USER_BUTTON):
                                 m.next = "HANDLE_GET_USER_BUTTON"
-                            with m.Default():
-                                m.next = "UNHANDLED"
-
-                with m.State("UNHANDLED"):
-                    # stall unhandled requests
-                    with m.If(interface.status_requested | interface.data_requested):
-                        m.d.comb += interface.handshakes_out.stall.eq(1)
-                        m.next = "IDLE"
 
                 with m.State("HANDLE_SET_FPGA_LEDS"):
+                    # take ownership of the interface
+                    m.d.comb += interface.claim.eq(1)
+
                     # if we have an active data byte, set the FPGA LEDs to the payload
                     with m.If(interface.rx.valid & interface.rx.next):
                         m.d.usb += fpga_leds.eq(interface.rx.payload[0:6])
@@ -88,6 +80,9 @@ class VendorRequestHandler(ControlRequestHandler):
                         m.next = "IDLE"
 
                 with m.State("HANDLE_GET_USER_BUTTON"):
+                    # take ownership of the interface
+                    m.d.comb += interface.claim.eq(1)
+
                     # write the state of the user button into a local data register
                     data = Signal(8)
                     m.d.comb += data[0].eq(user_button)
