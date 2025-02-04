@@ -1,9 +1,9 @@
 pub use crate::pac;
 pub use lunasoc_hal::*;
 
-/*lunasoc_hal::impl_gpio! {
+lunasoc_hal::impl_gpio! {
     Gpio0: pac::GPIO0,
-}*/
+}
 
 lunasoc_hal::impl_serial! {
     Serial0: pac::UART0,
