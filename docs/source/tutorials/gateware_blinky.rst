@@ -93,11 +93,11 @@ To start with, let's define the timer state by adding the highlighted lines:
             leds: Signal(6) = Cat(platform.request("led", n).o for n in range(0, 6))
 
             half_freq: int    = int(60e6 // 2)
-            timer: Signal(25) = Signal(range(half_freq + 1))
+            timer: Signal(25) = Signal(range(half_freq))
 
             return m
 
-First we'll declare a variable ``half_freq`` which is exactly half of Cynthion FPGA's default clock frequency in Hz, next we'll declare ``timer`` to be an Amaranth ``Signal`` which is wide enough to contain a value equal to ``half_freq + 1``.
+First we'll declare a variable ``half_freq`` which is exactly half of Cynthion FPGA's default clock frequency in Hz, next we'll declare ``timer`` to be an Amaranth ``Signal`` which is wide enough to contain a value equal to ``half_freq``.
 
 If we increment the ``timer`` by one for each clock cycle until it reaches ``half_freq`` we get a timer with a 500ms period.
 
