@@ -97,9 +97,9 @@ To start with, let's define the timer state by adding the highlighted lines:
 
             return m
 
-First we'll declare a variable ``half_freq`` which is exactly half of Cynthion FPGA's default clock frequency in Hz, next we'll declare ``timer`` to be an Amaranth ``Signal`` which is wide enough to contain a value equal to ``half_freq``.
+First we'll declare a variable ``half_freq`` which is exactly half of Cynthion FPGA's default clock frequency in Hz, next we'll declare ``timer`` to be an Amaranth ``Signal`` which is wide enough to contain a value equal to ``half_freq - 1``.
 
-If we increment the ``timer`` by one for each clock cycle until it reaches ``half_freq`` we get a timer with a 500ms period.
+If we increment the ``timer`` by one for each clock cycle until it reaches ``half_freq - 1`` we get a timer with a 500ms period.
 
 
 Timer Logic
