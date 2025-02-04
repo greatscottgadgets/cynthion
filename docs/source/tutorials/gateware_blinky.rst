@@ -133,7 +133,7 @@ Now that we have a state definition for our timer we can move forward to the imp
 
 Amaranth combines normal Python expressions with Amaranth in order to describe a design. Whenever you see the prefix ``m.`` you are making a call to the ``Module`` object you created at the beginning of the ``elaborate(...)`` method. These calls are what build the logic which makes up a design.
 
-The ``with m.If(...):`` and ``with m.Else():`` blocks operate much like you'd expect where, every clock-cycle, the expression ``timer == half_freq`` will be evaluated and trigger the corresponding branch.
+The ``with m.If(...):`` and ``with m.Else():`` blocks operate much like you'd expect where, every clock-cycle, the expression ``timer == half_freq - 1`` will be evaluated and trigger the corresponding branch.
 
 The first block represents the point at which the timer has expired and we'd like to change the state of the LEDs and then reset the timer back to zero.
 
