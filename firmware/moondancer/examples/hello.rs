@@ -27,7 +27,7 @@ fn main() -> ! {
     moondancer::log::set_port(moondancer::log::Port::Both);
     moondancer::log::init();
 
-    let mut timer = hal::Timer0::new(peripherals.TIMER, pac::clock::sysclk());
+    let mut timer = hal::Timer0::new(peripherals.TIMER0, pac::clock::sysclk());
     let mut counter = 0;
     let mut direction = true;
     let mut led_state = 0b11_0000;
@@ -51,8 +51,7 @@ fn main() -> ! {
             }
         }
 
-        leds.output()
-            .write(|w| unsafe { w.output().bits(led_state) });
+        leds.output().write(|w| unsafe { w.bits(led_state) });
         counter += 1;
     }
 }

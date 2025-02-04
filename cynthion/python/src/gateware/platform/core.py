@@ -13,7 +13,7 @@ try:
     from amaranth.vendor.lattice_ecp5 import LatticeECP5Platform
 except:
     from amaranth.vendor import LatticeECP5Platform
-from ..vendor.amaranth_boards.resources import *
+from amaranth_boards.resources import *
 
 from luna.gateware.platform.core import LUNAApolloPlatform
 from luna.gateware.architecture.car import LunaECP5DomainGenerator

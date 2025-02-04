@@ -4,20 +4,22 @@
 # SPDX-License-Identifier: BSD-3-Clause
 
 from __future__ import print_function
-# Alias objects to make them easier to import.
 
-# mildly evil hack to vendor in amaranth_stdio for the benefit of
-# apollo_fpga.gateware.advertiser.ApolloAdvertiser
+# Make sure all luna_soc's vendored libraries are available
+import luna_soc
+
+# Mildly evil hack to vendor in amaranth_boards if it's not installed:
 try:
     try:
-        import amaranth_stdio
+        import amaranth_boards
     except:
         import sys
-        from luna_soc.gateware.vendor import amaranth_stdio
-        sys.modules["amaranth_stdio"] = amaranth_stdio
+        from .gateware.vendor import amaranth_boards as amaranth_boards_vendor
+        sys.modules["amaranth_boards"] = amaranth_boards_vendor
 except:
     pass
 
+# Alias objects to make them easier to import.
 from .cynthion import Cynthion
 from .cynthion import CynthionSingleton
 from .cynthion import CynthionBoard
@@ -27,7 +29,6 @@ from . import shared
 
 import importlib.metadata
 __version__ = importlib.metadata.version(__package__)
-
 
 Cynthion = Cynthion  # pyflakes
 
