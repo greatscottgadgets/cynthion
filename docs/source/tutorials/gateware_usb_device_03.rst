@@ -229,11 +229,9 @@ Next, we take ownership of the interface, in order to avoid conflicting with the
 
 While in ``IDLE`` we wait for the ``setup.received`` signal to go high and signal the arrival of a new control request. We then parse the ``setup.request`` field to identify the next state to advance our FSM to. (We could also use the other setup packet fields such as ``wValue`` and ``wIndex`` for dispatch or as arguments but for now we're just intered in ``bRequest``.)
 
-The first handler of interest is ``UNHANDLED`` which simply stalls the interface in order to inform the host that it was an invalid request.
+We then implement two handlers, the first is ``HANDLE_SET_FPGA_LEDS``, which needs to read the data sent with our OUT control request in order to set the fpga leds state.
 
-Next is ``HANDLE_SET_FPGA_LEDS`` which needs to read the data sent with our OUT control request in order to set the fpga leds state.
-
-Finally, in ``HANDLE_GET_USER_BUTTON`` we will use one of the built-in LUNA helper function to respond to our IN control request with the data containing the state of the user button.
+Then the second, in ``HANDLE_GET_USER_BUTTON`` we will use one of the built-in LUNA helper function to respond to our IN control request with the data containing the state of the user button.
 
 
 Test Control Endpoints
