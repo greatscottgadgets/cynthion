@@ -97,6 +97,7 @@ struct Firmware<'a> {
 
     // classes
     core: libgreat::gcp::class_core::Core,
+    gpio: moondancer::gcp::gpio::Gpio,
     moondancer: moondancer::gcp::moondancer::Moondancer,
 
     pub _marker: core::marker::PhantomData<&'a ()>,
@@ -107,9 +108,10 @@ struct Firmware<'a> {
 impl<'a> Firmware<'a> {
     fn new(peripherals: pac::Peripherals) -> Self {
         // initialize libgreat class registry
-        static CLASSES: [libgreat::gcp::Class; 4] = [
+        static CLASSES: [libgreat::gcp::Class; 5] = [
             libgreat::gcp::class_core::CLASS,
             moondancer::gcp::firmware::CLASS,
+            moondancer::gcp::gpio::CLASS,
             moondancer::gcp::selftest::CLASS,
             moondancer::gcp::moondancer::CLASS,
         ];
@@ -136,7 +138,7 @@ impl<'a> Firmware<'a> {
         info!("Logging initialized");
 
         // initialize ladybug
-        moondancer::debug::init(peripherals.GPIO0, peripherals.GPIO1);
+        // moondancer::debug::init(peripherals.GPIO0, peripherals.GPIO1);
 
         // get Cynthion SPI Flash uuid from the SoC
         let uuid = util::read_flash_uuid(&peripherals.SPI0).unwrap_or([0_u8; 8]);
@@ -217,6 +219,7 @@ impl<'a> Firmware<'a> {
         // initialize libgreat classes
         let core = libgreat::gcp::class_core::Core::new(classes, moondancer::BOARD_INFORMATION);
         let moondancer = moondancer::gcp::moondancer::Moondancer::new(usb0);
+        let gpio = moondancer::gcp::gpio::Gpio::new(Some(peripherals.GPIO0), None, Some(peripherals.USER0));
 
         Self {
             leds: peripherals.LEDS,
@@ -225,6 +228,7 @@ impl<'a> Firmware<'a> {
             libgreat_response: None,
             libgreat_response_last_error: None,
             core,
+            gpio,
             moondancer,
             _marker: core::marker::PhantomData,
         }
@@ -232,7 +236,7 @@ impl<'a> Firmware<'a> {
 
     fn initialize(&mut self) -> GreatResult<()> {
         // leds: starting up
-        self.leds.output().write(|w| unsafe { w.bits(1 << 2) });
+        self.leds.output().write(|w| unsafe { w.bits(0b00_0000) });
 
         // connect usb2
         self.usb2.connect(DEVICE_SPEED);
@@ -267,16 +271,10 @@ impl<'a> Firmware<'a> {
     fn main_loop(&'a mut self) -> GreatResult<()> {
         let mut max_queue_length: usize = 0;
         let mut queue_length: usize = 0;
-        let mut counter: usize = 1;
 
         info!("Peripherals initialized, entering main loop");
 
         loop {
-            // leds: main loop is responsive, interrupts are firing
-            self.leds
-                .output()
-                .write(|w| unsafe { w.bits((counter % 0xff) as u8) });
-
             if queue_length > max_queue_length {
                 max_queue_length = queue_length;
                 debug!("max_queue_length: {}", max_queue_length);
@@ -290,11 +288,7 @@ impl<'a> Firmware<'a> {
                 };
                 use smolusb::event::UsbEvent::*;
 
-                counter += 1;
                 queue_length += 1;
-
-                // leds: event loop is active
-                self.leds.output().write(|w| unsafe { w.bits(1 << 0) });
 
                 match interrupt_event {
                     // - misc event handlers --
@@ -467,6 +461,10 @@ impl<'a> Firmware<'a> {
             // class: firmware
             libgreat::gcp::ClassId::firmware => {
                 moondancer::gcp::firmware::dispatch(verb_number, arguments, response_buffer)
+            }
+            // class: gpio
+            libgreat::gcp::ClassId::gpio => {
+                self.gpio.dispatch(verb_number, arguments, response_buffer)
             }
             // class: selftest
             libgreat::gcp::ClassId::selftest => {
