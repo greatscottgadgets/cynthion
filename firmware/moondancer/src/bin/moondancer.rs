@@ -523,6 +523,7 @@ impl<'a> Firmware<'a> {
 
             // clear any queued responses
             self.libgreat_response = None;
+            self.libgreat_response_last_error = None;
         } else if let Some(error) = self.libgreat_response_last_error {
             warn!("dispatch_libgreat_response error result: {:?}", error);
         } else {
