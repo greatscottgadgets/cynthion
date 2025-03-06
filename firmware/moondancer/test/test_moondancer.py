@@ -18,7 +18,6 @@ class TestMoondancer(unittest.TestCase):
     """Tests for libgreat class: Moondancer"""
 
     def setUp(self):
-        #print(f"configure logging: {os.getenv('LOG_LEVEL', 'INFO').upper()}")
         configure_default_logging(level=os.getenv("LOG_LEVEL", "INFO").upper())
 
         self.board = cynthion.Cynthion()
@@ -26,7 +25,7 @@ class TestMoondancer(unittest.TestCase):
     def test_connectivity(self):
         response = self.board.board_name()
         logging.debug(f"test_connectivity: {response}")
-        self.assertEqual(response, "Cynthion in Moondancer mode")
+        self.assertEqual(response, "Facedancer (Cynthion Project)")
 
     def test_class_moondancer(self):
         response = self.board.supports_api("moondancer")
