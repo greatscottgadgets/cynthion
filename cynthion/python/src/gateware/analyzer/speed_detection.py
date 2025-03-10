@@ -32,6 +32,12 @@ class USBAnalyzerSpeedDetector(Elaboratable):
     current_speed: Signal(2), output
         A USBSpeed value that indicates the current operating speed. Used both to drive our device's
         knowledge of operating speed and to drive our PHY's speed selection.
+
+    speed_changing: Signal(), output
+        A strobe that indicates that a speed change condition has been detected and current_speed is about to change.
+
+    next_speed: Signal(2), output
+        A USBSpeed value that indicates the new speed when speed_changing is set.
     """
 
     # Constants for our line states at various speeds.
@@ -71,6 +77,9 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         self.suspended          = Signal()
 
         self.current_speed      = Signal(2, reset=USBSpeed.FULL)
+
+        self.speed_changing     = Signal()
+        self.next_speed         = Signal(2)
 
 
     def elaborate(self, platform):
@@ -127,8 +136,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 m.d.usb += [
                     timer.eq(0),
                     line_state_time.eq(0),
-                    self.current_speed.eq(USBSpeed.FULL),
                 ]
+                self.set_speed(m, USBSpeed.FULL)
 
             # DISCONNECT -- the device disconnected and now we're waiting to see a bus idle
             # state to indicate a connection.
@@ -143,7 +152,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # If we see FS K-state, it's equivalent to LS J-state, go into low-speed mode.
                 with m.Elif(self.line_state == self._LINE_STATE_FS_HS_K):
                     with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
-                        m.d.usb += self.current_speed.eq(USBSpeed.LOW)
+                        self.set_speed(m, USBSpeed.LOW)
                         m.next = 'LS_NON_RESET'
 
                 with m.Else():
@@ -167,8 +176,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     m.d.usb  += [
                         timer.eq(0),
                         line_state_time.eq(0),
-                        self.current_speed.eq(USBSpeed.FULL),
                     ]
+                    self.set_speed(m, USBSpeed.FULL)
                     m.next = 'DISCONNECT'
 
 
@@ -200,8 +209,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     m.d.usb  += [
                         timer.eq(0),
                         line_state_time.eq(0),
-                        self.current_speed.eq(USBSpeed.FULL),
                     ]
+                    self.set_speed(m, USBSpeed.FULL),
                     m.next = 'DISCONNECT'
 
                 # If we see an SE0 for >2.5uS; < 3ms, this a bus reset.
@@ -247,10 +256,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # Either way, our next step is the same: we'll drop down to full-speed. [USB2.0: 7.1.7.6]
                 # Afterwards, we'll take steps to differentiate a reset from a suspend.
                 with m.If(timer == self._CYCLES_3_MILLISECONDS):
-                    m.d.usb += [
-                        timer                    .eq(0),
-                        self.current_speed       .eq(USBSpeed.FULL),
-                    ]
+                    m.d.usb += timer.eq(0)
+                    self.set_speed(m, USBSpeed.FULL),
                     m.next = 'DETECT_HS_SUSPEND'
 
 
@@ -260,10 +267,10 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     timer              .eq(0),
                     line_state_time    .eq(0),
                     chirp_seen         .eq(0),
-
-                    # Switch into High-speed mode
-                    self.current_speed .eq(USBSpeed.HIGH),
                 ]
+                # Switch into High-speed mode
+                self.set_speed(m, USBSpeed.HIGH),
+
                 m.next = 'AWAIT_DEVICE_CHIRP'
 
 
@@ -379,9 +386,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 m.d.usb += [
                     timer                    .eq(0),
                     line_state_time          .eq(0),
-
-                    self.current_speed       .eq(USBSpeed.HIGH),
                 ]
+                self.set_speed(m, USBSpeed.HIGH),
 
                 m.next = 'HS_NON_RESET'
 
@@ -389,9 +395,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # IS_LOW_OR_FULL_SPEED -- we've decided the device is low/full speed (typically
             # because it didn't) complete our high-speed handshake; set it up accordingly.
             with m.State('IS_FULL_SPEED'):
-                m.d.usb += [
-                    self.current_speed.eq(USBSpeed.FULL),
-                ]
+                self.set_speed(m, USBSpeed.FULL),
 
                 # Once we know that our reset is complete, move back to our normal, non-reset state.
                 with m.If(self.line_state != self._LINE_STATE_SE0):
@@ -463,3 +467,11 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     m.next = 'START_HS_DETECTION'
 
         return m
+
+    def set_speed(self, m, new_speed):
+        with m.If(new_speed != self.current_speed):
+            m.d.comb += [
+                self.speed_changing.eq(1),
+                self.next_speed.eq(new_speed),
+            ]
+            m.d.usb += self.current_speed.eq(new_speed)
