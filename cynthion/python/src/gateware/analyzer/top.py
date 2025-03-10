@@ -264,6 +264,8 @@ class USBAnalyzerApplet(Elaboratable):
                 speed_selection == USB_SPEED_AUTO,
                 speed_detector.current_speed,
                 speed_selection)
+            speed_changing = speed_detector.speed_changing
+            next_speed = speed_detector.next_speed
 
             # Provide the necessary signals for speed detection.
             m.d.comb += [
@@ -283,6 +285,8 @@ class USBAnalyzerApplet(Elaboratable):
 
             # Speed selection is manual only.
             current_speed = speed_selection
+            speed_changing = False
+            next_speed = USB_SPEED_HIGH
 
         # Set up our parameters.
         m.d.comb += [
@@ -357,7 +361,8 @@ class USBAnalyzerApplet(Elaboratable):
         usb.add_endpoint(stream_ep)
 
         # Create a USB analyzer.
-        m.submodules.analyzer = analyzer = USBAnalyzer(utmi, current_speed)
+        m.submodules.analyzer = analyzer = USBAnalyzer(
+            utmi, current_speed, speed_changing, next_speed)
 
         # Follow this with a HyperRAM FIFO for additional buffering.
         reset_on_start = ResetInserter(analyzer.starting)
