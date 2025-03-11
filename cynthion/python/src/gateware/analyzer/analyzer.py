@@ -64,7 +64,7 @@ class USBAnalyzer(Elaboratable):
     # Support a maximum payload size of 1024B, plus a 1-byte PID and a 2-byte CRC16.
     MAX_PACKET_SIZE_BYTES = 1024 + 1 + 2
 
-    def __init__(self, utmi_interface, speed_selection, speed_changing, next_speed, mem_depth=4096):
+    def __init__(self, utmi_interface, speed_selection, speed_changing, next_speed, bus_reset, mem_depth=4096):
         """
         Parameters:
             utmi_interface -- A record or elaboratable that presents a UTMI interface.
@@ -74,6 +74,7 @@ class USBAnalyzer(Elaboratable):
         self.speed_selection = speed_selection
         self.speed_changing = speed_changing
         self.next_speed = next_speed
+        self.bus_reset = bus_reset
 
         assert (mem_depth % 2) == 0, "mem_depth must be a power of 2"
 
@@ -230,6 +231,12 @@ class USBAnalyzer(Elaboratable):
                     m.d.comb += [
                         write_event        .eq(1),
                         event_code         .eq(USBAnalyzerEvent.NONE),
+                    ]
+                with m.Elif(self.bus_reset):
+                    # Bus reset detected.
+                    m.d.comb += [
+                        write_event        .eq(1),
+                        event_code         .eq(USBAnalyzerEvent.BUS_RESET),
                     ]
                 with m.Elif(self.speed_changing):
                     # Speed change detected.
@@ -419,10 +426,11 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
         speed = C(0x00, 2)
         speed_changing = False
         next_speed = speed
+        bus_reset = False
 
         m = Module()
         m.submodules.analyzer = self.analyzer = USBAnalyzer(
-            self.utmi, speed, speed_changing, next_speed, mem_depth=128)
+            self.utmi, speed, speed_changing, next_speed, bus_reset, mem_depth=128)
         reset_on_start = ResetInserter(self.analyzer.starting)
         m.submodules.s16to8 = s16to8 = reset_on_start(Stream16to8())
         m.submodules.clk_conv = clk_conv = StreamFIFO(
@@ -639,13 +647,14 @@ class USBAnalyzerStackTest(USBAnalyzerTestBase):
         speed = C(0x00, 2)
         speed_changing = False
         next_speed = speed
+        bus_reset = False
 
         # Create a stack of our UTMITranslator and our USBAnalyzer.
         # We'll wrap the both in a module to establish a synthetic hierarchy.
         m = Module()
         m.submodules.translator = self.translator = UTMITranslator(ulpi=self.ulpi, handle_clocking=False)
         m.submodules.analyzer   = self.analyzer = USBAnalyzer(
-            self.translator, speed, speed_changing, next_speed, mem_depth=128)
+            self.translator, speed, speed_changing, next_speed, bus_reset, mem_depth=128)
         reset_on_start = ResetInserter(self.analyzer.starting)
         m.submodules.s16to8 = s16to8 = reset_on_start(Stream16to8())
         m.submodules.clk_conv = clk_conv = StreamFIFO(
