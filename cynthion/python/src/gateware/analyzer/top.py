@@ -257,9 +257,13 @@ class USBAnalyzerApplet(Elaboratable):
 
             # Add a speed detector and use it when selected.
             m.submodules.speed = speed_detector = USBAnalyzerSpeedDetector()
-            current_speed = Mux(
+            phy_speed = Mux(
                 speed_selection == USBAnalyzerSpeed.AUTO,
-                speed_detector.current_speed,
+                speed_detector.phy_speed,
+                speed_selection)
+            detected_speed = Mux(
+                speed_selection == USBAnalyzerSpeed.AUTO,
+                speed_detector.detected_speed,
                 speed_selection)
             speed_changing = speed_detector.speed_changing
             next_speed = speed_detector.next_speed
@@ -281,7 +285,7 @@ class USBAnalyzerApplet(Elaboratable):
             ]
 
             # Speed selection is manual only.
-            current_speed = speed_selection
+            phy_speed = detected_speed = next_speed = speed_selection
             speed_changing = False
             next_speed = USBAnalyzerSpeed.HIGH
 
@@ -289,7 +293,7 @@ class USBAnalyzerApplet(Elaboratable):
         m.d.comb += [
             # Set our mode to non-driving and to the desired speed.
             utmi.op_mode     .eq(0b01),
-            utmi.xcvr_select .eq(current_speed),
+            utmi.xcvr_select .eq(phy_speed),
 
             # Disable all of our terminations, as we want to participate in
             # passive observation.
@@ -359,7 +363,7 @@ class USBAnalyzerApplet(Elaboratable):
 
         # Create a USB analyzer.
         m.submodules.analyzer = analyzer = USBAnalyzer(
-            utmi, current_speed, speed_changing, next_speed)
+            utmi, detected_speed, speed_changing, next_speed)
 
         # Follow this with a HyperRAM FIFO for additional buffering.
         reset_on_start = ResetInserter(analyzer.starting)
