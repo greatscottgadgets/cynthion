@@ -31,6 +31,7 @@ from luna.gateware.utils.cdc             import synchronize
 from luna.gateware.architecture.car      import LunaECP5DomainGenerator
 from luna.gateware.architecture.flash_sn import ECP5FlashUIDStringDescriptor
 from luna.gateware.interface.ulpi        import UTMITranslator
+from luna.gateware.usb.usb2              import USBSpeed
 from luna.gateware.usb.usb2.control      import USBControlEndpoint
 from luna.gateware.usb.request.standard  import StandardRequestHandler
 from luna.gateware.usb.request.windows   import MicrosoftOS10DescriptorCollection, MicrosoftOS10RequestHandler
@@ -43,14 +44,10 @@ from usb_protocol.types.descriptors.microsoft10 import RegistryTypes
 from .analyzer                           import USBAnalyzer
 from .fifo                               import Stream16to8, StreamFIFO, AsyncFIFOReadReset, HyperRAMPacketFIFO
 from .speed_detection                    import USBAnalyzerSpeedDetector
+from .speeds                             import USBAnalyzerSpeed
 
 import cynthion
 
-
-USB_SPEED_HIGH       = 0b00
-USB_SPEED_FULL       = 0b01
-USB_SPEED_LOW        = 0b10
-USB_SPEED_AUTO       = 0b11
 
 USB_VENDOR_ID        = cynthion.shared.usb.bVendorId.cynthion
 USB_PRODUCT_ID       = cynthion.shared.usb.bProductId.cynthion
@@ -261,7 +258,7 @@ class USBAnalyzerApplet(Elaboratable):
             # Add a speed detector and use it when selected.
             m.submodules.speed = speed_detector = USBAnalyzerSpeedDetector()
             current_speed = Mux(
-                speed_selection == USB_SPEED_AUTO,
+                speed_selection == USBAnalyzerSpeed.AUTO,
                 speed_detector.current_speed,
                 speed_selection)
             speed_changing = speed_detector.speed_changing
@@ -286,7 +283,7 @@ class USBAnalyzerApplet(Elaboratable):
             # Speed selection is manual only.
             current_speed = speed_selection
             speed_changing = False
-            next_speed = USB_SPEED_HIGH
+            next_speed = USBAnalyzerSpeed.HIGH
 
         # Set up our parameters.
         m.d.comb += [
@@ -412,24 +409,24 @@ class USBAnalyzerApplet(Elaboratable):
 class AnalyzerTestDevice(Elaboratable):
     """ Built-in example device that can be used to test the analyzer. """
 
-    SPEEDS = (USB_SPEED_HIGH, USB_SPEED_FULL, USB_SPEED_LOW)
+    SPEEDS = (USBSpeed.HIGH, USBSpeed.FULL, USBSpeed.LOW)
 
     EP0_MAX_SIZE = {
-        USB_SPEED_HIGH: 64,
-        USB_SPEED_FULL: 64,
-        USB_SPEED_LOW: 8,
+        USBSpeed.HIGH: 64,
+        USBSpeed.FULL: 64,
+        USBSpeed.LOW: 8,
     }
 
     INT_EP_MAX_SIZE = {
-        USB_SPEED_HIGH: 512,
-        USB_SPEED_FULL: 64,
-        USB_SPEED_LOW: 8,
+        USBSpeed.HIGH: 512,
+        USBSpeed.FULL: 64,
+        USBSpeed.LOW: 8,
     }
 
     INT_EP_NUM = {
-        USB_SPEED_HIGH: 1,
-        USB_SPEED_FULL: 2,
-        USB_SPEED_LOW: 3,
+        USBSpeed.HIGH: 1,
+        USBSpeed.FULL: 2,
+        USBSpeed.LOW: 3,
     }
 
     def __init__(self, config):
@@ -469,8 +466,8 @@ class AnalyzerTestDevice(Elaboratable):
         current_speed = self.config.current[1:3]
         m.d.comb += [
             usb.connect.eq(self.config.current[0]),
-            usb.low_speed_only.eq(current_speed == USB_SPEED_LOW),
-            usb.full_speed_only.eq(current_speed == USB_SPEED_FULL),
+            usb.low_speed_only.eq(current_speed == USBSpeed.LOW),
+            usb.full_speed_only.eq(current_speed == USBSpeed.FULL),
         ]
 
         # Create control endpoint.
