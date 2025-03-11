@@ -16,7 +16,7 @@ import usb
 from datetime import datetime
 from enum import IntEnum, IntFlag
 
-from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter
+from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter, Mux
 from amaranth.build.res                  import ResourceError
 from usb_protocol.emitters               import DeviceDescriptorCollection
 from usb_protocol.types                  import USBRequestType, USBRequestRecipient
@@ -31,6 +31,7 @@ from luna.gateware.utils.cdc             import synchronize
 from luna.gateware.architecture.car      import LunaECP5DomainGenerator
 from luna.gateware.architecture.flash_sn import ECP5FlashUIDStringDescriptor
 from luna.gateware.interface.ulpi        import UTMITranslator
+from luna.gateware.usb.usb2              import USBSpeed
 from luna.gateware.usb.usb2.control      import USBControlEndpoint
 from luna.gateware.usb.request.standard  import StandardRequestHandler
 from luna.gateware.usb.request.windows   import MicrosoftOS10DescriptorCollection, MicrosoftOS10RequestHandler
@@ -42,13 +43,11 @@ from usb_protocol.types.descriptors.microsoft10 import RegistryTypes
 
 from .analyzer                           import USBAnalyzer
 from .fifo                               import Stream16to8, StreamFIFO, AsyncFIFOReadReset, HyperRAMPacketFIFO
+from .speed_detection                    import USBAnalyzerSpeedDetector
+from .speeds                             import USBAnalyzerSpeed
 
 import cynthion
 
-
-USB_SPEED_HIGH       = 0b00
-USB_SPEED_FULL       = 0b01
-USB_SPEED_LOW        = 0b10
 
 USB_VENDOR_ID        = cynthion.shared.usb.bVendorId.cynthion
 USB_PRODUCT_ID       = cynthion.shared.usb.bProductId.cynthion
@@ -151,6 +150,12 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                         USBAnalyzerSupportedSpeeds.USB_SPEED_LOW | \
                         USBAnalyzerSupportedSpeeds.USB_SPEED_FULL | \
                         USBAnalyzerSupportedSpeeds.USB_SPEED_HIGH
+
+                    # Automatic speed detection is only supported on Cynthion r0.6+.
+                    if platform.version >= (0, 6):
+                        supported_speeds |= \
+                            USBAnalyzerSupportedSpeeds.USB_SPEED_AUTO
+
                     self.handle_simple_data_request(m, transmitter, supported_speeds, length=1)
 
                 # SET_TEST_CONFIG -- The host is trying to configure our test device
@@ -220,6 +225,7 @@ class USBAnalyzerApplet(Elaboratable):
 
         # State register
         m.submodules.state = state = USBAnalyzerRegister()
+        speed_selection = state.current[1:3]
 
         # Test config register
         m.submodules.test_config = test_config = USBAnalyzerRegister(reset=0x01)
@@ -243,6 +249,30 @@ class USBAnalyzerApplet(Elaboratable):
             # On Cynthion r0.6 - r1.3 this passthrough is enabled by
             # default, even with the hardware unpowered, but it does no
             # harm to explicitly set it here.
+
+            # Tap the D+/D- signals for speed detection.
+            usb_diff_input = platform.request("target_usb_diff").i
+            usb_diff = Signal()
+            m.d.usb += usb_diff.eq(usb_diff_input)
+
+            # Add a speed detector and use it when selected.
+            m.submodules.speed = speed_detector = USBAnalyzerSpeedDetector()
+            phy_speed = Mux(
+                speed_selection == USBAnalyzerSpeed.AUTO,
+                speed_detector.phy_speed,
+                speed_selection)
+            detected_speed = speed_detector.detected_speed
+            speed_changing = speed_detector.speed_changing
+            next_speed = speed_detector.next_speed
+            bus_reset = speed_detector.bus_reset
+
+            # Provide the necessary signals for speed detection.
+            m.d.comb += [
+                speed_detector.reset.eq(state.write),
+                speed_detector.line_state.eq(utmi.line_state),
+                speed_detector.usb_diff.eq(usb_diff),
+                speed_detector.vbus_connected.eq(utmi.session_valid),
+            ]
         else:
             # On Cynthion r0.1 - r0.5, there is no `target_c_vbus_en`
             # signal. The following two signals are needed to have
@@ -252,18 +282,22 @@ class USBAnalyzerApplet(Elaboratable):
                 platform.request("pass_through_vbus").o .eq(1),
             ]
 
+            # Speed selection is manual only.
+            phy_speed = detected_speed = next_speed = speed_selection
+            speed_changing = False
+            bus_reset = False
+
         # Set up our parameters.
         m.d.comb += [
-
             # Set our mode to non-driving and to the desired speed.
             utmi.op_mode     .eq(0b01),
-            utmi.xcvr_select .eq(state.current[1:3]),
+            utmi.xcvr_select .eq(phy_speed),
 
             # Disable all of our terminations, as we want to participate in
             # passive observation.
             utmi.dm_pulldown .eq(0),
             utmi.dm_pulldown .eq(0),
-            utmi.term_select .eq(0)
+            utmi.term_select .eq(0),
         ]
 
         # Select the appropriate PHY according to platform version.
@@ -326,10 +360,11 @@ class USBAnalyzerApplet(Elaboratable):
         usb.add_endpoint(stream_ep)
 
         # Create a USB analyzer.
-        m.submodules.analyzer = analyzer = USBAnalyzer(utmi_interface=utmi)
+        m.submodules.analyzer = analyzer = USBAnalyzer(
+            utmi, detected_speed, speed_changing, next_speed, bus_reset)
 
         # Follow this with a HyperRAM FIFO for additional buffering.
-        reset_on_start = ResetInserter(analyzer.discarding)
+        reset_on_start = ResetInserter(analyzer.starting)
         m.submodules.psram_fifo = psram_fifo = reset_on_start(
             HyperRAMPacketFIFO(out_fifo_depth=128))
 
@@ -347,14 +382,14 @@ class USBAnalyzerApplet(Elaboratable):
             # Flush endpoint when analyzer is idle with capture disabled.
             stream_ep.flush             .eq(analyzer.idle & ~analyzer.capture_enable),
 
-            # Discard data buffered by endpoint when the analyzer discards its data.
-            stream_ep.discard           .eq(analyzer.discarding),
+            # Discard old data buffered by endpoint when the analyzer starts.
+            stream_ep.discard           .eq(analyzer.starting),
 
             # USB stream pipeline.
             psram_fifo.input            .stream_eq(analyzer.stream),
             s16to8.input                .stream_eq(psram_fifo.output),
             clk_conv.input              .stream_eq(s16to8.output),
-            clk_conv.fifo.ext_rst       .eq(analyzer.discarding),
+            clk_conv.fifo.ext_rst       .eq(analyzer.starting),
             stream_ep.stream            .stream_eq(clk_conv.output),
 
             usb.connect                 .eq(1),
@@ -376,24 +411,24 @@ class USBAnalyzerApplet(Elaboratable):
 class AnalyzerTestDevice(Elaboratable):
     """ Built-in example device that can be used to test the analyzer. """
 
-    SPEEDS = (USB_SPEED_HIGH, USB_SPEED_FULL, USB_SPEED_LOW)
+    SPEEDS = (USBSpeed.HIGH, USBSpeed.FULL, USBSpeed.LOW)
 
     EP0_MAX_SIZE = {
-        USB_SPEED_HIGH: 64,
-        USB_SPEED_FULL: 64,
-        USB_SPEED_LOW: 8,
+        USBSpeed.HIGH: 64,
+        USBSpeed.FULL: 64,
+        USBSpeed.LOW: 8,
     }
 
     INT_EP_MAX_SIZE = {
-        USB_SPEED_HIGH: 512,
-        USB_SPEED_FULL: 64,
-        USB_SPEED_LOW: 8,
+        USBSpeed.HIGH: 512,
+        USBSpeed.FULL: 64,
+        USBSpeed.LOW: 8,
     }
 
     INT_EP_NUM = {
-        USB_SPEED_HIGH: 1,
-        USB_SPEED_FULL: 2,
-        USB_SPEED_LOW: 3,
+        USBSpeed.HIGH: 1,
+        USBSpeed.FULL: 2,
+        USBSpeed.LOW: 3,
     }
 
     def __init__(self, config):
@@ -433,8 +468,8 @@ class AnalyzerTestDevice(Elaboratable):
         current_speed = self.config.current[1:3]
         m.d.comb += [
             usb.connect.eq(self.config.current[0]),
-            usb.low_speed_only.eq(current_speed == USB_SPEED_LOW),
-            usb.full_speed_only.eq(current_speed == USB_SPEED_FULL),
+            usb.low_speed_only.eq(current_speed == USBSpeed.LOW),
+            usb.full_speed_only.eq(current_speed == USBSpeed.FULL),
         ]
 
         # Create control endpoint.
