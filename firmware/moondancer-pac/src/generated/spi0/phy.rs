@@ -34,24 +34,21 @@ impl R {
 impl W {
     #[doc = "Bits 0:5 - length field"]
     #[inline(always)]
-    #[must_use]
     pub fn length(&mut self) -> LENGTH_W<PHY_SPEC> {
         LENGTH_W::new(self, 0)
     }
     #[doc = "Bits 6:9 - width field"]
     #[inline(always)]
-    #[must_use]
     pub fn width(&mut self) -> WIDTH_W<PHY_SPEC> {
         WIDTH_W::new(self, 6)
     }
     #[doc = "Bits 10:17 - mask field"]
     #[inline(always)]
-    #[must_use]
     pub fn mask(&mut self) -> MASK_W<PHY_SPEC> {
         MASK_W::new(self, 10)
     }
 }
-#[doc = "PHY control register length : SPI transfer length in bits. width : SPI transfer bus width (1/2/4/8). mask : SPI DQ output enable mask.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`phy::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`phy::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "A CSR register. Parameters ---------- fields : :class:`dict` or :class:`list` or :class:`Field` Collection of register fields. If ``None`` (default), a dict is populated from Python :term:`variable annotations <python:variable annotations>`. ``fields`` is used to create a :class:`FieldActionMap`, :class:`FieldActionArray`, or :class:`FieldAction`, depending on its type (dict, list, or Field). Interface attributes -------------------- element : :class:`Element` Interface between this register and a CSR bus primitive. Attributes ---------- field : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Collection of field instances. f : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Shorthand for :attr:`Register.field`. Raises ------ :exc:`TypeError` If ``fields`` is neither ``None``, a :class:`dict`, a :class:`list`, or a :class:`Field`. :exc:`ValueError` If ``fields`` is not ``None`` and at least one variable annotation is a :class:`Field`. :exc:`ValueError` If ``element.access`` is not readable and at least one field is readable. :exc:`ValueError` If ``element.access`` is not writable and at least one field is writable.\n\nYou can [`read`](crate::Reg::read) this register and get [`phy::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`phy::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct PHY_SPEC;
 impl crate::RegisterSpec for PHY_SPEC {
     type Ux = u32;

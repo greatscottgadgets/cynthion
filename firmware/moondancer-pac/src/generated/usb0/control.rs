@@ -52,36 +52,31 @@ impl R {
 impl W {
     #[doc = "Bit 0 - connect field"]
     #[inline(always)]
-    #[must_use]
     pub fn connect(&mut self) -> CONNECT_W<CONTROL_SPEC> {
         CONNECT_W::new(self, 0)
     }
     #[doc = "Bits 1:7 - _0 field"]
     #[inline(always)]
-    #[must_use]
     pub fn _0(&mut self) -> _0_W<CONTROL_SPEC> {
         _0_W::new(self, 1)
     }
     #[doc = "Bit 8 - low_speed_only field"]
     #[inline(always)]
-    #[must_use]
     pub fn low_speed_only(&mut self) -> LOW_SPEED_ONLY_W<CONTROL_SPEC> {
         LOW_SPEED_ONLY_W::new(self, 8)
     }
     #[doc = "Bit 9 - full_speed_only field"]
     #[inline(always)]
-    #[must_use]
     pub fn full_speed_only(&mut self) -> FULL_SPEED_ONLY_W<CONTROL_SPEC> {
         FULL_SPEED_ONLY_W::new(self, 9)
     }
     #[doc = "Bits 10:15 - _1 field"]
     #[inline(always)]
-    #[must_use]
     pub fn _1(&mut self) -> _1_W<CONTROL_SPEC> {
         _1_W::new(self, 10)
     }
 }
-#[doc = "Control register connect: Set this bit to '1' to allow the associated USB device to connect to a host. low_speed_only: Set this bit to '1' to force the device to operate at low speed. full_speed_only: Set this bit to '1' to force the device to operate at full speed.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`control::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`control::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "A CSR register. Parameters ---------- fields : :class:`dict` or :class:`list` or :class:`Field` Collection of register fields. If ``None`` (default), a dict is populated from Python :term:`variable annotations <python:variable annotations>`. ``fields`` is used to create a :class:`FieldActionMap`, :class:`FieldActionArray`, or :class:`FieldAction`, depending on its type (dict, list, or Field). Interface attributes -------------------- element : :class:`Element` Interface between this register and a CSR bus primitive. Attributes ---------- field : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Collection of field instances. f : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Shorthand for :attr:`Register.field`. Raises ------ :exc:`TypeError` If ``fields`` is neither ``None``, a :class:`dict`, a :class:`list`, or a :class:`Field`. :exc:`ValueError` If ``fields`` is not ``None`` and at least one variable annotation is a :class:`Field`. :exc:`ValueError` If ``element.access`` is not readable and at least one field is readable. :exc:`ValueError` If ``element.access`` is not writable and at least one field is writable.\n\nYou can [`read`](crate::Reg::read) this register and get [`control::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`control::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct CONTROL_SPEC;
 impl crate::RegisterSpec for CONTROL_SPEC {
     type Ux = u16;
