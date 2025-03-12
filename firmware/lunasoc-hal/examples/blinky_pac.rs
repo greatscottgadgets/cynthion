@@ -12,7 +12,7 @@ const SYSTEM_CLOCK_FREQUENCY: u32 = pac::clock::sysclk();
 fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
     let leds = &peripherals.LEDS;
-    let timer = &peripherals.TIMER;
+    let timer = &peripherals.TIMER0;
 
     let mut direction = true;
     let mut led_state = 0b11000000;
@@ -32,23 +32,21 @@ fn main() -> ! {
             }
         }
 
-        leds.output()
-            .write(|w| unsafe { w.output().bits(led_state) });
+        leds.output().write(|w| unsafe { w.bits(led_state) });
     }
 }
 
-fn delay_ms(timer: &pac::TIMER, sys_clk: u32, ms: u32) {
+fn delay_ms(timer: &pac::TIMER0, sys_clk: u32, ms: u32) {
     let ticks: u32 = sys_clk / 1_000 * ms;
 
-    timer.reload().write(|w| unsafe { w.reload().bits(0) });
-    timer.ctr().write(|w| unsafe { w.ctr().bits(ticks) });
-    timer.en().write(|w| w.en().bit(true));
+    timer.reload().write(|w| unsafe { w.value().bits(ticks) });
+    timer.enable().write(|w| w.enable().bit(true));
 
-    while timer.ctr().read().ctr().bits() > 0 {
+    while timer.counter().read().value().bits() > 0 {
         unsafe {
             riscv::asm::nop();
         }
     }
 
-    timer.en().write(|w| w.en().bit(false));
+    timer.enable().write(|w| w.enable().bit(false));
 }

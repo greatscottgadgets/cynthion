@@ -117,12 +117,12 @@ impl<'a> Firmware<'a> {
 
         // enable ApolloAdvertiser to disconnect the Cynthion USB2 control port from Apollo
         let advertiser = peripherals.ADVERTISER;
-        advertiser.enable().write(|w| w.enable().bit(true));
+        advertiser.control().write(|w| w.enable().bit(true));
 
         // get Cynthion hardware revision information from the SoC
         let info = &peripherals.INFO;
-        let board_major = info.version_major().read().bits() as u8;
-        let board_minor = info.version_minor().read().bits() as u8;
+        let board_major = info.version().read().major().bits();
+        let board_minor = info.version().read().minor().bits();
 
         // initialize logging
         moondancer::log::set_port(moondancer::log::Port::Both);
@@ -136,7 +136,7 @@ impl<'a> Firmware<'a> {
         info!("Logging initialized");
 
         // initialize ladybug
-        moondancer::debug::init(peripherals.GPIOA, peripherals.GPIOB);
+        moondancer::debug::init(peripherals.GPIO0, peripherals.GPIO1);
 
         // get Cynthion SPI Flash uuid from the SoC
         let uuid = util::read_flash_uuid(&peripherals.SPI0).unwrap_or([0_u8; 8]);
@@ -149,6 +149,7 @@ impl<'a> Firmware<'a> {
         let string_descriptors = {
             static mut UUID: heapless::String<16> = heapless::String::new();
             static mut ISERIALNUMBER: StringDescriptor = StringDescriptor::new("0000000000000000");
+            #[allow(static_mut_refs)]
             unsafe {
                 UUID = uuid.clone();
                 ISERIALNUMBER = StringDescriptor::new(UUID.as_str());
@@ -231,9 +232,7 @@ impl<'a> Firmware<'a> {
 
     fn initialize(&mut self) -> GreatResult<()> {
         // leds: starting up
-        self.leds
-            .output()
-            .write(|w| unsafe { w.output().bits(1 << 2) });
+        self.leds.output().write(|w| unsafe { w.bits(1 << 2) });
 
         // connect usb2
         self.usb2.connect(DEVICE_SPEED);
@@ -276,7 +275,7 @@ impl<'a> Firmware<'a> {
             // leds: main loop is responsive, interrupts are firing
             self.leds
                 .output()
-                .write(|w| unsafe { w.output().bits((counter % 0xff) as u8) });
+                .write(|w| unsafe { w.bits((counter % 0xff) as u8) });
 
             if queue_length > max_queue_length {
                 max_queue_length = queue_length;
@@ -295,9 +294,7 @@ impl<'a> Firmware<'a> {
                 queue_length += 1;
 
                 // leds: event loop is active
-                self.leds
-                    .output()
-                    .write(|w| unsafe { w.output().bits(1 << 0) });
+                self.leds.output().write(|w| unsafe { w.bits(1 << 0) });
 
                 match interrupt_event {
                     // - misc event handlers --
@@ -369,7 +366,7 @@ impl<'a> Firmware<'a> {
                 // allow apollo to claim Cynthion's control port
                 info!("Releasing Cynthion USB Control Port and activating Apollo");
                 let advertiser = unsafe { pac::ADVERTISER::steal() };
-                advertiser.enable().write(|w| w.enable().bit(false));
+                advertiser.control().write(|w| w.enable().bit(false));
             }
 
             // handle moondancer control requests
@@ -526,10 +523,8 @@ impl<'a> Firmware<'a> {
 
             // clear any queued responses
             self.libgreat_response = None;
-
         } else if let Some(error) = self.libgreat_response_last_error {
             warn!("dispatch_libgreat_response error result: {:?}", error);
-
         } else {
             self.usb2.stall_endpoint_in(0);
             error!("dispatch_libgreat_response stall: libgreat response requested but no response or error queued");
@@ -546,10 +541,20 @@ impl<'a> Firmware<'a> {
 
         // send error response
         if let Some(error) = self.libgreat_response_last_error {
-            self.usb2.write_requested(0, requested_length, (error as u32).to_le_bytes().into_iter());
+            self.usb2.write_requested(
+                0,
+                requested_length,
+                (error as u32).to_le_bytes().into_iter(),
+            );
             warn!("dispatch_libgreat_abort: {:?}", error);
         } else {
-            self.usb2.write_requested(0, requested_length, (GreatError::StateNotRecoverable as u32).to_le_bytes().into_iter());
+            self.usb2.write_requested(
+                0,
+                requested_length,
+                (GreatError::StateNotRecoverable as u32)
+                    .to_le_bytes()
+                    .into_iter(),
+            );
             warn!("dispatch_libgreat_abort: libgreat abort requested but no error queued");
         }
 
