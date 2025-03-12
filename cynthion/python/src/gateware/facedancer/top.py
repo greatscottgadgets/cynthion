@@ -79,6 +79,7 @@ class Soc(Component):
         self.usb2_ep_out_irq      = 13
         self.advertiser_base      = 0x00001400
         self.info_base            = 0x00001500
+        self.user0_base           = 0x00001600
 
         # cpu
         self.cpu = VexRiscv(
@@ -214,6 +215,10 @@ class Soc(Component):
         self.info = info.Peripheral()
         self.csr_decoder.add(self.info.bus, addr=self.info_base, name="info")
 
+        # user0
+        self.user0 = gpio.Peripheral(pin_count=1, addr_width=3, data_width=8)
+        self.csr_decoder.add(self.user0.bus, addr=self.user0_base, name="user0")
+
         # wishbone csr bridge
         self.wb_to_csr = WishboneCSRBridge(self.csr_decoder.bus, data_width=32)
         self.wb_decoder.add(self.wb_to_csr.wb_bus, addr=self.csr_base, sparse=False, name="wb_to_csr")
@@ -286,7 +291,7 @@ class Soc(Component):
         m.d.comb += self.usb0.attach(usb0_device)
         m.submodules += [ulpi0_provider, self.usb0, usb0_device]
 
-        # usb1 - target_phy
+        # usb1 - aux_phy
         ulpi1_provider = provider.ULPIProvider(["aux_phy", "host_phy"])
         usb1_device = USBDevice(bus=ulpi1_provider.bus)
         usb1_device.add_endpoint(self.usb1_ep_control)
@@ -295,7 +300,7 @@ class Soc(Component):
         m.d.comb += self.usb1.attach(usb1_device)
         m.submodules += [ulpi1_provider, self.usb1, usb1_device]
 
-        # usb2 - target_phy
+        # usb2 - control_phy
         ulpi2_provider = provider.ULPIProvider(["control_phy", "sideband_phy"])
         usb2_device = USBDevice(bus=ulpi2_provider.bus)
         usb2_device.add_endpoint(self.usb2_ep_control)
@@ -310,15 +315,19 @@ class Soc(Component):
         # info
         m.submodules += self.info
 
+        # user0
+        user0_provider = provider.ButtonProvider("button_user", 0)
+        m.submodules += [user0_provider, self.user0]
+        wiring.connect(m, self.user0.pins[0], user0_provider.pins[0])
+
         # wishbone csr bridge
         m.submodules += self.wb_to_csr
 
         # wire up the cpu external reset signal
-        try:
-            user1_io = platform.request("button_user")
-            m.d.comb += self.cpu.ext_reset.eq(user1_io.i)
-        except:
-            logging.warning("Platform does not support a user button for cpu reset")
+        delay = Signal(18)
+        with m.If(~delay.all()):
+            m.d.sync += delay.eq(delay + 1)
+            m.d.comb += self.cpu.ext_reset.eq(1)
 
         # wire up the cpu jtag signals
         jtag0_io = platform.request("jtag", 0)
@@ -347,8 +356,8 @@ class Top(Elaboratable):
 
         # PMOD B: DEBUG
         Resource("debug", 0,
-            Subsignal("a",  Pins("3", conn=("pmod", 1), dir="o")),
-            Subsignal("b",  Pins("4", conn=("pmod", 1), dir="o")),
+            Subsignal("a",  Pins("3", conn=("pmod", 1), dir="io")),
+            Subsignal("b",  Pins("4", conn=("pmod", 1), dir="io")),
             Attrs(IO_TYPE="LVCMOS33")
         ),
 
