@@ -255,15 +255,13 @@ class USBAnalyzerApplet(Elaboratable):
         # Set up our parameters.
         m.d.comb += [
 
-            # Set our mode to non-driving and to the desired speed.
+            # Set PHY mode to non-driving as we want to passively observe.
+            #
+            # `dp_pulldown`, `dm_pulldown` and `term_select` do not need to be
+            # configured as these values are "don't cares" for this specific
+            # `op_mode` (see ULPI Specification rev. 1.1 Table 41).
             utmi.op_mode     .eq(0b01),
             utmi.xcvr_select .eq(state.current[1:3]),
-
-            # Disable all of our terminations, as we want to participate in
-            # passive observation.
-            utmi.dm_pulldown .eq(0),
-            utmi.dm_pulldown .eq(0),
-            utmi.term_select .eq(0)
         ]
 
         # Select the appropriate PHY according to platform version.
