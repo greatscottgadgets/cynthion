@@ -150,6 +150,10 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             #
             # In this state, the PHY is set to full-speed mode as we're only looking at line_state.
             with m.State('DISCONNECT'):
+
+                # Speed is unknown for now.
+                self.detect_speed(m, USBAnalyzerSpeed.AUTO)
+
                 # If we see full-speed J-state, go into full-speed mode.
                 with m.If(self.line_state == self._LINE_STATE_FS_HS_J):
                     with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
@@ -185,7 +189,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                         line_state_time.eq(0),
                         self.phy_speed.eq(USBSpeed.FULL),
                     ]
-                    self.detect_speed(m, USBAnalyzerSpeed.AUTO)
                     m.next = 'DISCONNECT'
 
 
@@ -219,7 +222,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                         line_state_time.eq(0),
                         self.phy_speed.eq(USBSpeed.FULL),
                     ]
-                    self.detect_speed(m, USBAnalyzerSpeed.AUTO)
                     m.next = 'DISCONNECT'
 
                 # If we see an SE0 for >2.5uS; < 3ms, this a bus reset.
