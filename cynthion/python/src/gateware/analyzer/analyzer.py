@@ -64,7 +64,7 @@ class USBAnalyzer(Elaboratable):
     # Support a maximum payload size of 1024B, plus a 1-byte PID and a 2-byte CRC16.
     MAX_PACKET_SIZE_BYTES = 1024 + 1 + 2
 
-    def __init__(self, utmi_interface, speed_selection, speed_changing, next_speed, mem_depth=4096):
+    def __init__(self, utmi_interface, speed_selection, event_strobe, event_code, mem_depth=4096):
         """
         Parameters:
             utmi_interface -- A record or elaboratable that presents a UTMI interface.
@@ -72,8 +72,8 @@ class USBAnalyzer(Elaboratable):
 
         self.utmi = utmi_interface
         self.speed_selection = speed_selection
-        self.speed_changing = speed_changing
-        self.next_speed = next_speed
+        self.event_strobe = event_strobe
+        self.event_code = event_code
 
         assert (mem_depth % 2) == 0, "mem_depth must be a power of 2"
 
@@ -231,12 +231,11 @@ class USBAnalyzer(Elaboratable):
                         write_event        .eq(1),
                         event_code         .eq(USBAnalyzerEvent.NONE),
                     ]
-                with m.Elif(self.speed_changing):
-                    # Speed change detected.
+                with m.Elif(self.event_strobe):
+                    # Event detected externally.
                     m.d.comb += [
                         write_event        .eq(1),
-                        event_code         .eq(
-                            USBAnalyzerEvent.SPEED_DETECT_BASE | self.next_speed),
+                        event_code         .eq(self.event_code),
                     ]
 
 

@@ -10,6 +10,7 @@ from amaranth import Elaboratable, Module, Signal, Mux
 
 from luna.gateware.usb.usb2            import USBSpeed
 from .speeds                           import USBAnalyzerSpeed
+from .events                           import USBAnalyzerEvent
 
 
 class USBAnalyzerSpeedDetector(Elaboratable):
@@ -37,11 +38,11 @@ class USBAnalyzerSpeedDetector(Elaboratable):
     detected_speed: Signal(2), output
         A USBAnalyzer speed value used to indicate detected speed.
 
-    speed_changing: Signal(), output
-        A strobe that indicates that a speed change condition has been detected and detected_speed is about to change.
+    event_strobe: Signal(), output
+        A strobe that indicates that an event has been detected.
 
-    next_speed: Signal(2), output
-        A USBAnalyzerSpeed value that indicates the new speed when speed_changing is set.
+    event_code: Signal(8), output
+        A USBAnalyzerEvent value indicating the detected event.
     """
 
     # Constants for our line states at various speeds.
@@ -83,8 +84,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         self.phy_speed          = Signal(2, reset=USBSpeed.FULL)
         self.detected_speed     = Signal(2, reset=USBAnalyzerSpeed.AUTO)
 
-        self.speed_changing     = Signal()
-        self.next_speed         = Signal(2)
+        self.event_strobe       = Signal()
+        self.event_code         = Signal(8)
 
 
     def elaborate(self, platform):
@@ -485,8 +486,11 @@ class USBAnalyzerSpeedDetector(Elaboratable):
 
     def detect_speed(self, m, new_speed):
         with m.If(new_speed != self.detected_speed):
-            m.d.comb += [
-                self.speed_changing.eq(1),
-                self.next_speed.eq(new_speed),
-            ]
             m.d.usb += self.detected_speed.eq(new_speed)
+            self.detect_event(m, USBAnalyzerEvent.SPEED_DETECT_BASE | new_speed)
+
+    def detect_event(self, m, code):
+        m.d.comb += [
+            self.event_strobe.eq(1),
+            self.event_code.eq(code),
+        ]
