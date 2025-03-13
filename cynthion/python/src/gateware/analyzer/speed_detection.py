@@ -189,6 +189,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                         self.phy_speed.eq(USBSpeed.FULL),
                     ]
                     m.next = 'DISCONNECT'
+                    self.detect_event(m, USBAnalyzerEvent.VBUS_DISCONNECTED)
 
 
                 # If we're seeing a state other than IDLE, clear our suspend timer.
@@ -222,6 +223,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                         self.phy_speed.eq(USBSpeed.FULL),
                     ]
                     m.next = 'DISCONNECT'
+                    self.detect_event(m, USBAnalyzerEvent.VBUS_DISCONNECTED)
 
                 # If we see an SE0 for >2.5uS; < 3ms, this a bus reset.
                 # We'll trigger a reset after 5uS; providing a little bit of timing flexibility.
@@ -263,6 +265,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                         self.phy_speed.eq(USBSpeed.FULL),
                     ]
                     m.next = 'DISCONNECT'
+                    self.detect_event(m, USBAnalyzerEvent.VBUS_DISCONNECTED)
 
 
                 # High speed signaling presents IDLE and RESET the same way: with the host
