@@ -138,12 +138,26 @@ class USBAnalyzerSpeedDetector(Elaboratable):
 
             # INITIALIZE -- we're immediately post-reset; we'll perform some minor setup
             with m.State('INITIALIZE'):
-                m.next = 'DISCONNECT'
                 m.d.usb += [
                     timer.eq(0),
                     line_state_time.eq(0),
                     self.phy_speed.eq(USBSpeed.FULL),
                 ]
+                with m.If(self.vbus_connected):
+                    m.next = 'DISCONNECT'
+                with m.Else():
+                    m.next = 'VBUS_INVALID'
+
+            # VBUS_INVALID -- there's no valid VBUS, so await that before anything else.
+            with m.State('VBUS_INVALID'):
+
+                # Speed is unknown for now.
+                self.detect_speed(m, USBAnalyzerSpeed.AUTO)
+
+                with m.If(self.vbus_connected):
+                    m.next = 'DISCONNECT'
+                    self.detect_event(m, USBAnalyzerEvent.VBUS_CONNECTED)
+
 
             # DISCONNECT -- the device disconnected and now we're waiting to see a bus idle
             # state to indicate a connection.
@@ -484,7 +498,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 line_state_time.eq(0),
                 self.phy_speed.eq(USBSpeed.FULL),
             ]
-            m.next = 'DISCONNECT'
+            m.next = 'VBUS_INVALID'
             self.detect_event(m, USBAnalyzerEvent.VBUS_DISCONNECTED)
 
     def detect_speed(self, m, new_speed):
