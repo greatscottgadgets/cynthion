@@ -217,7 +217,7 @@ class USBAnalyzer(Elaboratable):
                         write_event        .eq(1),
                         event_code         .eq(USBAnalyzerEvent.CAPTURE_STOP_NORMAL),
                     ]
-                with m.Elif(self.utmi.rx_active):
+                with m.Elif(self.utmi.rx_active & self.utmi.session_valid):
                     m.d.comb += new_packet.eq(1)
                     m.next = "CAPTURE_PACKET"
                     m.d.usb += [
