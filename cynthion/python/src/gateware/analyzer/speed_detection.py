@@ -256,8 +256,12 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # a blank state. We'll want to present our detection pull-up to the host,
                 # so we'll drop out of high speed.
                 with m.If(~self.vbus_connected):
-                    m.d.comb += self.bus_reset.eq(1)
-                    m.next = 'IS_FULL_SPEED'
+                    m.d.usb  += [
+                        timer.eq(0),
+                        line_state_time.eq(0),
+                        self.phy_speed.eq(USBSpeed.FULL),
+                    ]
+                    m.next = 'DISCONNECT'
 
 
                 # High speed signaling presents IDLE and RESET the same way: with the host
