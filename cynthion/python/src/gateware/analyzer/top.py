@@ -45,6 +45,7 @@ from .analyzer                           import USBAnalyzer
 from .fifo                               import Stream16to8, StreamFIFO, AsyncFIFOReadReset, HyperRAMPacketFIFO
 from .speed_detection                    import USBAnalyzerSpeedDetector
 from .speeds                             import USBAnalyzerSpeed
+from .events                             import USBAnalyzerEvent
 
 import cynthion
 
@@ -265,8 +266,8 @@ class USBAnalyzerApplet(Elaboratable):
                 speed_selection == USBAnalyzerSpeed.AUTO,
                 speed_detector.detected_speed,
                 speed_selection)
-            speed_changing = speed_detector.speed_changing
-            next_speed = speed_detector.next_speed
+            event_strobe = speed_detector.event_strobe
+            event_code = speed_detector.event_code
 
             # Provide the necessary signals for speed detection.
             m.d.comb += [
@@ -286,8 +287,8 @@ class USBAnalyzerApplet(Elaboratable):
 
             # Speed selection is manual only.
             phy_speed = detected_speed = next_speed = speed_selection
-            speed_changing = False
-            next_speed = USBAnalyzerSpeed.HIGH
+            event_strobe = False
+            event_code = USBAnalyzerEvent.NONE
 
         # Set up our parameters.
         m.d.comb += [
@@ -363,7 +364,7 @@ class USBAnalyzerApplet(Elaboratable):
 
         # Create a USB analyzer.
         m.submodules.analyzer = analyzer = USBAnalyzer(
-            utmi, detected_speed, speed_changing, next_speed)
+            utmi, detected_speed, event_strobe, event_code)
 
         # Follow this with a HyperRAM FIFO for additional buffering.
         reset_on_start = ResetInserter(analyzer.starting)
