@@ -169,6 +169,9 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.Else():
                     m.d.usb += line_state_time.eq(0)
 
+                self.handle_vbus_disconnect(m, timer, line_state_time)
+
+
             # LS_NON_RESET -- we're currently operating at LS and waiting for a reset;
             # the device could be active or inactive, but we haven't yet seen a reset condition.
             with m.State('LS_NON_RESET'):
@@ -177,21 +180,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # potential reset. Keep our timer at zero.
                 with m.If(self.line_state != self._LINE_STATE_SE0):
                     m.d.usb += timer.eq(0)
-
-
-                # If VBUS isn't connected, don't go through the whole reset process;
-                # but also consider ourselves permanently in reset. This ensures we
-                # don't progress through the reset FSM; but also ensures the device
-                # state starts fresh with each plug.
-                with m.If(~self.vbus_connected):
-                    m.d.usb  += [
-                        timer.eq(0),
-                        line_state_time.eq(0),
-                        self.phy_speed.eq(USBSpeed.FULL),
-                    ]
-                    m.next = 'DISCONNECT'
-                    self.detect_event(m, USBAnalyzerEvent.VBUS_DISCONNECTED)
-
 
                 # If we're seeing a state other than IDLE, clear our suspend timer.
                 with m.If(~bus_idle):
@@ -203,6 +191,9 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 #    m.d.usb += was_hs_pre_suspend.eq(0)
                 #    m.next = 'SUSPENDED'
 
+                self.handle_vbus_disconnect(m, timer, line_state_time)
+
+
             # FS_NON_RESET -- we're currently operating at FS and waiting for a reset;
             # the device could be active or inactive, but we haven't yet seen a reset condition.
             with m.State('FS_NON_RESET'):
@@ -211,20 +202,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # potential reset. Keep our timer at zero.
                 with m.If(self.line_state != self._LINE_STATE_SE0):
                     m.d.usb += timer.eq(0)
-
-
-                # If VBUS isn't connected, don't go through the whole reset process;
-                # but also consider ourselves permanently in reset. This ensures we
-                # don't progress through the reset FSM; but also ensures the device
-                # state starts fresh with each plug.
-                with m.If(~self.vbus_connected):
-                    m.d.usb  += [
-                        timer.eq(0),
-                        line_state_time.eq(0),
-                        self.phy_speed.eq(USBSpeed.FULL),
-                    ]
-                    m.next = 'DISCONNECT'
-                    self.detect_event(m, USBAnalyzerEvent.VBUS_DISCONNECTED)
 
                 # If we see an SE0 for >2.5uS; < 3ms, this a bus reset.
                 # We'll trigger a reset after 5uS; providing a little bit of timing flexibility.
@@ -244,7 +221,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     m.d.usb += was_hs_pre_suspend.eq(0)
                     m.next = 'SUSPENDED'
 
-
+                self.handle_vbus_disconnect(m, timer, line_state_time)
 
 
             # HS_NON_RESET -- we're currently operating at high speed and waiting for a reset or
@@ -255,19 +232,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # potential reset. Keep our timer at zero.
                 with m.If(self.line_state != self._LINE_STATE_SE0):
                     m.d.usb += timer.eq(0)
-
-                # If VBUS isn't connected, our device/host relationship is effectively
-                # a blank state. We'll want to present our detection pull-up to the host,
-                # so we'll drop out of high speed.
-                with m.If(~self.vbus_connected):
-                    m.d.usb  += [
-                        timer.eq(0),
-                        line_state_time.eq(0),
-                        self.phy_speed.eq(USBSpeed.FULL),
-                    ]
-                    m.next = 'DISCONNECT'
-                    self.detect_event(m, USBAnalyzerEvent.VBUS_DISCONNECTED)
-
 
                 # High speed signaling presents IDLE and RESET the same way: with the host
                 # driving SE0; and us seeing SQUELCH. [USB2.0: 7.1.1.3; USB2.0: 7.1.7.6].
@@ -280,6 +244,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     ]
                     m.next = 'DETECT_HS_SUSPEND'
 
+                self.handle_vbus_disconnect(m, timer, line_state_time)
+
 
             # START_HS_DETECTION -- entry state for high-speed detection
             with m.State('START_HS_DETECTION'):
@@ -291,6 +257,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     self.phy_speed.eq(USBSpeed.HIGH),
                 ]
                 m.next = 'AWAIT_DEVICE_CHIRP'
+
+                self.handle_vbus_disconnect(m, timer, line_state_time)
 
 
             # AWAIT_DEVICE_CHIRP -- the device produces a 'chirp' K,
@@ -320,6 +288,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(timer == self._CYCLES_7_MILLISECONDS):
                     m.next = 'IS_FULL_SPEED'
 
+                self.handle_vbus_disconnect(m, timer, line_state_time)
+
 
 
             # AWAIT_HOST_K -- we've now completed the device chirp; and are waiting to see if the host
@@ -335,6 +305,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(chirp_k):
                     m.next = 'IN_HOST_K'
                     m.d.usb += line_state_time.eq(0)
+
+                self.handle_vbus_disconnect(m, timer, line_state_time)
 
 
             # IN_HOST_K: we're seeing a host Chirp K as part of our handshake; we'll
@@ -355,6 +327,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(timer == self._CYCLES_2P5_MILLISECONDS):
                     m.next = 'IS_FULL_SPEED'
 
+                self.handle_vbus_disconnect(m, timer, line_state_time)
+
 
             # AWAIT_HOST_J -- we're waiting for the next Chirp J in the host chirp sequence
             with m.State('AWAIT_HOST_J'):
@@ -367,6 +341,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(chirp_j):
                     m.next = 'IN_HOST_J'
                     m.d.usb += line_state_time.eq(0)
+
+                self.handle_vbus_disconnect(m, timer, line_state_time)
 
 
             # IN_HOST_J: we're seeing a host Chirp K as part of our handshake; we'll
@@ -395,6 +371,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # Time out if we exceed our maximum allowed duration.
                 with m.If(timer == self._CYCLES_2P5_MILLISECONDS):
                     m.next = 'IS_FULL_SPEED'
+
+                self.handle_vbus_disconnect(m, timer, line_state_time)
 
 
             # IS_HIGH_SPEED -- we've completed a high speed handshake, and are ready to
@@ -430,6 +408,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                         line_state_time.eq(0)
                     ]
 
+                self.handle_vbus_disconnect(m, timer, line_state_time)
+
 
             # DETECT_HS_SUSPEND -- we were operating at high speed, and just detected an event
             # which is either a reset or a suspend event; we'll now detect which.
@@ -451,6 +431,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     with m.Else():
                         m.d.comb += self.bus_reset.eq(1)
                         m.next = 'START_HS_DETECTION'
+
+                self.handle_vbus_disconnect(m, timer, line_state_time)
 
 
             # SUSPEND -- our device has entered USB suspend; we'll now wait for either a
@@ -491,7 +473,19 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     # Otherwise, this could be a high-speed device; enter its reset.
                     m.next = 'START_HS_DETECTION'
 
+                self.handle_vbus_disconnect(m, timer, line_state_time)
+
         return m
+
+    def handle_vbus_disconnect(self, m, timer, line_state_time):
+        with m.If(~self.vbus_connected):
+            m.d.usb  += [
+                timer.eq(0),
+                line_state_time.eq(0),
+                self.phy_speed.eq(USBSpeed.FULL),
+            ]
+            m.next = 'DISCONNECT'
+            self.detect_event(m, USBAnalyzerEvent.VBUS_DISCONNECTED)
 
     def detect_speed(self, m, new_speed):
         with m.If(new_speed != self.detected_speed):
