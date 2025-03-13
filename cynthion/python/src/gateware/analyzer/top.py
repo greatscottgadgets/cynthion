@@ -364,7 +364,7 @@ class USBAnalyzerApplet(Elaboratable):
 
         # Create a USB analyzer.
         m.submodules.analyzer = analyzer = USBAnalyzer(
-            utmi, detected_speed, event_strobe, event_code)
+            utmi, utmi.session_valid, detected_speed, event_strobe, event_code)
 
         # Follow this with a HyperRAM FIFO for additional buffering.
         reset_on_start = ResetInserter(analyzer.starting)

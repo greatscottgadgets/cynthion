@@ -64,13 +64,14 @@ class USBAnalyzer(Elaboratable):
     # Support a maximum payload size of 1024B, plus a 1-byte PID and a 2-byte CRC16.
     MAX_PACKET_SIZE_BYTES = 1024 + 1 + 2
 
-    def __init__(self, utmi_interface, speed_selection, event_strobe, event_code, mem_depth=4096):
+    def __init__(self, utmi_interface, session_valid, speed_selection, event_strobe, event_code, mem_depth=4096):
         """
         Parameters:
             utmi_interface -- A record or elaboratable that presents a UTMI interface.
         """
 
         self.utmi = utmi_interface
+        self.session_valid = session_valid
         self.speed_selection = speed_selection
         self.event_strobe = event_strobe
         self.event_code = event_code
@@ -217,7 +218,7 @@ class USBAnalyzer(Elaboratable):
                         write_event        .eq(1),
                         event_code         .eq(USBAnalyzerEvent.CAPTURE_STOP_NORMAL),
                     ]
-                with m.Elif(self.utmi.rx_active):
+                with m.Elif(self.utmi.rx_active & self.session_valid):
                     m.d.comb += new_packet.eq(1)
                     m.next = "CAPTURE_PACKET"
                     m.d.usb += [
@@ -415,13 +416,14 @@ class USBAnalyzerTest(USBAnalyzerTestBase):
             ('rx_complete', 1),
         ])
 
+        session_valid = True
         speed = C(0x00, 2)
         speed_changing = False
         next_speed = speed
 
         m = Module()
         m.submodules.analyzer = self.analyzer = USBAnalyzer(
-            self.utmi, speed, speed_changing, next_speed, mem_depth=128)
+            self.utmi, session_valid, speed, speed_changing, next_speed, mem_depth=128)
         reset_on_start = ResetInserter(self.analyzer.starting)
         m.submodules.s16to8 = s16to8 = reset_on_start(Stream16to8())
         m.submodules.clk_conv = clk_conv = StreamFIFO(
@@ -635,6 +637,7 @@ class USBAnalyzerStackTest(USBAnalyzerTestBase):
             ('rst', [('o', 1)]),
         ])
 
+        session_valid = True
         speed = C(0x00, 2)
         speed_changing = False
         next_speed = speed
@@ -644,7 +647,7 @@ class USBAnalyzerStackTest(USBAnalyzerTestBase):
         m = Module()
         m.submodules.translator = self.translator = UTMITranslator(ulpi=self.ulpi, handle_clocking=False)
         m.submodules.analyzer   = self.analyzer = USBAnalyzer(
-            self.translator, speed, speed_changing, next_speed, mem_depth=128)
+            self.translator, session_valid, speed, speed_changing, next_speed, mem_depth=128)
         reset_on_start = ResetInserter(self.analyzer.starting)
         m.submodules.s16to8 = s16to8 = reset_on_start(Stream16to8())
         m.submodules.clk_conv = clk_conv = StreamFIFO(
