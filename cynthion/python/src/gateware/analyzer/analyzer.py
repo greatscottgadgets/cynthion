@@ -14,6 +14,7 @@ from luna.gateware.stream import StreamInterface
 from luna.gateware.test   import LunaGatewareTestCase, usb_domain_test_case
 
 from .fifo import Stream16to8, StreamFIFO, AsyncFIFOReadReset
+from .speeds import USBAnalyzerSpeed
 from .events import USBAnalyzerEvent
 
 
@@ -218,7 +219,11 @@ class USBAnalyzer(Elaboratable):
                         write_event        .eq(1),
                         event_code         .eq(USBAnalyzerEvent.CAPTURE_STOP_NORMAL),
                     ]
-                with m.Elif(self.utmi.rx_active & self.session_valid):
+                with m.Elif(
+                    self.utmi.rx_active &
+                    self.session_valid &
+                    (self.speed_selection != USBAnalyzerSpeed.AUTO)
+                ):
                     m.d.comb += new_packet.eq(1)
                     m.next = "CAPTURE_PACKET"
                     m.d.usb += [
