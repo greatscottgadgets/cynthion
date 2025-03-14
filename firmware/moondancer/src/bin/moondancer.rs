@@ -85,7 +85,6 @@ fn main() -> ! {
 
 struct Firmware<'a> {
     // peripherals
-    leds: pac::LEDS,
     usb2: hal::Usb2,
 
     // usb2 control endpoint
@@ -98,6 +97,7 @@ struct Firmware<'a> {
     // classes
     core: libgreat::gcp::class_core::Core,
     gpio: moondancer::gcp::gpio::Gpio,
+    leds: moondancer::gcp::leds::Leds,
     moondancer: moondancer::gcp::moondancer::Moondancer,
 
     pub _marker: core::marker::PhantomData<&'a ()>,
@@ -108,10 +108,11 @@ struct Firmware<'a> {
 impl<'a> Firmware<'a> {
     fn new(peripherals: pac::Peripherals) -> Self {
         // initialize libgreat class registry
-        static CLASSES: [libgreat::gcp::Class; 5] = [
+        static CLASSES: [libgreat::gcp::Class; 6] = [
             libgreat::gcp::class_core::CLASS,
             moondancer::gcp::firmware::CLASS,
             moondancer::gcp::gpio::CLASS,
+            moondancer::gcp::leds::CLASS,
             moondancer::gcp::selftest::CLASS,
             moondancer::gcp::moondancer::CLASS,
         ];
@@ -220,24 +221,22 @@ impl<'a> Firmware<'a> {
         let core = libgreat::gcp::class_core::Core::new(classes, moondancer::BOARD_INFORMATION);
         let moondancer = moondancer::gcp::moondancer::Moondancer::new(usb0);
         let gpio = moondancer::gcp::gpio::Gpio::new(Some(peripherals.GPIO0), None, Some(peripherals.USER0));
+        let leds = moondancer::gcp::leds::Leds::new(peripherals.LEDS);
 
         Self {
-            leds: peripherals.LEDS,
             usb2,
             usb2_control,
             libgreat_response: None,
             libgreat_response_last_error: None,
             core,
             gpio,
+            leds,
             moondancer,
             _marker: core::marker::PhantomData,
         }
     }
 
     fn initialize(&mut self) -> GreatResult<()> {
-        // leds: starting up
-        self.leds.output().write(|w| unsafe { w.bits(0b00_0000) });
-
         // connect usb2
         self.usb2.connect(DEVICE_SPEED);
         info!("Connected usb2 device");
@@ -462,13 +461,17 @@ impl<'a> Firmware<'a> {
             libgreat::gcp::ClassId::firmware => {
                 moondancer::gcp::firmware::dispatch(verb_number, arguments, response_buffer)
             }
+            // class: selftest
+            libgreat::gcp::ClassId::selftest => {
+                moondancer::gcp::selftest::dispatch(verb_number, arguments, response_buffer)
+            }
             // class: gpio
             libgreat::gcp::ClassId::gpio => {
                 self.gpio.dispatch(verb_number, arguments, response_buffer)
             }
-            // class: selftest
-            libgreat::gcp::ClassId::selftest => {
-                moondancer::gcp::selftest::dispatch(verb_number, arguments, response_buffer)
+            // class: leds
+            libgreat::gcp::ClassId::leds => {
+                self.leds.dispatch(verb_number, arguments, response_buffer)
             }
             // class: moondancer
             libgreat::gcp::ClassId::moondancer => {
