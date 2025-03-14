@@ -22,7 +22,7 @@ class TestFirmware(unittest.TestCase):
     def test_connectivity(self):
         result = self.board.board_name()
         logging.debug(f"test_connectivity: {result}")
-        self.assertEqual(result, "Cynthion in Moondancer mode")
+        self.assertEqual(result, "Facedancer (Cynthion Project)")
 
     def test_class_firmware(self):
         result = self.board.supports_api("firmware")
