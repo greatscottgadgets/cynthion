@@ -89,7 +89,7 @@ class CynthionBoard(GreatBoard):
 
         self._add_interface('leds', {})
 
-        for i in range(1, led_count + 1):
+        for i in range(0, led_count):
             self.leds[i] = led.LED(self, i)
 
 
