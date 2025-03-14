@@ -102,6 +102,7 @@ pub enum ClassId {
     selftest = 0x0011,
     gpio = 0x0103,
     greatdancer = 0x0104,
+    leds = 0x010a,
     moondancer = 0x0120,
     unsupported(u32),
 }
@@ -114,6 +115,7 @@ impl core::convert::From<u32> for ClassId {
             0x0011 => ClassId::selftest,
             0x0103 => ClassId::gpio,
             0x0104 => ClassId::greatdancer,
+            0x010a => ClassId::leds,
             0x0120 => ClassId::moondancer,
             _ => ClassId::unsupported(value),
         }
@@ -129,6 +131,7 @@ impl ClassId {
             ClassId::selftest => 0x0011,
             ClassId::gpio => 0x0103,
             ClassId::greatdancer => 0x0104,
+            ClassId::leds => 0x010a,
             ClassId::moondancer => 0x0120,
             ClassId::unsupported(value) => *value,
         }
