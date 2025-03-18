@@ -143,15 +143,16 @@ macro_rules! impl_timer {
                 fn delay_us(&mut self, us: u32) -> Result<(), Self::Error> {
                     let ticks: u32 = self.clk / 1_000_000 * us;
 
+                    // reset timer
+                    self.registers.enable().write(|w| w.enable().bit(false));
+
                     // start timer
+                    self.set_mode($crate::timer::Mode::OneShot);
                     self.registers.reload().write(|w| unsafe { w.value().bits(ticks) });
                     self.registers.enable().write(|w| w.enable().bit(true));
 
                     // wait for timer to hit zero
                     while self.registers.counter().read().value().bits() != 0 {}
-
-                    // reset timer
-                    self.registers.enable().write(|w| w.enable().bit(false));
 
                     Ok(())
                 }
