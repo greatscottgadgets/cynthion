@@ -201,6 +201,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(timer == self._CYCLES_5_MICROSECONDS):
                     m.d.comb += self.bus_reset.eq(1)
                     m.next = 'LS_RESET'
+                    self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
 
                 # If we're seeing a state other than IDLE, clear our suspend timer.
                 with m.If(~bus_idle):
@@ -253,6 +254,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(timer == self._CYCLES_5_MICROSECONDS):
                     m.d.comb += self.bus_reset.eq(1)
                     m.next = 'START_HS_DETECTION'
+                    self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
 
 
                 # If we're seeing a state other than IDLE, clear our suspend timer.
@@ -477,6 +479,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     with m.Else():
                         m.d.comb += self.bus_reset.eq(1)
                         m.next = 'START_HS_DETECTION'
+                        self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
 
                 self.handle_vbus_disconnect(m, timer, line_state_time)
 
@@ -518,6 +521,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
 
                     # Otherwise, this could be a high-speed device; enter its reset.
                     m.next = 'START_HS_DETECTION'
+                    self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
 
                 self.handle_vbus_disconnect(m, timer, line_state_time)
 
