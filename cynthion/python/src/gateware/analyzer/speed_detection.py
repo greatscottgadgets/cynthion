@@ -297,8 +297,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     timer              .eq(0),
                     line_state_time    .eq(0),
                     chirp_seen         .eq(0),
-                    # Switch into High-speed mode
-                    self.phy_speed.eq(USBSpeed.HIGH),
                 ]
                 m.next = 'AWAIT_DEVICE_CHIRP'
 
