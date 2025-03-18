@@ -299,6 +299,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     timer              .eq(0),
                     line_state_time    .eq(0),
                     chirp_seen         .eq(0),
+                    valid_pairs        .eq(0),
                 ]
                 m.next = 'AWAIT_DEVICE_CHIRP'
 
