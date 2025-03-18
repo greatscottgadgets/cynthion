@@ -330,6 +330,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # of the Chirp K for no less than 2.5us [USB2.0: 7.1.7.5]
                 with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
                     m.d.usb += chirp_seen.eq(1)
+                    self.detect_event(m, USBAnalyzerEvent.DEVICE_CHIRP_SEEN)
 
                 with m.If(timer == self._CYCLES_7_MILLISECONDS):
                     m.next = 'IS_LOW_OR_FULL_SPEED'
@@ -402,6 +403,9 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # If we've exceeded our minimum chirp time, consider this a valid pattern
                 # bit, and advance in the pattern.
                 with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
+                    # Report that a host chirp has been seen after the first valid pair.
+                    with m.If(valid_pairs == 0):
+                        self.detect_event(m, USBAnalyzerEvent.HOST_CHIRP_SEEN)
 
                     # If this would complete our third pair, this completes a handshake,
                     # and we've identified a high speed host!
