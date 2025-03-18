@@ -195,6 +195,13 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(self.line_state != self._LINE_STATE_SE0):
                     m.d.usb += timer.eq(0)
 
+                # If we see an SE0 for >2.5uS; < 3ms, this a bus reset.
+                # We'll trigger a reset after 5uS; providing a little bit of timing flexibility.
+                # [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
+                with m.If(timer == self._CYCLES_5_MICROSECONDS):
+                    m.d.comb += self.bus_reset.eq(1)
+                    m.next = 'LS_RESET'
+
                 # If we're seeing a state other than IDLE, clear our suspend timer.
                 with m.If(~bus_idle):
                     m.d.usb += line_state_time.eq(0)
@@ -204,6 +211,29 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 #with m.If(line_state_time == self._CYCLES_3_MILLISECONDS):
                 #    m.d.usb += was_hs_pre_suspend.eq(0)
                 #    m.next = 'SUSPENDED'
+
+                self.handle_vbus_disconnect(m, timer, line_state_time)
+
+
+            # LS_RESET -- we're in an LS bus reset, but it could also be a disconnect.
+            with m.State('LS_RESET'):
+
+                # If we come out of SE0 into the LS K state (same as HS J), then this was a
+                # disconnect and there's a new FS or HS device connecting. Switch PHY to FS,
+                # go to FS_NON_RESET, and report speed as unknown until we've done chirp
+                # detection.
+                with m.If(self.line_state == self._LINE_STATE_LS_K):
+                    m.d.usb += [
+                        timer.eq(0),
+                        line_state_time.eq(0),
+                        self.phy_speed.eq(USBSpeed.FULL),
+                    ]
+                    m.next = 'FS_NON_RESET'
+                    self.detect_speed(m, USBAnalyzerSpeed.AUTO)
+
+                # If we come out of SE0 into any other line state, revert to LS_NON_RESET state.
+                with m.Elif(self.line_state != self._LINE_STATE_SE0):
+                    m.next = 'LS_NON_RESET'
 
                 self.handle_vbus_disconnect(m, timer, line_state_time)
 
