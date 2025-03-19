@@ -129,8 +129,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             m.d.comb += bus_idle.eq(self.line_state == self._LINE_STATE_LS_J)
 
 
-        chirp_seen = Signal()
-
         #
         # Core reset sequences.
         #
@@ -298,39 +296,27 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 m.d.usb += [
                     timer              .eq(0),
                     line_state_time    .eq(0),
-                    chirp_seen         .eq(0),
                     valid_pairs        .eq(0),
                 ]
-                m.next = 'AWAIT_DEVICE_CHIRP'
+                m.next = 'AWAIT_DEVICE_CHIRP_START'
 
                 self.handle_ls_connect(m)
                 self.handle_vbus_disconnect(m, timer, line_state_time)
 
 
-            # AWAIT_DEVICE_CHIRP -- the device produces a 'chirp' K,
+            # AWAIT_DEVICE_CHIRP_START -- the device may produce a 'chirp' K,
             # which advertises to the host that it's high speed capable.
-            with m.State('AWAIT_DEVICE_CHIRP'):
+            with m.State('AWAIT_DEVICE_CHIRP_START'):
 
-                # In HS mode, the linestate signals the assertion and de-assertion of squelch.
-                with m.If(~chirp_k):
-                    # If HS squelch asserted, we're still seeing SE0 so reset the timer.
+                with m.If(chirp_k):
+                    # The host must detect the device chirp after it has seen
+                    # assertion of the Chirp K for no less than 2.5us
+                    # [USB2.0: 7.1.7.5]
+                    with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
+                        m.next = 'AWAIT_DEVICE_CHIRP_END'
+                        self.detect_event(m, USBAnalyzerEvent.DEVICE_CHIRP_SEEN)
+                with m.Else():
                     m.d.usb += line_state_time.eq(0)
-
-                    # If we've already seen the device chirp, then the return to SE0 signals
-                    # the end of the chirp and we should await the host chirp.
-                    with m.If(chirp_seen):
-                        m.d.usb += [
-                            timer           .eq(0),
-                            line_state_time .eq(0),
-                            chirp_seen      .eq(0),
-                        ]
-                        m.next = 'AWAIT_HOST_K'
-
-                # The host must detect the device chirp after it has seen assertion
-                # of the Chirp K for no less than 2.5us [USB2.0: 7.1.7.5]
-                with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
-                    m.d.usb += chirp_seen.eq(1)
-                    self.detect_event(m, USBAnalyzerEvent.DEVICE_CHIRP_SEEN)
 
                 with m.If(timer == self._CYCLES_7_MILLISECONDS):
                     m.next = 'IS_LOW_OR_FULL_SPEED'
@@ -338,6 +324,25 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 self.handle_ls_connect(m)
                 self.handle_vbus_disconnect(m, timer, line_state_time)
 
+
+            # AWAIT_DEVICE_CHIRP_END -- we've seen the device chirp and are
+            # waiting for it to end.
+            with m.State('AWAIT_DEVICE_CHIRP_END'):
+
+                with m.If(~chirp_k):
+                    # The return to SE0 signals the end of the chirp and
+                    # we should await the host chirp.
+                    m.d.usb += [
+                        timer           .eq(0),
+                        line_state_time .eq(0),
+                    ]
+                    m.next = 'AWAIT_HOST_K'
+
+                with m.If(timer == self._CYCLES_7_MILLISECONDS):
+                    m.next = 'IS_LOW_OR_FULL_SPEED'
+
+                self.handle_ls_connect(m)
+                self.handle_vbus_disconnect(m, timer, line_state_time)
 
 
             # AWAIT_HOST_K -- we've now completed the device chirp; and are waiting to see if the host
