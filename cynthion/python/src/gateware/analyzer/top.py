@@ -252,9 +252,14 @@ class USBAnalyzerApplet(Elaboratable):
             # harm to explicitly set it here.
 
             # Tap the D+/D- signals for speed detection.
-            usb_diff_input = platform.request("target_usb_diff").i
-            usb_diff = Signal()
-            m.d.usb += usb_diff.eq(usb_diff_input)
+            usb_dp = Signal()
+            usb_dm = Signal()
+            usb_dp_input = platform.request("target_usb_dp_chirp").i
+            usb_dm_input = platform.request("target_usb_dm_chirp").i
+            m.d.usb += [
+                usb_dp.eq(usb_dp_input),
+                usb_dm.eq(usb_dm_input),
+            ]
 
             # Add a speed detector and use it when selected.
             m.submodules.speed = speed_detector = USBAnalyzerSpeedDetector()
@@ -273,7 +278,8 @@ class USBAnalyzerApplet(Elaboratable):
             m.d.comb += [
                 speed_detector.reset.eq(state.write),
                 speed_detector.line_state.eq(utmi.line_state),
-                speed_detector.usb_diff.eq(usb_diff),
+                speed_detector.usb_dp.eq(usb_dp),
+                speed_detector.usb_dm.eq(usb_dm),
                 speed_detector.vbus_connected.eq(utmi.session_valid),
             ]
         else:

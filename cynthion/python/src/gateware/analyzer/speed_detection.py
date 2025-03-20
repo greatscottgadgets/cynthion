@@ -76,7 +76,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         self.reset              = Signal()
         self.vbus_connected     = Signal()
         self.line_state         = Signal(2)
-        self.usb_diff           = Signal()
+        self.usb_dp             = Signal()
+        self.usb_dm             = Signal()
 
         self.bus_reset          = Signal()
         self.suspended          = Signal()
@@ -114,8 +115,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         # Our bus's IDLE condition depends on our active speed.
         bus_idle = Signal()
 
-        chirp_j = self.usb_diff
-        chirp_k = ~self.usb_diff
+        chirp_j =  self.usb_dp & ~self.usb_dm
+        chirp_k = ~self.usb_dp &  self.usb_dm
 
         # High speed busses present SE0 (which we see as SQUELCH'd) when idle [USB2.0: 7.1.1.3].
         with m.If(self.phy_speed == USBSpeed.HIGH):
