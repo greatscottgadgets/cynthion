@@ -24,14 +24,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
     line_state: Signal(2), input
         The UTMI linestate signals; used to read the current state of the USB D+ and D- lines.
 
-    bus_reset: Signal(), output
-        Strobe; pulses high for one cycle when a bus reset is detected. This signal indicates that the
-         device should return to unaddressed, unconfigured, and should not longer be in High Speed mode.
-    suspended: Signal(), output
-        Held high while the USB device should be in suspend. This technically indicates that the device should
-        drop down to consuming suspend current (<= 2.5mA), but very few devices are compliant with this requirement.
-        Either way, a polite device might reduce its power consumption while in suspend.
-
     phy_speed: Signal(2), output
         A USBSpeed value used to drive our PHY's speed selection.
 
@@ -78,9 +70,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         self.line_state         = Signal(2)
         self.usb_dp             = Signal()
         self.usb_dm             = Signal()
-
-        self.bus_reset          = Signal()
-        self.suspended          = Signal()
 
         self.phy_speed          = Signal(2, reset=USBSpeed.FULL)
         self.detected_speed     = Signal(2, reset=USBAnalyzerSpeed.AUTO)
@@ -198,7 +187,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # We'll trigger a reset after 5uS; providing a little bit of timing flexibility.
                 # [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
                 with m.If(timer == self._CYCLES_5_MICROSECONDS):
-                    m.d.comb += self.bus_reset.eq(1)
                     m.next = 'LS_RESET'
                     self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
 
@@ -251,7 +239,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # We'll trigger a reset after 5uS; providing a little bit of timing flexibility.
                 # [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
                 with m.If(timer == self._CYCLES_5_MICROSECONDS):
-                    m.d.comb += self.bus_reset.eq(1)
                     m.next = 'START_HS_DETECTION'
                     self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
 
@@ -488,7 +475,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     # Otherwise, this is a reset (or, if K/SE1, we're very confused, and
                     # should re-initialize anyway). Move to the HS reset detect sequence.
                     with m.Else():
-                        m.d.comb += self.bus_reset.eq(1)
                         m.next = 'START_HS_DETECTION'
                         self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
 
@@ -498,7 +484,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # SUSPEND -- our device has entered USB suspend; we'll now wait for either a
             # resume or a reset
             with m.State('SUSPENDED'):
-                m.d.comb += self.suspended.eq(1)
 
                 # If we see a K state, then we're being resumed.
                 is_fs_k = (self.line_state == self._LINE_STATE_FS_HS_K)
@@ -527,7 +512,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # If we see an SE0 for > 2.5uS, this is a reset request. [USB 2.0: 7.1.7.5]
                 # We'll handle it directly from suspend.
                 with m.If(timer == self._CYCLES_2P5_MICROSECONDS):
-                    m.d.comb += self.bus_reset.eq(1)
                     m.d.usb  += timer.eq(0)
 
                     # Otherwise, this could be a high-speed device; enter its reset.
