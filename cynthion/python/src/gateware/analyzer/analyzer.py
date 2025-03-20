@@ -243,6 +243,8 @@ class USBAnalyzer(Elaboratable):
                         write_event        .eq(1),
                         event_code         .eq(self.event_code),
                     ]
+                    # After writing the event, reset our timestamp counter.
+                    m.d.usb += current_time.eq(0)
 
 
             # Capture data until the packet is complete.
