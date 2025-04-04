@@ -37,3 +37,13 @@ class USBAnalyzerEvent(IntEnum):
     BUS_RESET           = 16
     DEVICE_CHIRP_VALID  = 17
     HOST_CHIRP_VALID    = 18
+
+    LINESTATE_BASE      = 19
+
+    LINESTATE_SE0       = 19
+    LINESTATE_CHIRP_DR1 = 20
+    LINESTATE_CHIRP_DR0 = 21
+    LINESTATE_CHIRP_SE1 = 22
+    LINESTATE_DR1       = 23
+    LINESTATE_DR0       = 24
+    LINESTATE_SE1       = 25

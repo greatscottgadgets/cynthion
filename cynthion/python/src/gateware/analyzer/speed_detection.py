@@ -6,7 +6,7 @@
 # Copyright (c) 2024 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from amaranth import Elaboratable, Module, Signal, Mux
+from amaranth import Elaboratable, Module, Signal, Mux, Cat
 
 from luna.gateware.usb.usb2            import USBSpeed
 from .speeds                           import USBAnalyzerSpeed
@@ -104,8 +104,22 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         # Our bus's IDLE condition depends on our active speed.
         bus_idle = Signal()
 
+        # Line states detected at HS chirp signal levels.
         chirp_j =  self.usb_dp & ~self.usb_dm
         chirp_k = ~self.usb_dp &  self.usb_dm
+
+        # Whether to generate chirp events.
+        chirp_events = Signal()
+
+        # Generate chirp events when enabled.
+        chirp_state = Cat(self.usb_dp, self.usb_dm)
+        last_chirp_state = Signal.like(chirp_state)
+        m.d.usb += last_chirp_state.eq(chirp_state)
+        with m.If(chirp_events & (chirp_state != last_chirp_state)):
+            m.d.comb += [
+                self.event_strobe.eq(1),
+                self.event_code.eq(USBAnalyzerEvent.LINESTATE_BASE + chirp_state),
+            ]
 
         # High speed busses present SE0 (which we see as SQUELCH'd) when idle [USB2.0: 7.1.1.3].
         with m.If(self.phy_speed == USBSpeed.HIGH):
@@ -296,6 +310,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # AWAIT_DEVICE_CHIRP_START -- the device may produce a 'chirp' K,
             # which advertises to the host that it's high speed capable.
             with m.State('AWAIT_DEVICE_CHIRP_START'):
+                m.d.comb += chirp_events.eq(1)
 
                 with m.If(chirp_k):
                     # The host must detect the device chirp after it has seen
@@ -317,6 +332,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # AWAIT_DEVICE_CHIRP_END -- we've seen the device chirp and are
             # waiting for it to end.
             with m.State('AWAIT_DEVICE_CHIRP_END'):
+                m.d.comb += chirp_events.eq(1)
 
                 with m.If(~chirp_k):
                     # The return to SE0 signals the end of the chirp and
@@ -337,6 +353,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # AWAIT_HOST_K -- we've now completed the device chirp; and are waiting to see if the host
             # will respond with an alternating sequence of K's and J's.
             with m.State('AWAIT_HOST_K'):
+                m.d.comb += chirp_events.eq(1)
 
                 # If we don't see our response within 2.5ms, this isn't a compliant HS host. [USB2.0: 7.1.7.5].
                 # This is thus a full-speed host, and we'll act as a full-speed device.
@@ -355,6 +372,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # IN_HOST_K: we're seeing a host Chirp K as part of our handshake; we'll
             # time it and see how long it lasts
             with m.State('IN_HOST_K'):
+                m.d.comb += chirp_events.eq(1)
 
                 # If we've exceeded our minimum chirp time, consider this a valid pattern
                 # bit, # and advance in the pattern.
@@ -376,6 +394,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
 
             # AWAIT_HOST_J -- we're waiting for the next Chirp J in the host chirp sequence
             with m.State('AWAIT_HOST_J'):
+                m.d.comb += chirp_events.eq(1)
 
                 # If we've exceeded our maximum wait, this isn't a high speed host.
                 with m.If(timer == self._CYCLES_2P5_MILLISECONDS):
@@ -393,6 +412,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # IN_HOST_J: we're seeing a host Chirp K as part of our handshake; we'll
             # time it and see how long it lasts
             with m.State('IN_HOST_J'):
+                m.d.comb += chirp_events.eq(1)
 
                 # If we've exceeded our minimum chirp time, consider this a valid pattern
                 # bit, and advance in the pattern.
