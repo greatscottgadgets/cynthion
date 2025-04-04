@@ -35,5 +35,5 @@ class USBAnalyzerEvent(IntEnum):
     SUSPEND_STARTED     = 15
 
     BUS_RESET           = 16
-    DEVICE_CHIRP_SEEN   = 17
-    HOST_CHIRP_SEEN     = 18
+    DEVICE_CHIRP_VALID  = 17
+    HOST_CHIRP_VALID    = 18
