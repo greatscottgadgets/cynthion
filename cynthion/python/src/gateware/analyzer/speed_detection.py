@@ -196,9 +196,9 @@ class USBAnalyzerSpeedDetector(Elaboratable):
 
                 # If we see 3ms of consecutive line idle, we're being put into USB suspend.
                 # We'll enter our suspended state, directly. [USB2.0: 7.1.7.6]
-                #with m.If(line_state_time == self._CYCLES_3_MILLISECONDS):
-                #    m.d.usb += was_hs_pre_suspend.eq(0)
-                #    m.next = 'SUSPENDED'
+                with m.If(line_state_time == self._CYCLES_3_MILLISECONDS):
+                    m.next = 'LS_SUSPEND'
+                    self.detect_event(m, USBAnalyzerEvent.SUSPEND_STARTED)
 
                 self.handle_vbus_disconnect(m, timer, line_state_time)
 
@@ -251,7 +251,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # We'll enter our suspended state, directly. [USB2.0: 7.1.7.6]
                 with m.If(line_state_time == self._CYCLES_3_MILLISECONDS):
                     m.d.usb += was_hs_pre_suspend.eq(0)
-                    m.next = 'SUSPENDED'
+                    m.next = 'FS_SUSPEND'
+                    self.detect_event(m, USBAnalyzerEvent.SUSPEND_STARTED)
 
                 self.handle_vbus_disconnect(m, timer, line_state_time)
 
@@ -470,7 +471,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     # If we've resume IDLE, this is suspend. Move to HS suspend.
                     with m.If(self.line_state == self._LINE_STATE_FS_HS_J):
                         m.d.usb += was_hs_pre_suspend.eq(1)
-                        m.next = 'SUSPENDED'
+                        m.next = 'FS_SUSPEND'
+                        self.detect_event(m, USBAnalyzerEvent.SUSPEND_STARTED)
 
                     # Otherwise, this is a reset (or, if K/SE1, we're very confused, and
                     # should re-initialize anyway). Move to the HS reset detect sequence.
@@ -481,9 +483,9 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 self.handle_vbus_disconnect(m, timer, line_state_time)
 
 
-            # SUSPEND -- our device has entered USB suspend; we'll now wait for either a
+            # FS SUSPEND -- our device has entered FS suspend; we'll now wait for either a
             # resume or a reset
-            with m.State('SUSPENDED'):
+            with m.State('FS_SUSPEND'):
 
                 # If we see a K state, then we're being resumed.
                 is_fs_k = (self.line_state == self._LINE_STATE_FS_HS_K)
@@ -496,25 +498,51 @@ class USBAnalyzerSpeedDetector(Elaboratable):
 
                     # Otherwise, just resume.
                     with m.Else():
+                        m.d.usb += line_state_time.eq(0)
                         m.next = 'FS_NON_RESET'
-                        m.d.usb += [
-                            timer.eq(0),
-                            line_state_time.eq(0)
-                        ]
 
+                    self.detect_event(m, USBAnalyzerEvent.SUSPEND_ENDED)
 
                 # If this isn't an SE0, we're not receiving a reset request.
                 # Keep our reset counter at zero.
                 with m.If(self.line_state != self._LINE_STATE_SE0):
                     m.d.usb += timer.eq(0)
 
-
                 # If we see an SE0 for > 2.5uS, this is a reset request. [USB 2.0: 7.1.7.5]
-                # We'll handle it directly from suspend.
                 with m.If(timer == self._CYCLES_2P5_MICROSECONDS):
                     m.d.usb  += timer.eq(0)
+                    m.next = 'START_HS_DETECTION'
+                    self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
 
-                    # Otherwise, this could be a high-speed device; enter its reset.
+                self.handle_vbus_disconnect(m, timer, line_state_time)
+
+
+            # LS SUSPEND -- our device has entered LS suspend; we'll now wait for either a
+            # resume or a reset
+            with m.State('LS_SUSPEND'):
+
+                # If we see a K state, then we're being resumed.
+                is_ls_k = (self.line_state == self._LINE_STATE_LS_K)
+                with m.If(is_ls_k):
+                    m.d.usb += [
+                        timer.eq(0),
+                        line_state_time.eq(0)
+                    ]
+                    m.next = 'LS_NON_RESET'
+
+                    self.detect_event(m, USBAnalyzerEvent.SUSPEND_ENDED)
+
+                # If this isn't an SE0, we're not receiving a reset request.
+                # Keep our reset counter at zero.
+                with m.If(self.line_state != self._LINE_STATE_SE0):
+                    m.d.usb += timer.eq(0)
+
+                # If we see an SE0 for > 2.5uS, this is a reset request. [USB 2.0: 7.1.7.5]
+                with m.If(timer == self._CYCLES_2P5_MICROSECONDS):
+                    m.d.usb += [
+                        timer.eq(0),
+                        self.phy_speed.eq(USBSpeed.FULL)
+                    ]
                     m.next = 'START_HS_DETECTION'
                     self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
 
