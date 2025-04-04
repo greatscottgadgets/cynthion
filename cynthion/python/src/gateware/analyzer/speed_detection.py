@@ -6,7 +6,7 @@
 # Copyright (c) 2024 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-from amaranth import Elaboratable, Module, Signal, Mux, Cat
+from amaranth import Elaboratable, Module, Signal, Mux, Cat, Array
 
 from luna.gateware.usb.usb2            import USBSpeed
 from .speeds                           import USBAnalyzerSpeed
@@ -121,6 +121,26 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 self.event_code.eq(USBAnalyzerEvent.LINESTATE_BASE + chirp_state),
             ]
 
+        # Whether to generate line state events.
+        line_state_events = Signal()
+
+        # Mapping of FS line states to events.
+        line_state_mapping = Array([
+            USBAnalyzerEvent.LINESTATE_SE0,
+            USBAnalyzerEvent.LINESTATE_DR1,
+            USBAnalyzerEvent.LINESTATE_DR0,
+            USBAnalyzerEvent.LINESTATE_SE1,
+        ])
+
+        # Generate line state events when enabled.
+        last_line_state = Signal.like(self.line_state)
+        m.d.usb += last_line_state.eq(self.line_state)
+        with m.If(line_state_events & (self.line_state != last_line_state)):
+            m.d.comb += [
+                self.event_strobe.eq(1),
+                self.event_code.eq(line_state_mapping[self.line_state]),
+            ]
+
         # High speed busses present SE0 (which we see as SQUELCH'd) when idle [USB2.0: 7.1.1.3].
         with m.If(self.phy_speed == USBSpeed.HIGH):
             m.d.comb += bus_idle.eq(self.line_state == self._LINE_STATE_SQUELCH)
@@ -152,6 +172,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
 
             # VBUS_INVALID -- there's no valid VBUS, so await that before anything else.
             with m.State('VBUS_INVALID'):
+                m.d.comb += line_state_events.eq(1)
 
                 # Speed is unknown for now.
                 self.detect_speed(m, USBAnalyzerSpeed.AUTO)
@@ -166,6 +187,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             #
             # In this state, the PHY is set to full-speed mode as we're only looking at line_state.
             with m.State('DISCONNECT'):
+                m.d.comb += line_state_events.eq(1)
 
                 # Speed is unknown for now.
                 self.detect_speed(m, USBAnalyzerSpeed.AUTO)
@@ -180,7 +202,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
                         m.d.usb += self.phy_speed.eq(USBSpeed.LOW)
                         m.next = 'LS_NON_RESET'
-                        self.detect_speed(m, USBAnalyzerSpeed.LOW)
 
                 with m.Else():
                     m.d.usb += line_state_time.eq(0)
@@ -191,6 +212,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # LS_NON_RESET -- we're currently operating at LS and waiting for a reset;
             # the device could be active or inactive, but we haven't yet seen a reset condition.
             with m.State('LS_NON_RESET'):
+
+                self.detect_speed(m, USBAnalyzerSpeed.LOW)
 
                 # If we're seeing a state other than SE0 (D+ / D- at zero), this isn't yet a
                 # potential reset. Keep our timer at zero.
