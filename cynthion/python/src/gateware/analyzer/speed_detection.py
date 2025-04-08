@@ -116,10 +116,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         last_chirp_state = Signal.like(chirp_state)
         m.d.usb += last_chirp_state.eq(chirp_state)
         with m.If(chirp_events & (chirp_state != last_chirp_state)):
-            m.d.comb += [
-                self.event_strobe.eq(1),
-                self.event_code.eq(USBAnalyzerEvent.LINESTATE_BASE + chirp_state),
-            ]
+            self.detect_event(m, USBAnalyzerEvent.LINESTATE_BASE + chirp_state)
 
         # Whether to generate line state events.
         line_state_events = Signal()
@@ -136,10 +133,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         last_line_state = Signal.like(self.line_state)
         m.d.usb += last_line_state.eq(self.line_state)
         with m.If(line_state_events & (self.line_state != last_line_state)):
-            m.d.comb += [
-                self.event_strobe.eq(1),
-                self.event_code.eq(line_state_mapping[self.line_state]),
-            ]
+            self.detect_event(m, line_state_mapping[self.line_state])
 
         # High speed busses present SE0 (which we see as SQUELCH'd) when idle [USB2.0: 7.1.1.3].
         with m.If(self.phy_speed == USBSpeed.HIGH):
