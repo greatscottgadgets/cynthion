@@ -244,7 +244,9 @@ class USBAnalyzer(Elaboratable):
                         event_code         .eq(self.event_code),
                     ]
                     # After writing the event, reset our timestamp counter.
-                    m.d.usb += current_time.eq(0)
+                    # An event that occurs next cycle will have a timestamp
+                    # one cycle after the current event.
+                    m.d.usb += current_time.eq(1)
 
 
             # Capture data until the packet is complete.
