@@ -166,7 +166,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
 
             # VBUS_INVALID -- there's no valid VBUS, so await that before anything else.
             with m.State('VBUS_INVALID'):
-                m.d.comb += line_state_events.eq(1)
 
                 # Speed is unknown for now.
                 self.detect_speed(m, USBAnalyzerSpeed.AUTO)
@@ -236,6 +235,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
 
             # LS_RESET -- we're in an LS bus reset, but it could also be a disconnect.
             with m.State('LS_RESET'):
+                m.d.comb += line_state_events.eq(1)
 
                 # If we come out of SE0 into the LS K state (same as HS J), then this was a
                 # disconnect and there's a new FS or HS device connecting. Switch PHY to FS,
@@ -328,6 +328,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # which advertises to the host that it's high speed capable.
             with m.State('AWAIT_DEVICE_CHIRP_START'):
                 m.d.comb += chirp_events.eq(1)
+                m.d.comb += line_state_events.eq(1)
 
                 with m.If(chirp_k):
                     # The host must detect the device chirp after it has seen
@@ -350,6 +351,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # waiting for it to end.
             with m.State('AWAIT_DEVICE_CHIRP_END'):
                 m.d.comb += chirp_events.eq(1)
+                m.d.comb += line_state_events.eq(1)
 
                 with m.If(~chirp_k):
                     # The return to SE0 signals the end of the chirp and
@@ -371,6 +373,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # will respond with an alternating sequence of K's and J's.
             with m.State('AWAIT_HOST_K'):
                 m.d.comb += chirp_events.eq(1)
+                m.d.comb += line_state_events.eq(1)
 
                 # If we don't see our response within 2.5ms, this isn't a compliant HS host. [USB2.0: 7.1.7.5].
                 # This is thus a full-speed host, and we'll act as a full-speed device.
@@ -390,6 +393,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # time it and see how long it lasts
             with m.State('IN_HOST_K'):
                 m.d.comb += chirp_events.eq(1)
+                m.d.comb += line_state_events.eq(1)
 
                 # If we've exceeded our minimum chirp time, consider this a valid pattern
                 # bit, # and advance in the pattern.
@@ -412,6 +416,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # AWAIT_HOST_J -- we're waiting for the next Chirp J in the host chirp sequence
             with m.State('AWAIT_HOST_J'):
                 m.d.comb += chirp_events.eq(1)
+                m.d.comb += line_state_events.eq(1)
 
                 # If we've exceeded our maximum wait, this isn't a high speed host.
                 with m.If(timer == self._CYCLES_2P5_MILLISECONDS):
@@ -430,6 +435,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # time it and see how long it lasts
             with m.State('IN_HOST_J'):
                 m.d.comb += chirp_events.eq(1)
+                m.d.comb += line_state_events.eq(1)
 
                 # If we've exceeded our minimum chirp time, consider this a valid pattern
                 # bit, and advance in the pattern.
@@ -521,6 +527,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # FS SUSPEND -- our device has entered FS suspend; we'll now wait for either a
             # resume or a reset
             with m.State('FS_SUSPEND'):
+                m.d.comb += line_state_events.eq(1)
 
                 # If we see a K state, then we're being resumed.
                 is_fs_k = (self.line_state == self._LINE_STATE_FS_HS_K)
@@ -555,6 +562,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # LS SUSPEND -- our device has entered LS suspend; we'll now wait for either a
             # resume or a reset
             with m.State('LS_SUSPEND'):
+                m.d.comb += line_state_events.eq(1)
 
                 # If we see a K state, then we're being resumed.
                 is_ls_k = (self.line_state == self._LINE_STATE_LS_K)
