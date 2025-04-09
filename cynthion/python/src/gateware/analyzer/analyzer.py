@@ -231,12 +231,6 @@ class USBAnalyzer(Elaboratable):
                         packet_time        .eq(current_time),
                         current_time       .eq(0),
                     ]
-                with m.Elif(current_time == 0xFFFF):
-                    # The timestamp is about to wrap. Write a dummy event.
-                    m.d.comb += [
-                        write_event        .eq(1),
-                        event_code         .eq(USBAnalyzerEvent.NONE),
-                    ]
                 with m.Elif(self.event_strobe):
                     # Event detected externally.
                     m.d.comb += [
@@ -247,6 +241,12 @@ class USBAnalyzer(Elaboratable):
                     # An event that occurs next cycle will have a timestamp
                     # one cycle after the current event.
                     m.d.usb += current_time.eq(1)
+                with m.Elif(current_time == 0xFFFF):
+                    # The timestamp is about to wrap. Write a dummy event.
+                    m.d.comb += [
+                        write_event        .eq(1),
+                        event_code         .eq(USBAnalyzerEvent.NONE),
+                    ]
 
 
             # Capture data until the packet is complete.
