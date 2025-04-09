@@ -266,9 +266,11 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # the device could be active or inactive, but we haven't yet seen a reset condition.
             with m.State('FS_NON_RESET'):
 
-                # If we're seeing a state other than SE0 (D+ / D- at zero), this isn't yet a
-                # potential reset. Keep our timer at zero.
-                with m.If(self.line_state != self._LINE_STATE_SE0):
+                # If we see SE0, generate a line state event, but it's not a reset yet.
+                with m.If(self.line_state == self._LINE_STATE_SE0):
+                    with m.If(last_line_state != self._LINE_STATE_SE0):
+                        self.detect_event(m, USBAnalyzerEvent.LINESTATE_SE0)
+                with m.Else():
                     m.d.usb += timer.eq(0)
 
                 # If we see an SE0 for >2.5uS; < 3ms, this a bus reset.
