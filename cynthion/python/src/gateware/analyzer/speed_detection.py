@@ -52,6 +52,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
     _CYCLES_1_MICROSECOND      = _CYCLES_500_NANOSECONDS  * 2
     _CYCLES_2P5_MICROSECONDS   = _CYCLES_500_NANOSECONDS  * 5
     _CYCLES_5_MICROSECONDS     = _CYCLES_1_MICROSECOND    * 5
+    _CYCLES_50_MICROSECONDS    = _CYCLES_1_MICROSECOND    * 50
     _CYCLES_200_MICROSECONDS   = _CYCLES_1_MICROSECOND    * 200
     _CYCLES_1_MILLISECONDS     = _CYCLES_1_MICROSECOND    * 1000
     _CYCLES_2_MILLISECONDS     = _CYCLES_1_MILLISECONDS   * 2
@@ -170,7 +171,11 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # Speed is unknown for now.
                 self.detect_speed(m, USBAnalyzerSpeed.AUTO)
 
-                with m.If(self.vbus_connected):
+                # If VBUS remains low, keep our timer at zero.
+                with m.If(~self.vbus_connected):
+                    m.d.usb += timer.eq(0)
+                # Accept VBUS as valid when it's stayed high for 50us.
+                with m.Elif(timer == self._CYCLES_50_MICROSECONDS):
                     m.next = 'DISCONNECT'
                     self.detect_event(m, USBAnalyzerEvent.VBUS_CONNECTED)
 
