@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+ #!/usr/bin/env python3
 # pylint: disable=maybe-no-member
 #
 # This file is part of Cynthion.
@@ -234,7 +234,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                         self.phy_speed.eq(USBSpeed.FULL),
                     ]
                     m.next = 'FS_NON_RESET'
-                    self.detect_speed(m, USBAnalyzerSpeed.AUTO)
 
                 # If we come out of SE0 into any other line state, revert to LS_NON_RESET state.
                 with m.Elif(self.line_state != self._LINE_STATE_SE0):
@@ -246,6 +245,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # FS_NON_RESET -- we're currently operating at FS and waiting for a reset;
             # the device could be active or inactive, but we haven't yet seen a reset condition.
             with m.State('FS_NON_RESET'):
+
+                self.detect_speed(m, USBAnalyzerSpeed.FULL)
 
                 # If we see SE0, generate a line state event, but it's not a reset yet.
                 with m.If(self.line_state == self._LINE_STATE_SE0):
@@ -444,12 +445,12 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # IS_LOW_OR_FULL_SPEED -- we've decided the device is low/full speed (typically
             # because it didn't) complete our high-speed handshake; set it up accordingly.
             with m.State('IS_LOW_OR_FULL_SPEED'):
+                m.d.comb += line_state_events.eq(1)
 
                 # If we see a return to FS idle, FS operation is now confirmed.
                 with m.If(self.line_state == self._LINE_STATE_FS_HS_J):
                     m.next = 'FS_NON_RESET'
                     m.d.usb += timer.eq(0)
-                    self.detect_speed(m, USBAnalyzerSpeed.FULL)
 
                 self.handle_ls_connect(m)
                 self.handle_vbus_disconnect(m, timer)
