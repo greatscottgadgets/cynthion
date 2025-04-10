@@ -47,3 +47,6 @@ class USBAnalyzerEvent(IntEnum):
     LINESTATE_DR1       = 23
     LINESTATE_DR0       = 24
     LINESTATE_SE1       = 25
+
+    FS_ATTACH           = 26
+    LS_ATTACH           = 27

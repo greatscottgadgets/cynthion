@@ -194,12 +194,14 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(self.line_state == self._LINE_STATE_FS_HS_J):
                     with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
                         m.next = 'FS_NON_RESET'
+                        self.detect_event(m, USBAnalyzerEvent.FS_ATTACH)
 
                 # If we see FS K-state, it's equivalent to LS J-state, go into low-speed mode.
                 with m.Elif(self.line_state == self._LINE_STATE_FS_HS_K):
                     with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
                         m.d.usb += self.phy_speed.eq(USBSpeed.LOW)
                         m.next = 'LS_NON_RESET'
+                        self.detect_event(m, USBAnalyzerEvent.LS_ATTACH)
 
                 with m.Else():
                     m.d.usb += line_state_time.eq(0)
