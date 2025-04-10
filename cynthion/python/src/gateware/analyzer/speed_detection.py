@@ -218,10 +218,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(self.line_state != self._LINE_STATE_SE0):
                     m.d.usb += timer.eq(0)
 
-                # If we see an SE0 for >2.5uS; < 3ms, this a bus reset.
-                # We'll trigger a reset after 5uS; providing a little bit of timing flexibility.
-                # [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
-                with m.If(timer == self._CYCLES_5_MICROSECONDS):
+                # If we see an SE0 for >2.5us, this a bus reset. [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
+                with m.If(timer == self._CYCLES_2P5_MICROSECONDS):
                     m.next = 'LS_RESET'
                     self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
 
@@ -273,10 +271,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.Else():
                     m.d.usb += timer.eq(0)
 
-                # If we see an SE0 for >2.5uS; < 3ms, this a bus reset.
-                # We'll trigger a reset after 5uS; providing a little bit of timing flexibility.
-                # [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
-                with m.If(timer == self._CYCLES_5_MICROSECONDS):
+                # If we see an SE0 for >2.5us, this a bus reset. [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
+                with m.If(timer == self._CYCLES_2P5_MICROSECONDS):
                     self.enter_fs_reset(m, timer, line_state_time, valid_pairs)
 
                 # If we're seeing a state other than IDLE, clear our suspend timer.
