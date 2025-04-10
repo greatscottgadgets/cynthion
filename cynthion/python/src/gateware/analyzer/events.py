@@ -28,25 +28,25 @@ class USBAnalyzerEvent(IntEnum):
     SPEED_DETECT_LOW    = 10
     SPEED_DETECT_AUTO   = 11
 
-    VBUS_DISCONNECTED   = 12
-    VBUS_CONNECTED      = 13
+    LINESTATE_BASE      = 12
 
-    SUSPEND_ENDED       = 14
-    SUSPEND_STARTED     = 15
+    LINESTATE_SE0       = 12
+    LINESTATE_CHIRP_J   = 13
+    LINESTATE_CHIRP_K   = 14
+    LINESTATE_CHIRP_SE1 = 15
+    LINESTATE_LS_J      = 16
+    LINESTATE_LS_K      = 17
+    LINESTATE_FS_J      = 18
+    LINESTATE_FS_K      = 19
+    LINESTATE_SE1       = 20
 
-    BUS_RESET           = 16
-    DEVICE_CHIRP_VALID  = 17
-    HOST_CHIRP_VALID    = 18
-
-    LINESTATE_BASE      = 19
-
-    LINESTATE_SE0       = 19
-    LINESTATE_CHIRP_J   = 20
-    LINESTATE_CHIRP_K   = 21
-    LINESTATE_CHIRP_SE1 = 22
-    LINESTATE_DR1       = 23
-    LINESTATE_DR0       = 24
-    LINESTATE_SE1       = 25
-
-    FS_ATTACH           = 26
-    LS_ATTACH           = 27
+    VBUS_INVALID        = 21
+    VBUS_VALID          = 22
+    LS_ATTACH           = 23
+    FS_ATTACH           = 24
+    BUS_RESET           = 25
+    DEVICE_CHIRP_VALID  = 26
+    HOST_CHIRP_VALID    = 27
+    SUSPEND             = 28
+    RESUME              = 29
+    LS_KEEPALIVE        = 30
