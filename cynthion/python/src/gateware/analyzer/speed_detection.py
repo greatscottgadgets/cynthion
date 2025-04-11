@@ -238,15 +238,13 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 ]
 
                 # If we come out of SE0 into the LS K state (same as HS J), then this was a
-                # disconnect and there's a new FS or HS device connecting. Switch PHY to FS,
-                # go to FS_NON_RESET, and report speed as unknown until we've done chirp
-                # detection.
+                # disconnect and there's a new FS or HS device connecting.
                 with m.If(self.line_state == self._LINE_STATE_LS_K):
-                    m.d.usb += [
-                        timer.eq(0),
-                        self.phy_speed.eq(USBSpeed.FULL),
-                    ]
-                    m.next = 'FS_NON_RESET'
+                    m.d.comb += low_speed_line_states.eq(0)
+                    with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
+                        m.d.usb += self.phy_speed.eq(USBSpeed.FULL)
+                        m.next = 'FS_NON_RESET'
+                        self.detect_event(m, USBAnalyzerEvent.FS_ATTACH)
 
                 # If we come out of SE0 into any other line state, revert to LS_NON_RESET state.
                 with m.Elif(self.line_state != self._LINE_STATE_SE0):
