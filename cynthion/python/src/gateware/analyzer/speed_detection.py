@@ -210,13 +210,9 @@ class USBAnalyzerSpeedDetector(Elaboratable):
 
                 self.detect_speed(m, USBAnalyzerSpeed.LOW)
 
-                # If we're seeing a state other than SE0 (D+ / D- at zero), this isn't yet a
-                # potential reset. Keep our timer at zero.
-                with m.If(self.line_state != self._LINE_STATE_SE0):
-                    m.d.usb += timer.eq(0)
-
                 # If we see an SE0 for >2.5us, this a bus reset. [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
-                with m.If(timer == self._CYCLES_2P5_MICROSECONDS):
+                with m.If((self.line_state == self._LINE_STATE_SE0) &
+                          (line_state_time == self._CYCLES_2P5_MICROSECONDS)):
                     m.next = 'LS_RESET'
                     self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
 
@@ -263,12 +259,10 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(self.line_state == self._LINE_STATE_SE0):
                     with m.If(last_line_state != self._LINE_STATE_SE0):
                         self.detect_event(m, USBAnalyzerEvent.LINESTATE_SE0)
-                with m.Else():
-                    m.d.usb += timer.eq(0)
 
-                # If we see an SE0 for >2.5us, this a bus reset. [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
-                with m.If(timer == self._CYCLES_2P5_MICROSECONDS):
-                    self.enter_fs_reset(m, timer, valid_pairs)
+                    # If we see an SE0 for >2.5us, this a bus reset. [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
+                    with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
+                        self.enter_fs_reset(m, timer, valid_pairs)
 
                 # If we see 3ms of consecutive line idle, we're being put into USB suspend.
                 # We'll enter our suspended state, directly. [USB2.0: 7.1.7.6]
@@ -285,16 +279,12 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             # suspend; the device could be active or inactive.
             with m.State('HS_NON_RESET'):
 
-                # If we're seeing a state other than SE0 (D+ / D- at zero), this isn't yet a
-                # potential reset. Keep our timer at zero.
-                with m.If(self.line_state != self._LINE_STATE_SE0):
-                    m.d.usb += timer.eq(0)
-
                 # High speed signaling presents IDLE and RESET the same way: with the host
                 # driving SE0; and us seeing SQUELCH. [USB2.0: 7.1.1.3; USB2.0: 7.1.7.6].
                 # Either way, our next step is the same: we'll drop down to full-speed. [USB2.0: 7.1.7.6]
                 # Afterwards, we'll take steps to differentiate a reset from a suspend.
-                with m.If(timer == self._CYCLES_3_MILLISECONDS):
+                with m.If((self.line_state == self._LINE_STATE_SQUELCH) &
+                          (line_state_time == self._CYCLES_3_MILLISECONDS)):
                     m.d.usb += [
                         timer.eq(0),
                         self.phy_speed.eq(USBSpeed.FULL),
@@ -442,10 +432,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             with m.State('IS_HIGH_SPEED'):
 
                 # Switch to high speed.
-                m.d.usb += [
-                    timer                    .eq(0),
-                    self.phy_speed           .eq(USBSpeed.HIGH),
-                ]
+                m.d.usb += self.phy_speed.eq(USBSpeed.HIGH)
 
                 # Signal HS detection.
                 self.detect_speed(m, USBAnalyzerSpeed.HIGH)
@@ -461,7 +448,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # If we see a return to FS idle, FS operation is now confirmed.
                 with m.If(self.line_state == self._LINE_STATE_FS_HS_J):
                     m.next = 'FS_NON_RESET'
-                    m.d.usb += timer.eq(0)
 
                 self.handle_ls_connect(m, line_state_time, low_speed_line_states)
                 self.handle_vbus_disconnect(m, timer)
@@ -475,7 +461,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # We'll wait a little while for the bus to settle, and then
                 # check to see if it's settled to FS idle; or if we still see SE0.
                 with m.If(timer == self._CYCLES_200_MICROSECONDS):
-                    m.d.usb += timer.eq(0)
 
                     # If we've resume IDLE, this is suspend. Move to HS suspend.
                     with m.If(self.line_state == self._LINE_STATE_FS_HS_J):
@@ -499,7 +484,6 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # If we see a K state, then we're being resumed.
                 is_fs_k = (self.line_state == self._LINE_STATE_FS_HS_K)
                 with m.If(is_fs_k):
-                    m.d.usb  += timer.eq(0)
 
                     # If we were in high-speed pre-suspend, then resume being in HS.
                     with m.If(was_hs_pre_suspend):
@@ -511,13 +495,9 @@ class USBAnalyzerSpeedDetector(Elaboratable):
 
                     self.detect_event(m, USBAnalyzerEvent.RESUME)
 
-                # If this isn't an SE0, we're not receiving a reset request.
-                # Keep our reset counter at zero.
-                with m.If(self.line_state != self._LINE_STATE_SE0):
-                    m.d.usb += timer.eq(0)
-
                 # If we see an SE0 for > 2.5uS, this is a reset request. [USB 2.0: 7.1.7.5]
-                with m.If(timer == self._CYCLES_2P5_MICROSECONDS):
+                with m.If((self.line_state == self._LINE_STATE_SE0) &
+                          (line_state_time == self._CYCLES_2P5_MICROSECONDS)):
                     self.enter_fs_reset(m, timer, valid_pairs)
 
                 self.handle_vbus_disconnect(m, timer)
@@ -534,18 +514,13 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 # If we see a K state, then we're being resumed.
                 is_ls_k = (self.line_state == self._LINE_STATE_LS_K)
                 with m.If(is_ls_k):
-                    m.d.usb += timer.eq(0)
                     m.next = 'LS_NON_RESET'
 
                     self.detect_event(m, USBAnalyzerEvent.RESUME)
 
-                # If this isn't an SE0, we're not receiving a reset request.
-                # Keep our reset counter at zero.
-                with m.If(self.line_state != self._LINE_STATE_SE0):
-                    m.d.usb += timer.eq(0)
-
                 # If we see an SE0 for > 2.5uS, this is a reset request. [USB 2.0: 7.1.7.5]
-                with m.If(timer == self._CYCLES_2P5_MICROSECONDS):
+                with m.If((self.line_state == self._LINE_STATE_SE0) &
+                          (line_state_time == self._CYCLES_2P5_MICROSECONDS)):
                     self.enter_fs_reset(m, timer, valid_pairs)
 
                 self.handle_vbus_disconnect(m, timer)
