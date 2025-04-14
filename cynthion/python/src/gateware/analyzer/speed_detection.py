@@ -98,6 +98,19 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         # We'll reset the timer below when appropriate.
         m.d.usb += timer.eq(timer + 1)
 
+        # Helper functions for detecting events and speed changes.
+
+        def detect_event(code):
+            m.d.comb += [
+                self.event_strobe.eq(1),
+                self.event_code.eq(code),
+            ]
+
+        def detect_speed(new_speed):
+            with m.If(new_speed != self.detected_speed):
+                m.d.usb += self.detected_speed.eq(new_speed)
+                detect_event(USBAnalyzerEvent.SPEED_DETECT_BASE | new_speed)
+
         # Line states detected at HS chirp signal levels.
         chirp_j =  self.usb_dp & ~self.usb_dm
         chirp_k = ~self.usb_dp &  self.usb_dm
@@ -113,7 +126,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         with m.If(chirp_state != last_chirp_state):
             m.d.usb += chirp_state_time.eq(0)
             with m.If(chirp_events):
-                self.detect_event(m, USBAnalyzerEvent.LINESTATE_BASE + chirp_state)
+                detect_event(USBAnalyzerEvent.LINESTATE_BASE + chirp_state)
         with m.Else():
             m.d.usb += chirp_state_time.eq(chirp_state_time + 1)
 
@@ -136,7 +149,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                         USBAnalyzerEvent.LINESTATE_LS_J,
                         USBAnalyzerEvent.LINESTATE_SE1,
                     ])
-                    self.detect_event(m, mapping[self.line_state])
+                    detect_event(mapping[self.line_state])
                 with m.Else():
                     mapping = Array([
                         USBAnalyzerEvent.LINESTATE_SE0,
@@ -144,7 +157,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                         USBAnalyzerEvent.LINESTATE_FS_K,
                         USBAnalyzerEvent.LINESTATE_SE1,
                     ])
-                    self.detect_event(m, mapping[self.line_state])
+                    detect_event(mapping[self.line_state])
         with m.Else():
             m.d.usb += line_state_time.eq(line_state_time + 1)
 
@@ -160,6 +173,43 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         #
         with m.FSM(domain='usb', reset='INITIALIZE') as fsm:
 
+            # Helper functions for state transitions.
+
+            def enter_fs_reset():
+                """
+                Helper to enter the FS reset sequence.
+                """
+                m.next = 'AWAIT_DEVICE_CHIRP_START'
+                m.d.usb += [
+                    self.phy_speed.eq(USBSpeed.FULL),
+                    timer.eq(0),
+                    valid_pairs.eq(0),
+                ]
+                detect_event(USBAnalyzerEvent.BUS_RESET)
+
+            def handle_ls_connect():
+                """
+                Helper to be called from FS reset states,
+                i.e PHY is in FS mode and line state was previously SE0.
+                """
+                # If we see FS K-state, it's equivalent to LS J-state, this SE0 was a
+                # disconnect rather than a reset, and an LS device has just connected.
+                with m.If(self.line_state == self._LINE_STATE_FS_HS_K):
+                    m.d.comb += low_speed_line_states.eq(1)
+                    with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
+                        m.d.usb += self.phy_speed.eq(USBSpeed.LOW)
+                        m.next = 'LS_NON_RESET'
+                        detect_event(USBAnalyzerEvent.LS_ATTACH)
+
+            def handle_vbus_disconnect():
+                """
+                Helper to handle VBUS disconnect.
+                """
+                with m.If(~self.vbus_connected):
+                    m.d.usb += self.phy_speed.eq(USBSpeed.FULL),
+                    m.next = 'VBUS_INVALID'
+                    detect_event(USBAnalyzerEvent.VBUS_INVALID)
+
             # INITIALIZE -- we're immediately post-reset; we'll perform some minor setup
             with m.State('INITIALIZE'):
                 m.d.usb += self.phy_speed.eq(USBSpeed.FULL)
@@ -172,12 +222,12 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             with m.State('VBUS_INVALID'):
 
                 # Speed is unknown for now.
-                self.detect_speed(m, USBAnalyzerSpeed.AUTO)
+                detect_speed(USBAnalyzerSpeed.AUTO)
 
                 # Accept VBUS as valid when it's stayed high for 50us.
                 with m.If(vbus_high_time == self._VBUS_DEBOUNCE_TIME):
                     m.next = 'DISCONNECT'
-                    self.detect_event(m, USBAnalyzerEvent.VBUS_VALID)
+                    detect_event(USBAnalyzerEvent.VBUS_VALID)
 
 
             # DISCONNECT -- the device disconnected and now we're waiting to see a bus idle
@@ -188,13 +238,13 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 m.d.comb += line_state_events.eq(1)
 
                 # Speed is unknown for now.
-                self.detect_speed(m, USBAnalyzerSpeed.AUTO)
+                detect_speed(USBAnalyzerSpeed.AUTO)
 
                 # If we see full-speed J-state, go into full-speed mode.
                 with m.If(self.line_state == self._LINE_STATE_FS_HS_J):
                     with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
                         m.next = 'FS_NON_RESET'
-                        self.detect_event(m, USBAnalyzerEvent.FS_ATTACH)
+                        detect_event(USBAnalyzerEvent.FS_ATTACH)
 
                 # If we see FS K-state, it's equivalent to LS J-state, go into low-speed mode.
                 with m.Elif(self.line_state == self._LINE_STATE_FS_HS_K):
@@ -202,31 +252,31 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
                         m.d.usb += self.phy_speed.eq(USBSpeed.LOW)
                         m.next = 'LS_NON_RESET'
-                        self.detect_event(m, USBAnalyzerEvent.LS_ATTACH)
+                        detect_event(USBAnalyzerEvent.LS_ATTACH)
 
-                self.handle_vbus_disconnect(m)
+                handle_vbus_disconnect()
 
 
             # LS_NON_RESET -- we're currently operating at LS and waiting for a reset;
             # the device could be active or inactive, but we haven't yet seen a reset condition.
             with m.State('LS_NON_RESET'):
 
-                self.detect_speed(m, USBAnalyzerSpeed.LOW)
+                detect_speed(USBAnalyzerSpeed.LOW)
 
                 # If we see an SE0 for >2.5us, this a bus reset. [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
                 with m.If((self.line_state == self._LINE_STATE_SE0) &
                           (line_state_time == self._CYCLES_2P5_MICROSECONDS)):
                     m.next = 'LS_RESET'
-                    self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
+                    detect_event(USBAnalyzerEvent.BUS_RESET)
 
                 # If we see 3ms of consecutive line idle, we're being put into USB suspend.
                 # We'll enter our suspended state, directly. [USB2.0: 7.1.7.6]
                 with m.If((self.line_state == self._LINE_STATE_LS_J) &
                           (line_state_time == self._CYCLES_3_MILLISECONDS)):
                     m.next = 'LS_SUSPEND'
-                    self.detect_event(m, USBAnalyzerEvent.SUSPEND)
+                    detect_event(USBAnalyzerEvent.SUSPEND)
 
-                self.handle_vbus_disconnect(m)
+                handle_vbus_disconnect()
 
 
             # LS_RESET -- we're in an LS bus reset, but it could also be a disconnect.
@@ -243,29 +293,29 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
                         m.d.usb += self.phy_speed.eq(USBSpeed.FULL)
                         m.next = 'FS_NON_RESET'
-                        self.detect_event(m, USBAnalyzerEvent.FS_ATTACH)
+                        detect_event(USBAnalyzerEvent.FS_ATTACH)
 
                 # If we come out of SE0 into any other line state, revert to LS_NON_RESET state.
                 with m.Elif(self.line_state != self._LINE_STATE_SE0):
                     m.next = 'LS_NON_RESET'
 
-                self.handle_vbus_disconnect(m)
+                handle_vbus_disconnect()
 
 
             # FS_NON_RESET -- we're currently operating at FS and waiting for a reset;
             # the device could be active or inactive, but we haven't yet seen a reset condition.
             with m.State('FS_NON_RESET'):
 
-                self.detect_speed(m, USBAnalyzerSpeed.FULL)
+                detect_speed(USBAnalyzerSpeed.FULL)
 
                 # If we see SE0, generate a line state event, but it's not a reset yet.
                 with m.If(self.line_state == self._LINE_STATE_SE0):
                     with m.If(last_line_state != self._LINE_STATE_SE0):
-                        self.detect_event(m, USBAnalyzerEvent.LINESTATE_SE0)
+                        detect_event(USBAnalyzerEvent.LINESTATE_SE0)
 
                     # If we see an SE0 for >2.5us, this a bus reset. [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
                     with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
-                        self.enter_fs_reset(m, timer, valid_pairs)
+                        enter_fs_reset()
 
                 # If we see 3ms of consecutive line idle, we're being put into USB suspend.
                 # We'll enter our suspended state, directly. [USB2.0: 7.1.7.6]
@@ -273,9 +323,9 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                           (line_state_time == self._CYCLES_3_MILLISECONDS)):
                     m.d.usb += was_hs_pre_suspend.eq(0)
                     m.next = 'FS_SUSPEND'
-                    self.detect_event(m, USBAnalyzerEvent.SUSPEND)
+                    detect_event(USBAnalyzerEvent.SUSPEND)
 
-                self.handle_vbus_disconnect(m)
+                handle_vbus_disconnect()
 
 
             # HS_NON_RESET -- we're currently operating at high speed and waiting for a reset or
@@ -294,7 +344,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     ]
                     m.next = 'DETECT_HS_SUSPEND'
 
-                self.handle_vbus_disconnect(m)
+                handle_vbus_disconnect()
 
 
             # AWAIT_DEVICE_CHIRP_START -- the device may produce a 'chirp' K,
@@ -308,13 +358,13 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     # assertion of the Chirp K for no less than 2.5us
                     # [USB2.0: 7.1.7.5]
                     m.next = 'AWAIT_DEVICE_CHIRP_END'
-                    self.detect_event(m, USBAnalyzerEvent.DEVICE_CHIRP_VALID)
+                    detect_event(USBAnalyzerEvent.DEVICE_CHIRP_VALID)
 
                 with m.If(timer == self._CYCLES_7_MILLISECONDS):
                     m.next = 'IS_LOW_OR_FULL_SPEED'
 
-                self.handle_ls_connect(m, line_state_time, low_speed_line_states)
-                self.handle_vbus_disconnect(m)
+                handle_ls_connect()
+                handle_vbus_disconnect()
 
 
             # AWAIT_DEVICE_CHIRP_END -- we've seen the device chirp and are
@@ -332,8 +382,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(timer == self._CYCLES_7_MILLISECONDS):
                     m.next = 'IS_LOW_OR_FULL_SPEED'
 
-                self.handle_ls_connect(m, line_state_time, low_speed_line_states)
-                self.handle_vbus_disconnect(m)
+                handle_ls_connect()
+                handle_vbus_disconnect()
 
 
             # AWAIT_HOST_K -- we've now completed the device chirp; and are waiting to see if the host
@@ -351,8 +401,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(chirp_k):
                     m.next = 'IN_HOST_K'
 
-                self.handle_ls_connect(m, line_state_time, low_speed_line_states)
-                self.handle_vbus_disconnect(m)
+                handle_ls_connect()
+                handle_vbus_disconnect()
 
 
             # IN_HOST_K: we're seeing a host Chirp K as part of our handshake; we'll
@@ -375,8 +425,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(timer == self._CYCLES_2P5_MILLISECONDS):
                     m.next = 'IS_LOW_OR_FULL_SPEED'
 
-                self.handle_ls_connect(m, line_state_time, low_speed_line_states)
-                self.handle_vbus_disconnect(m)
+                handle_ls_connect()
+                handle_vbus_disconnect()
 
 
             # AWAIT_HOST_J -- we're waiting for the next Chirp J in the host chirp sequence
@@ -392,8 +442,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(chirp_j):
                     m.next = 'IN_HOST_J'
 
-                self.handle_ls_connect(m, line_state_time, low_speed_line_states)
-                self.handle_vbus_disconnect(m)
+                handle_ls_connect()
+                handle_vbus_disconnect()
 
 
             # IN_HOST_J: we're seeing a host Chirp K as part of our handshake; we'll
@@ -410,7 +460,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     # and we've identified a high speed host!
                     with m.If(valid_pairs == 2):
                         m.next = 'IS_HIGH_SPEED'
-                        self.detect_event(m, USBAnalyzerEvent.HOST_CHIRP_VALID)
+                        detect_event(USBAnalyzerEvent.HOST_CHIRP_VALID)
 
                     # Otherwise, count the pair as valid, and wait for the next K.
                     with m.Else():
@@ -426,8 +476,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(timer == self._CYCLES_2P5_MILLISECONDS):
                     m.next = 'IS_LOW_OR_FULL_SPEED'
 
-                self.handle_ls_connect(m, line_state_time, low_speed_line_states)
-                self.handle_vbus_disconnect(m)
+                handle_ls_connect()
+                handle_vbus_disconnect()
 
 
             # IS_HIGH_SPEED -- we've completed a high speed handshake, and are ready to
@@ -438,7 +488,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 m.d.usb += self.phy_speed.eq(USBSpeed.HIGH)
 
                 # Signal HS detection.
-                self.detect_speed(m, USBAnalyzerSpeed.HIGH)
+                detect_speed(USBAnalyzerSpeed.HIGH)
 
                 m.next = 'HS_NON_RESET'
 
@@ -452,8 +502,8 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(self.line_state == self._LINE_STATE_FS_HS_J):
                     m.next = 'FS_NON_RESET'
 
-                self.handle_ls_connect(m, line_state_time, low_speed_line_states)
-                self.handle_vbus_disconnect(m)
+                handle_ls_connect()
+                handle_vbus_disconnect()
 
 
             # DETECT_HS_SUSPEND -- we were operating at high speed, and just detected an event
@@ -469,14 +519,14 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     with m.If(self.line_state == self._LINE_STATE_FS_HS_J):
                         m.d.usb += was_hs_pre_suspend.eq(1)
                         m.next = 'FS_SUSPEND'
-                        self.detect_event(m, USBAnalyzerEvent.SUSPEND)
+                        detect_event(USBAnalyzerEvent.SUSPEND)
 
                     # Otherwise, this is a reset (or, if K/SE1, we're very confused, and
                     # should re-initialize anyway). Move to the HS reset detect sequence.
                     with m.Else():
-                        self.enter_fs_reset(m, timer, valid_pairs)
+                        enter_fs_reset()
 
-                self.handle_vbus_disconnect(m)
+                handle_vbus_disconnect()
 
 
             # FS SUSPEND -- our device has entered FS suspend; we'll now wait for either a
@@ -496,14 +546,14 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     with m.Else():
                         m.next = 'FS_NON_RESET'
 
-                    self.detect_event(m, USBAnalyzerEvent.RESUME)
+                    detect_event(USBAnalyzerEvent.RESUME)
 
                 # If we see an SE0 for > 2.5uS, this is a reset request. [USB 2.0: 7.1.7.5]
                 with m.If((self.line_state == self._LINE_STATE_SE0) &
                           (line_state_time == self._CYCLES_2P5_MICROSECONDS)):
-                    self.enter_fs_reset(m, timer, valid_pairs)
+                    enter_fs_reset()
 
-                self.handle_vbus_disconnect(m)
+                handle_vbus_disconnect()
 
 
             # LS SUSPEND -- our device has entered LS suspend; we'll now wait for either a
@@ -519,56 +569,13 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                 with m.If(is_ls_k):
                     m.next = 'LS_NON_RESET'
 
-                    self.detect_event(m, USBAnalyzerEvent.RESUME)
+                    detect_event(USBAnalyzerEvent.RESUME)
 
                 # If we see an SE0 for > 2.5uS, this is a reset request. [USB 2.0: 7.1.7.5]
                 with m.If((self.line_state == self._LINE_STATE_SE0) &
                           (line_state_time == self._CYCLES_2P5_MICROSECONDS)):
-                    self.enter_fs_reset(m, timer, valid_pairs)
+                    enter_fs_reset()
 
-                self.handle_vbus_disconnect(m)
+                handle_vbus_disconnect()
 
         return m
-
-    def enter_fs_reset(self, m, timer, valid_pairs):
-        """
-        Helper to enter the FS reset sequence.
-        """
-        m.next = 'AWAIT_DEVICE_CHIRP_START'
-        m.d.usb += [
-            self.phy_speed.eq(USBSpeed.FULL),
-            timer.eq(0),
-            valid_pairs.eq(0),
-        ]
-        self.detect_event(m, USBAnalyzerEvent.BUS_RESET)
-
-    def handle_ls_connect(self, m, line_state_time, low_speed_line_states):
-        """
-        Helper to be called from FS reset states,
-        i.e PHY is in FS mode and line state was previously SE0.
-        """
-        # If we see FS K-state, it's equivalent to LS J-state, this SE0 was a
-        # disconnect rather than a reset, and an LS device has just connected.
-        with m.If(self.line_state == self._LINE_STATE_FS_HS_K):
-            m.d.comb += low_speed_line_states.eq(1)
-            with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
-                m.d.usb += self.phy_speed.eq(USBSpeed.LOW)
-                m.next = 'LS_NON_RESET'
-                self.detect_event(m, USBAnalyzerEvent.LS_ATTACH)
-
-    def handle_vbus_disconnect(self, m):
-        with m.If(~self.vbus_connected):
-            m.d.usb += self.phy_speed.eq(USBSpeed.FULL),
-            m.next = 'VBUS_INVALID'
-            self.detect_event(m, USBAnalyzerEvent.VBUS_INVALID)
-
-    def detect_speed(self, m, new_speed):
-        with m.If(new_speed != self.detected_speed):
-            m.d.usb += self.detected_speed.eq(new_speed)
-            self.detect_event(m, USBAnalyzerEvent.SPEED_DETECT_BASE | new_speed)
-
-    def detect_event(self, m, code):
-        m.d.comb += [
-            self.event_strobe.eq(1),
-            self.event_code.eq(code),
-        ]
