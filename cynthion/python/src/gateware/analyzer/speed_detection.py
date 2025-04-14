@@ -49,7 +49,9 @@ class USBAnalyzerSpeedDetector(Elaboratable):
     # Eventually, if we support clocks other than 60MHz (48 MHz)?
     # We should provide the ability to scale these.
     _CYCLES_500_NANOSECONDS    = 30
+    _CYCLES_666_NANOSECONDS    = 40
     _CYCLES_1_MICROSECOND      = _CYCLES_500_NANOSECONDS  * 2
+    _CYCLES_1500_NANOSECONDS   = _CYCLES_500_NANOSECONDS  * 3
     _CYCLES_2P5_MICROSECONDS   = _CYCLES_500_NANOSECONDS  * 5
     _CYCLES_5_MICROSECONDS     = _CYCLES_1_MICROSECOND    * 5
     _CYCLES_50_MICROSECONDS    = _CYCLES_1_MICROSECOND    * 50
@@ -262,6 +264,13 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             with m.State('LS_NON_RESET'):
 
                 detect_speed(USBAnalyzerSpeed.LOW)
+
+                # If we see an SE0 that lasts between 670 and 1500 ns, this is an LS keepalive.
+                with m.If((self.line_state == self._LINE_STATE_LS_J) &
+                          (last_line_state == self._LINE_STATE_SE0) &
+                          (line_state_time >= self._CYCLES_666_NANOSECONDS) &
+                          (line_state_time <= self._CYCLES_1500_NANOSECONDS)):
+                    detect_event(USBAnalyzerEvent.LS_KEEPALIVE)
 
                 # If we see an SE0 for >2.5us, this a bus reset. [USB2.0: 7.1.7.5; ULPI 3.8.5.1].
                 with m.If((self.line_state == self._LINE_STATE_SE0) &
