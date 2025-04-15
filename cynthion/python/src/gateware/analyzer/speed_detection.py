@@ -326,13 +326,16 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     with m.If(line_state_time == self._CYCLES_2P5_MICROSECONDS):
                         enter_fs_reset()
 
-                # If we see 3ms of consecutive line idle, we're being put into USB suspend.
-                # We'll enter our suspended state, directly. [USB2.0: 7.1.7.6]
-                with m.If((self.line_state == self._LINE_STATE_FS_HS_J) &
-                          (line_state_time == self._CYCLES_3_MILLISECONDS)):
-                    m.d.usb += was_hs_pre_suspend.eq(0)
-                    m.next = 'FS_SUSPEND'
-                    detect_event(USBAnalyzerEvent.SUSPEND)
+                with m.If(self.line_state == self._LINE_STATE_FS_HS_J):
+                    with m.If(last_line_state == self._LINE_STATE_SE0):
+                        detect_event(USBAnalyzerEvent.LINESTATE_FS_J)
+
+                    # If we see 3ms of consecutive line idle, we're being put into USB suspend.
+                    # We'll enter our suspended state, directly. [USB2.0: 7.1.7.6]
+                    with m.If(line_state_time == self._CYCLES_3_MILLISECONDS):
+                        m.d.usb += was_hs_pre_suspend.eq(0)
+                        m.next = 'FS_SUSPEND'
+                        detect_event(USBAnalyzerEvent.SUSPEND)
 
                 handle_vbus_disconnect()
 
