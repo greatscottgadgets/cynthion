@@ -636,10 +636,11 @@ impl Moondancer {
         let iter = args.payload.iter();
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
 
-        let bytes_written = self.usb0.write_requested(
+        let bytes_written = self.usb0.write_with_packet_size(
             endpoint_number,
-            requested_length.into(),
+            Some(requested_length.into()),
             iter.copied().take(requested_length.into()),
+            max_packet_size,
         );
 
         // wait for send to complete if we're blocking
