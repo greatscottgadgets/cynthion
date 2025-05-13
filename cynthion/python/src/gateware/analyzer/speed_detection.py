@@ -61,6 +61,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
     _CYCLES_2P5_MILLISECONDS   = _CYCLES_2P5_MICROSECONDS * 1000
     _CYCLES_3_MILLISECONDS     = _CYCLES_1_MILLISECONDS   * 3
     _CYCLES_7_MILLISECONDS     = _CYCLES_1_MILLISECONDS   * 7
+    _CYCLES_20_MILLISECONDS    = _CYCLES_1_MILLISECONDS   * 20
 
     _VBUS_DEBOUNCE_TIME        = _CYCLES_50_MICROSECONDS
 
@@ -87,7 +88,7 @@ class USBAnalyzerSpeedDetector(Elaboratable):
         m = Module()
 
         # Event timer: keeps track of the timing of each of the individual event phases.
-        timer = Signal(range(0, self._CYCLES_7_MILLISECONDS + 1))
+        timer = Signal(range(0, self._CYCLES_20_MILLISECONDS + 1))
 
         # Valid pairs: keeps track of how make Chirp K / Chirp J sequences we've
         # seen, thus far.
@@ -546,19 +547,36 @@ class USBAnalyzerSpeedDetector(Elaboratable):
             with m.State('FS_SUSPEND'):
                 m.d.comb += line_state_events.eq(1)
 
-                # If we see a K state, then we're being resumed.
-                is_fs_k = (self.line_state == self._LINE_STATE_FS_HS_K)
-                with m.If(is_fs_k):
+                # If we see a K state for 20ms, then we're being resumed.
+                with m.If((self.line_state == self._LINE_STATE_FS_HS_K) &
+                          (line_state_time == self._CYCLES_20_MILLISECONDS)):
+                    m.next = 'FS_RESUME'
+                    detect_event(USBAnalyzerEvent.RESUME)
 
-                    # If we were in high-speed pre-suspend, then resume being in HS.
-                    with m.If(was_hs_pre_suspend):
+                # If we see an SE0 for > 2.5uS, this is a reset request. [USB 2.0: 7.1.7.5]
+                with m.If((self.line_state == self._LINE_STATE_SE0) &
+                          (line_state_time == self._CYCLES_2P5_MICROSECONDS)):
+                    enter_fs_reset()
+
+                handle_vbus_disconnect()
+
+
+            # FS RESUME -- we've detected a resume from FS suspend
+            with m.State('FS_RESUME'):
+                m.d.comb += line_state_events.eq(1)
+
+                # If we were in high-speed pre-suspend, then return to HS when we enter SE0.
+                with m.If(was_hs_pre_suspend):
+                    with m.If(self.line_state == self._LINE_STATE_SE0):
                         m.next = 'IS_HIGH_SPEED'
 
-                    # Otherwise, just resume.
-                    with m.Else():
+                # Otherwise, return to FS when we see end of resume.
+                with m.Else():
+                    with m.If((self.line_state == self._LINE_STATE_FS_HS_J) &
+                              (last_line_state == self._LINE_STATE_SE0) &
+                              (line_state_time >= self._CYCLES_666_NANOSECONDS) &
+                              (line_state_time <= self._CYCLES_1500_NANOSECONDS)):
                         m.next = 'FS_NON_RESET'
-
-                    detect_event(USBAnalyzerEvent.RESUME)
 
                 # If we see an SE0 for > 2.5uS, this is a reset request. [USB 2.0: 7.1.7.5]
                 with m.If((self.line_state == self._LINE_STATE_SE0) &
@@ -576,11 +594,10 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     low_speed_line_states.eq(1),
                 ]
 
-                # If we see a K state, then we're being resumed.
-                is_ls_k = (self.line_state == self._LINE_STATE_LS_K)
-                with m.If(is_ls_k):
-                    m.next = 'LS_NON_RESET'
-
+                # If we see a K state for 20ms, then we're being resumed.
+                with m.If((self.line_state == self._LINE_STATE_LS_K) &
+                          (line_state_time == self._CYCLES_20_MILLISECONDS)):
+                    m.next = 'LS_RESUME'
                     detect_event(USBAnalyzerEvent.RESUME)
 
                 # If we see an SE0 for > 2.5uS, this is a reset request. [USB 2.0: 7.1.7.5]
@@ -589,5 +606,28 @@ class USBAnalyzerSpeedDetector(Elaboratable):
                     enter_fs_reset()
 
                 handle_vbus_disconnect()
+
+
+            # LS RESUME -- we've detected a resume from LS suspend
+            with m.State('LS_RESUME'):
+                m.d.comb += [
+                    line_state_events.eq(1),
+                    low_speed_line_states.eq(1),
+                ]
+
+                # Return to LS when we see end of resume.
+                with m.If((self.line_state == self._LINE_STATE_LS_J) &
+                          (last_line_state == self._LINE_STATE_SE0) &
+                          (line_state_time >= self._CYCLES_666_NANOSECONDS) &
+                          (line_state_time <= self._CYCLES_1500_NANOSECONDS)):
+                    m.next = 'LS_NON_RESET'
+
+                # If we see an SE0 for > 2.5uS, this is a reset request. [USB 2.0: 7.1.7.5]
+                with m.If((self.line_state == self._LINE_STATE_SE0) &
+                          (line_state_time == self._CYCLES_2P5_MICROSECONDS)):
+                    enter_fs_reset()
+
+                handle_vbus_disconnect()
+
 
         return m
