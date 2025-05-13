@@ -16,7 +16,7 @@ import usb
 from datetime import datetime
 from enum import IntEnum, IntFlag
 
-from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter, Mux
+from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter, Mux, Array
 from amaranth.build.res                  import ResourceError
 from usb_protocol.emitters               import DeviceDescriptorCollection
 from usb_protocol.types                  import USBRequestType, USBRequestRecipient
@@ -44,6 +44,7 @@ from usb_protocol.types.descriptors.microsoft10 import RegistryTypes
 from .analyzer                           import USBAnalyzer
 from .fifo                               import Stream16to8, StreamFIFO, AsyncFIFOReadReset, HyperRAMPacketFIFO
 from .speed_detection                    import USBAnalyzerSpeedDetector
+from .event_detection                    import USBHighSpeedEventDetector, USBFullSpeedEventDetector, USBLowSpeedEventDetector
 from .speeds                             import USBAnalyzerSpeed
 from .events                             import USBAnalyzerEvent
 
@@ -239,6 +240,21 @@ class USBAnalyzerApplet(Elaboratable):
         ulpi = platform.request("target_phy")
         m.submodules.utmi = utmi = UTMITranslator(ulpi=ulpi)
 
+        # Add event detectors for fixed speeds.
+        m.submodules.hs_event = hs_event_detector = USBHighSpeedEventDetector()
+        m.submodules.fs_event = fs_event_detector = USBFullSpeedEventDetector()
+        m.submodules.ls_event = ls_event_detector = USBLowSpeedEventDetector()
+        m.d.comb += [
+            hs_event_detector.reset.eq(state.write),
+            fs_event_detector.reset.eq(state.write),
+            ls_event_detector.reset.eq(state.write),
+            fs_event_detector.line_state.eq(utmi.line_state),
+            ls_event_detector.line_state.eq(utmi.line_state),
+            hs_event_detector.vbus_connected.eq(utmi.session_valid),
+            fs_event_detector.vbus_connected.eq(utmi.session_valid),
+            ls_event_detector.vbus_connected.eq(utmi.session_valid),
+        ]
+
         # Strap our power controls to be in VBUS passthrough by default,
         # on the target port.
         if platform.version >= (0, 6):
@@ -271,8 +287,8 @@ class USBAnalyzerApplet(Elaboratable):
                 speed_selection == USBAnalyzerSpeed.AUTO,
                 speed_detector.detected_speed,
                 speed_selection)
-            event_strobe = speed_detector.event_strobe
-            event_code = speed_detector.event_code
+            auto_event_strobe = speed_detector.event_strobe
+            auto_event_code = speed_detector.event_code
 
             # Provide the necessary signals for speed detection.
             m.d.comb += [
@@ -282,6 +298,7 @@ class USBAnalyzerApplet(Elaboratable):
                 speed_detector.usb_dm.eq(usb_dm),
                 speed_detector.vbus_connected.eq(utmi.session_valid),
             ]
+
         else:
             # On Cynthion r0.1 - r0.5, there is no `target_c_vbus_en`
             # signal. The following two signals are needed to have
@@ -293,8 +310,26 @@ class USBAnalyzerApplet(Elaboratable):
 
             # Speed selection is manual only.
             phy_speed = detected_speed = next_speed = speed_selection
-            event_strobe = False
-            event_code = USBAnalyzerEvent.NONE
+            auto_event_strobe = False
+            auto_event_code = USBAnalyzerEvent.NONE
+
+        # Choose the appropriate event source according to speed selection.
+        event_strobes = Array([
+            hs_event_detector.event_strobe,
+            fs_event_detector.event_strobe,
+            ls_event_detector.event_strobe,
+            auto_event_strobe,
+        ])
+
+        event_codes = Array([
+            hs_event_detector.event_code,
+            fs_event_detector.event_code,
+            ls_event_detector.event_code,
+            auto_event_code,
+        ])
+
+        event_strobe = event_strobes[speed_selection]
+        event_code = event_codes[speed_selection]
 
         # Set up our parameters.
         m.d.comb += [
