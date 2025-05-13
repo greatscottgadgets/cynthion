@@ -4,7 +4,7 @@
 pub use smolusb::error::ErrorKind as Error;
 
 /// Default timeout for USB operations
-pub const DEFAULT_TIMEOUT: usize = 1_000_000;
+pub const DEFAULT_TIMEOUT: usize = 10_000_000;
 
 /// Macro to generate smolusb hal wrappers for `pac::USBx` peripherals
 ///
