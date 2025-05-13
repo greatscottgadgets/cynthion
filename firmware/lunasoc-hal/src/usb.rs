@@ -14,7 +14,7 @@ use crate::pac;
 use pac::interrupt::Interrupt;*/
 
 /// Default timeout for USB operations
-pub const DEFAULT_TIMEOUT: usize = 1_000_000;
+pub const DEFAULT_TIMEOUT: usize = 10_000_000;
 
 /// Macro to generate smolusb hal wrappers for `pac::USBx` peripherals
 ///
@@ -481,13 +481,13 @@ macro_rules! impl_usb {
                     let mut timeout = 0;
                     while self.ep_in.status().read().have().bit() {
                         if timeout == 0 {
-                            log::warn!("  {} clear tx", stringify!($USBX));
+                            log::warn!("  {} clear tx ep{}", stringify!($USBX), endpoint_number);
                         } else if timeout > DEFAULT_TIMEOUT {
                             self.ep_in.reset().write(|w| w.fifo().bit(true));
                             unsafe {
                                 self.clear_tx_ack_active(endpoint_number);
                             }
-                            log::error!("  {} clear tx timeout", stringify!($USBX));
+                            log::error!("  {} clear tx timeout ep{}", stringify!($USBX), endpoint_number);
                             return 0;
                         }
                         timeout += 1;

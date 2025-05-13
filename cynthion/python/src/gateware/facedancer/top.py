@@ -286,7 +286,7 @@ class Soc(Component):
         m.d.comb += self.usb0.attach(usb0_device)
         m.submodules += [ulpi0_provider, self.usb0, usb0_device]
 
-        # usb1 - target_phy
+        # usb1 - aux_phy
         ulpi1_provider = provider.ULPIProvider(["aux_phy", "host_phy"])
         usb1_device = USBDevice(bus=ulpi1_provider.bus)
         usb1_device.add_endpoint(self.usb1_ep_control)
@@ -295,7 +295,7 @@ class Soc(Component):
         m.d.comb += self.usb1.attach(usb1_device)
         m.submodules += [ulpi1_provider, self.usb1, usb1_device]
 
-        # usb2 - target_phy
+        # usb2 - control_phy
         ulpi2_provider = provider.ULPIProvider(["control_phy", "sideband_phy"])
         usb2_device = USBDevice(bus=ulpi2_provider.bus)
         usb2_device.add_endpoint(self.usb2_ep_control)
