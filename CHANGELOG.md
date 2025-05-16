@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.1.9] - 2025-05-16
+### Added
+* Cynthion Gateware Tutorials
+* Cynthion `make assets` will now build gateware if `yowasp-yosys` and `yowasp-nextpnr-ecp5` are installed.
+### Changed
+* Support for Python 3.8 has been ended. Cynthion now requires Python 3.9 or higher.
+### Fixed
+* Facedancer endpoints set max packet size for the control endpoint to 64 irrespective of script configuration.
+
+
 ## [0.1.8] - 2024-11-25
 ### Added
 * [USB Emulation Tutorial](https://cynthion.readthedocs.io/en/latest/tutorials/emulation.html)
@@ -92,7 +102,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release
 
 
-[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.8...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.9...HEAD
+[0.1.9]: https://github.com/greatscottgadgets/cynthion/compare/0.1.8...0.1.9
 [0.1.8]: https://github.com/greatscottgadgets/cynthion/compare/0.1.7...0.1.8
 [0.1.7]: https://github.com/greatscottgadgets/cynthion/compare/0.1.6...0.1.7
 [0.1.6]: https://github.com/greatscottgadgets/cynthion/compare/0.1.5...0.1.6

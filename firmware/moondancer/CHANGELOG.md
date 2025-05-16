@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.1.9] - 2025-05-16
+### Fixed
+* Use correct usb hal write function for facedancer control endpoint.
+
+
 ## [0.1.8] - 2024-11-25
 ### Added
 - New moondancer verb: `ep_out_interface_enable()`.
