@@ -9,22 +9,23 @@ use riscv_rt::entry;
 use lunasoc_hal as hal;
 use moondancer_pac as pac;
 
-lunasoc_hal::impl_serial! {
-    Serial: pac::UART,
+hal::impl_serial! {
+    Serial: pac::UART0,
 }
 
-lunasoc_hal::impl_timer! {
-    Timer: pac::TIMER,
+hal::impl_timer! {
+    Timer: pac::TIMER0,
 }
 
 #[entry]
 fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
-    let mut serial = Serial::new(peripherals.UART);
+    let mut serial = Serial::new(peripherals.UART0);
 
     // configure and enable timer
     let one_second = pac::clock::sysclk();
-    let mut timer = Timer::new(peripherals.TIMER, one_second);
+    let mut timer = Timer::new(peripherals.TIMER0, one_second);
+    timer.set_mode(hal::timer::Mode::Periodic);
     timer.set_timeout_ticks(one_second / 2);
     timer.enable();
 
@@ -40,7 +41,7 @@ fn main() -> ! {
         riscv::register::mie::set_mext();
 
         // write csr: enable timer interrupt
-        pac::csr::interrupt::enable(pac::Interrupt::TIMER)
+        pac::csr::interrupt::enable(pac::Interrupt::TIMER0)
     }
 
     writeln!(serial, "Peripherals initialized, entering main loop.").unwrap();
@@ -64,7 +65,7 @@ fn MachineExternal() {
 
     let mut serial = unsafe { Serial::summon() };
 
-    if pac::csr::interrupt::is_pending(pac::Interrupt::TIMER) {
+    if pac::csr::interrupt::is_pending(pac::Interrupt::TIMER0) {
         let timer = unsafe { Timer::summon() };
         timer.clear_pending();
 
@@ -75,9 +76,9 @@ fn MachineExternal() {
         let leds = &peripherals.LEDS;
 
         if unsafe { TOGGLE } {
-            leds.output().write(|w| unsafe { w.output().bits(255) });
+            leds.output().write(|w| unsafe { w.bits(255) });
         } else {
-            leds.output().write(|w| unsafe { w.output().bits(0) });
+            leds.output().write(|w| unsafe { w.bits(0) });
         }
         unsafe { TOGGLE = !TOGGLE };
     } else {
