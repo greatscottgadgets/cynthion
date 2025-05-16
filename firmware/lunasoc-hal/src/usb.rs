@@ -3,16 +3,6 @@
 /// Re-export smolusb error type
 pub use smolusb::error::ErrorKind as Error;
 
-/*use smolusb::device::Speed;
-use smolusb::setup::Direction;
-use smolusb::traits::{
-    ReadControl, ReadEndpoint, UnsafeUsbDriverOperations, UsbDriver, UsbDriverOperations,
-    WriteEndpoint,
-};
-
-use crate::pac;
-use pac::interrupt::Interrupt;*/
-
 /// Default timeout for USB operations
 pub const DEFAULT_TIMEOUT: usize = 1_000_000;
 
@@ -82,6 +72,28 @@ macro_rules! impl_usb {
                         ep_out: <$USBX_EP_OUT>::steal(),
                         device_speed: Speed::Unknown,
                     }
+                }
+
+                /// Wait for a write operation to timeout.
+                pub fn ep_in_busy(&self, endpoint_number: u8, message: &str) -> bool {
+                    let mut timeout = 0;
+                    while unsafe { self.is_tx_ack_active(endpoint_number) } {
+                        if timeout == 0 {
+                            log::debug!("  {} {} {}", stringify!($USBX), message, endpoint_number);
+
+                        } else if timeout > DEFAULT_TIMEOUT {
+                            unsafe {
+                                self.clear_tx_ack_active(endpoint_number);
+                            }
+                            self.ep_in.reset().write(|w| w.reset().bit(true));
+                            log::error!("  {} {} {} timeout", stringify!($USBX), message, endpoint_number);
+                            return true;
+                        }
+
+                        timeout += 1;
+                    }
+
+                    return false;
                 }
             }
 
@@ -340,19 +352,20 @@ macro_rules! impl_usb {
                 #[inline(always)]
                 unsafe fn is_tx_ack_active(&self, endpoint_number: u8) -> bool {
                     #[cfg(not(target_has_atomic))]
-                    {
+                    let active = {
                         let endpoint_number = endpoint_number as usize;
                         let active = riscv::interrupt::free(|| {
                             $IDX::TX_ACK_ACTIVE[endpoint_number]
                         });
                         active
-                    }
+                    };
                     #[cfg(target_has_atomic)]
-                    {
+                    let active = {
                         use core::sync::atomic::Ordering;
                         let endpoint_number = endpoint_number as usize;
                         $IDX::TX_ACK_ACTIVE[endpoint_number].load(Ordering::Relaxed)
-                    }
+                    };
+                    active
                 }
             }
 
@@ -468,22 +481,9 @@ macro_rules! impl_usb {
                 where
                     I: Iterator<Item = u8>
                 {
-                    unsafe { self.set_tx_ack_active(endpoint_number); }
-
-                    // check if output FIFO is empty
-                    let mut timeout = 0;
-                    while self.ep_in.have().read().have().bit() {
-                        if timeout == 0 {
-                            log::warn!("  {} clear tx", stringify!($USBX));
-                        } else if timeout > DEFAULT_TIMEOUT {
-                            self.ep_in.reset().write(|w| w.reset().bit(true));
-                            unsafe {
-                                self.clear_tx_ack_active(endpoint_number);
-                            }
-                            log::error!("  {} clear tx timeout", stringify!($USBX));
-                            return 0;
-                        }
-                        timeout += 1;
+                    // check if ep_in is available
+                    if self.ep_in_busy(endpoint_number, "usb::write_with_packet_size()") {
+                        return 0;
                     }
 
                     let mut bytes_written: usize = 0;
@@ -502,21 +502,8 @@ macro_rules! impl_usb {
                                 .write(|w| unsafe { w.epno().bits(endpoint_number) });
 
                             // wait for transmission to complete
-                            let mut timeout = 0;
-                            //while self.ep_in.have().read().have().bit() {
-                            while unsafe { self.is_tx_ack_active(endpoint_number) } {
-                                timeout += 1;
-                                if timeout > DEFAULT_TIMEOUT {
-                                    unsafe {
-                                        self.clear_tx_ack_active(endpoint_number);
-                                    }
-                                    log::error!(
-                                        "{}::write timed out after {} bytes",
-                                        stringify!($USBX),
-                                        bytes_written
-                                    );
-                                    return bytes_written;
-                                }
+                            if self.ep_in_busy(endpoint_number, "usb::write_with_packet_size() - ep_in.epno()") {
+                                return bytes_written;
                             }
                         }
                     }

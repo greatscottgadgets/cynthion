@@ -644,20 +644,13 @@ impl Moondancer {
         );
 
         // wait for send to complete if we're blocking
-        let mut timeout = 0;
-        while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
-            timeout += 1;
-            if timeout > hal::usb::DEFAULT_TIMEOUT {
-                unsafe {
-                    self.usb0.clear_tx_ack_active(endpoint_number);
-                }
+        if blocking && self.usb0.ep_in_busy(endpoint_number, "moondancer::write_control_endpoint()") {
                 log::error!(
                     "moondancer::write_control_endpoint timed out after {} bytes during write of {} bytes",
                     payload_length,
                     bytes_written
                 );
                 return Err(GreatError::StreamIoctlTimeout);
-            }
         }
 
         log::debug!(
@@ -697,24 +690,9 @@ impl Moondancer {
         let iter = args.payload.iter();
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
 
-        unsafe {
-            self.usb0.set_tx_ack_active(endpoint_number);
-        }
-
-        // check if output FIFO is empty
-        let mut timeout = 0;
-        while self.usb0.ep_in.have().read().have().bit() {
-            if timeout == 0 {
-                warn!("  moondancer clear tx ep{}", endpoint_number);
-            } else if timeout > hal::usb::DEFAULT_TIMEOUT {
-                self.usb0.ep_in.reset().write(|w| w.reset().bit(true));
-                unsafe {
-                    self.usb0.clear_tx_ack_active(endpoint_number);
-                }
-                error!("  moondancer clear tx timeout ep{}", endpoint_number);
-                return Err(GreatError::StreamIoctlTimeout);
-            }
-            timeout += 1;
+        // check if ep_in is available
+        if self.usb0.ep_in_busy(endpoint_number, "moondancer::write_endpoint()") {
+            return Err(GreatError::StreamIoctlTimeout);
         }
 
         // write data out to EP_IN, splitting into packets of max_packet_size
@@ -736,24 +714,12 @@ impl Moondancer {
                     .epno()
                     .write(|w| unsafe { w.epno().bits(endpoint_number) });
 
-                // TODO should we wait for send complete interrupt to fire
-                // or do we eke out the smallest bit of performance if we
-                // just wait for the FIFO to empty?
-                let mut timeout = 0;
-                //while !self.usb0.ep_in.idle().read().idle().bit() {
-                //while self.usb0.ep_in.have().read().have().bit() {
-                while unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
-                    timeout += 1;
-                    if timeout > hal::usb::DEFAULT_TIMEOUT {
-                        unsafe {
-                            self.usb0.clear_tx_ack_active(endpoint_number);
-                        }
-                        log::error!(
-                            "moondancer::write_endpoint timed out after {} bytes",
-                            bytes_written
-                        );
-                        return Err(GreatError::StreamIoctlTimeout);
-                    }
+                if self.usb0.ep_in_busy(endpoint_number, "moondancer::write_endpoint()") {
+                    log::error!(
+                        "moondancer::write_endpoint timed out after {} bytes",
+                        bytes_written
+                    );
+                    return Err(GreatError::StreamIoctlTimeout);
                 }
             }
         }
@@ -777,20 +743,13 @@ impl Moondancer {
         }
 
         // wait for send to complete if we're blocking
-        let mut timeout = 0;
-        while blocking & unsafe { self.usb0.is_tx_ack_active(endpoint_number) } {
-            timeout += 1;
-            if timeout > hal::usb::DEFAULT_TIMEOUT {
-                unsafe {
-                    self.usb0.clear_tx_ack_active(endpoint_number);
-                }
-                log::error!(
-                    "moondancer::write_endpoint timed out after {} bytes during write of {} bytes",
-                    payload_length,
-                    bytes_written
-                );
-                return Err(GreatError::StreamIoctlTimeout);
-            }
+        if blocking && self.usb0.ep_in_busy(endpoint_number, "moondancer::write_control_endpoint()") {
+            log::error!(
+                "moondancer::write_endpoint timed out after {} bytes during write of {} bytes",
+                payload_length,
+                bytes_written
+            );
+            return Err(GreatError::StreamIoctlTimeout);
         }
 
         log::debug!(
