@@ -87,9 +87,14 @@ bitstreams: detect-fpga-toolchain analyzer.bit selftest.bit facedancer.bit
 # - environment checks --------------------------------------------------------
 
 detect-fpga-toolchain:
-	@which nextpnr-ecp5 > /dev/null 2>&1 || [ $$? -eq 0 ] \
-		|| ( echo "No FPGA toolchain detected. Please install: https://github.com/YosysHQ/oss-cad-suite-build/" ; exit 1)
-	@echo "Using FPGA toolchain: $(shell dirname $(shell which nextpnr-ecp5))" \
+	@if which nextpnr-ecp5 > /dev/null 2>&1; then \
+		echo "Using Yosys FPGA toolchain: $(shell dirname $(shell which nextpnr-ecp5))" ; \
+	elif which yowasp-nextpnr-ecp5 > /dev/null 2>&1; then \
+		echo "Using YoWASP FPGA toolchain: $(shell dirname $(shell which yowasp-nextpnr-ecp5))" ; \
+	else; \
+		echo "No FPGA toolchain detected. Please install: https://github.com/YosysHQ/oss-cad-suite-build/"; \
+		exit 1 ; \
+	fi;
 
 detect-rust-toolchain:
 	@which rustup > /dev/null 2>&1 || [ $$? -eq 0 ] \
