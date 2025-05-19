@@ -16,10 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 >
 > Please refer to the [v0.1.x](https://github.com/greatscottgadgets/cynthion/tree/v0.1.x) branch for compatibility with older `0.1.x` releases.
 
----
-
 ### Changed
 * Update luna-soc usage to 0.3.x
+
+---
 
 ## [0.1.8] - 2024-11-25
 ### Changed
@@ -29,6 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Initial release
 
-[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.8...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.2.0...HEAD
+[0.2.0]: https://github.com/greatscottgadgets/cynthion/compare/0.1.8...0.2.0
 [0.1.8]: https://github.com/greatscottgadgets/cynthion/compare/0.1.1...0.1.8
 [0.1.1]: https://github.com/greatscottgadgets/cynthion/releases/tag/0.1.1
