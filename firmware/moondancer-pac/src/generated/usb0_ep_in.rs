@@ -1,151 +1,104 @@
 #[repr(C)]
 #[doc = "Register block"]
 pub struct RegisterBlock {
-    data: DATA,
-    epno: EPNO,
-    reset: RESET,
+    endpoint: ENDPOINT,
     stall: STALL,
-    idle: IDLE,
-    have: HAVE,
-    pend: PEND,
     pid: PID,
-    nak: NAK,
-    _reserved9: [u8; 0x1c],
-    ev_status: EV_STATUS,
-    ev_pending: EV_PENDING,
+    _reserved3: [u8; 0x01],
+    status: STATUS,
+    reset: RESET,
+    data: DATA,
+    _reserved6: [u8; 0x06],
     ev_enable: EV_ENABLE,
+    ev_pending: EV_PENDING,
 }
 impl RegisterBlock {
-    #[doc = "0x00 - usb0_ep_in data register"]
+    #[doc = "0x00 - Endpoint register number: Contains the endpoint the enqueued packet is to be transmitted on. Writing to this field marks the relevant packet as ready to transmit; and thus should only be written after a full packet has been written into the FIFO. If no data has been placed into the DATA FIFO, a zero-length packet is generated. Note that any IN requests that do not match the endpoint number are automatically NAK'd."]
     #[inline(always)]
-    pub const fn data(&self) -> &DATA {
-        &self.data
+    pub const fn endpoint(&self) -> &ENDPOINT {
+        &self.endpoint
     }
-    #[doc = "0x04 - usb0_ep_in epno register"]
-    #[inline(always)]
-    pub const fn epno(&self) -> &EPNO {
-        &self.epno
-    }
-    #[doc = "0x08 - usb0_ep_in reset register"]
-    #[inline(always)]
-    pub const fn reset(&self) -> &RESET {
-        &self.reset
-    }
-    #[doc = "0x0c - usb0_ep_in stall register"]
+    #[doc = "0x01 - Stall register stalled: When this field contains '1', any IN tokens targeting `epno` will be responded to with a STALL token, rather than DATA or a NAK. For EP0, this field will automatically be cleared when a new SETUP token is received."]
     #[inline(always)]
     pub const fn stall(&self) -> &STALL {
         &self.stall
     }
-    #[doc = "0x10 - usb0_ep_in idle register"]
-    #[inline(always)]
-    pub const fn idle(&self) -> &IDLE {
-        &self.idle
-    }
-    #[doc = "0x14 - usb0_ep_in have register"]
-    #[inline(always)]
-    pub const fn have(&self) -> &HAVE {
-        &self.have
-    }
-    #[doc = "0x18 - usb0_ep_in pend register"]
-    #[inline(always)]
-    pub const fn pend(&self) -> &PEND {
-        &self.pend
-    }
-    #[doc = "0x1c - usb0_ep_in pid register"]
+    #[doc = "0x02 - Pid register toggle: Sets the current PID toggle bit for the given endpoint."]
     #[inline(always)]
     pub const fn pid(&self) -> &PID {
         &self.pid
     }
-    #[doc = "0x20 - usb0_ep_in nak register"]
+    #[doc = "0x04 - Status register nak: Contains a bitmask of endpoints that have responded with a NAK since the last read of this register. epno: Contains the endpoint being transmitted on. idle: This value is `1` if no packet is actively being transmitted. have: This value is `1` if data is present in the transmit FIFO. pid: Contains the current PID toggle bit for the given endpoint."]
     #[inline(always)]
-    pub const fn nak(&self) -> &NAK {
-        &self.nak
+    pub const fn status(&self) -> &STATUS {
+        &self.status
     }
-    #[doc = "0x40 - usb0_ep_in ev_status register"]
+    #[doc = "0x08 - Reset register fifo: A write to this field Clears the FIFO without transmitting."]
     #[inline(always)]
-    pub const fn ev_status(&self) -> &EV_STATUS {
-        &self.ev_status
+    pub const fn reset(&self) -> &RESET {
+        &self.reset
     }
-    #[doc = "0x44 - usb0_ep_in ev_pending register"]
+    #[doc = "0x09 - Data register Each write enqueues a byte to be transmitted; gradually building a single packet to be transmitted. This queue should only ever contain a single packet; it is the software's responsibility to handle breaking requests down into packets."]
     #[inline(always)]
-    pub const fn ev_pending(&self) -> &EV_PENDING {
-        &self.ev_pending
+    pub const fn data(&self) -> &DATA {
+        &self.data
     }
-    #[doc = "0x48 - usb0_ep_in ev_enable register"]
+    #[doc = "0x10 - A CSR register. Parameters ---------- fields : :class:`dict` or :class:`list` or :class:`Field` Collection of register fields. If ``None`` (default), a dict is populated from Python :term:`variable annotations &lt;python:variable annotations>`. ``fields`` is used to create a :class:`FieldActionMap`, :class:`FieldActionArray`, or :class:`FieldAction`, depending on its type (dict, list, or Field). Interface attributes -------------------- element : :class:`Element` Interface between this register and a CSR bus primitive. Attributes ---------- field : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Collection of field instances. f : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Shorthand for :attr:`Register.field`. Raises ------ :exc:`TypeError` If ``fields`` is neither ``None``, a :class:`dict`, a :class:`list`, or a :class:`Field`. :exc:`ValueError` If ``fields`` is not ``None`` and at least one variable annotation is a :class:`Field`. :exc:`ValueError` If ``element.access`` is not readable and at least one field is readable. :exc:`ValueError` If ``element.access`` is not writable and at least one field is writable."]
     #[inline(always)]
     pub const fn ev_enable(&self) -> &EV_ENABLE {
         &self.ev_enable
     }
+    #[doc = "0x11 - A CSR register. Parameters ---------- fields : :class:`dict` or :class:`list` or :class:`Field` Collection of register fields. If ``None`` (default), a dict is populated from Python :term:`variable annotations &lt;python:variable annotations>`. ``fields`` is used to create a :class:`FieldActionMap`, :class:`FieldActionArray`, or :class:`FieldAction`, depending on its type (dict, list, or Field). Interface attributes -------------------- element : :class:`Element` Interface between this register and a CSR bus primitive. Attributes ---------- field : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Collection of field instances. f : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Shorthand for :attr:`Register.field`. Raises ------ :exc:`TypeError` If ``fields`` is neither ``None``, a :class:`dict`, a :class:`list`, or a :class:`Field`. :exc:`ValueError` If ``fields`` is not ``None`` and at least one variable annotation is a :class:`Field`. :exc:`ValueError` If ``element.access`` is not readable and at least one field is readable. :exc:`ValueError` If ``element.access`` is not writable and at least one field is writable."]
+    #[inline(always)]
+    pub const fn ev_pending(&self) -> &EV_PENDING {
+        &self.ev_pending
+    }
 }
-#[doc = "data (w) register accessor: usb0_ep_in data register\n\nYou can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`data::W`]. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@data`]
+#[doc = "endpoint (rw) register accessor: Endpoint register number: Contains the endpoint the enqueued packet is to be transmitted on. Writing to this field marks the relevant packet as ready to transmit; and thus should only be written after a full packet has been written into the FIFO. If no data has been placed into the DATA FIFO, a zero-length packet is generated. Note that any IN requests that do not match the endpoint number are automatically NAK'd.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`endpoint::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`endpoint::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@endpoint`]
 module"]
-#[doc(alias = "data")]
-pub type DATA = crate::Reg<data::DATA_SPEC>;
-#[doc = "usb0_ep_in data register"]
-pub mod data;
-#[doc = "epno (rw) register accessor: usb0_ep_in epno register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`epno::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`epno::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@epno`]
-module"]
-#[doc(alias = "epno")]
-pub type EPNO = crate::Reg<epno::EPNO_SPEC>;
-#[doc = "usb0_ep_in epno register"]
-pub mod epno;
-#[doc = "reset (w) register accessor: usb0_ep_in reset register\n\nYou can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`reset::W`]. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@reset`]
-module"]
-#[doc(alias = "reset")]
-pub type RESET = crate::Reg<reset::RESET_SPEC>;
-#[doc = "usb0_ep_in reset register"]
-pub mod reset;
-#[doc = "stall (rw) register accessor: usb0_ep_in stall register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`stall::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`stall::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@stall`]
+#[doc(alias = "endpoint")]
+pub type ENDPOINT = crate::Reg<endpoint::ENDPOINT_SPEC>;
+#[doc = "Endpoint register number: Contains the endpoint the enqueued packet is to be transmitted on. Writing to this field marks the relevant packet as ready to transmit; and thus should only be written after a full packet has been written into the FIFO. If no data has been placed into the DATA FIFO, a zero-length packet is generated. Note that any IN requests that do not match the endpoint number are automatically NAK'd."]
+pub mod endpoint;
+#[doc = "stall (rw) register accessor: Stall register stalled: When this field contains '1', any IN tokens targeting `epno` will be responded to with a STALL token, rather than DATA or a NAK. For EP0, this field will automatically be cleared when a new SETUP token is received.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`stall::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`stall::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@stall`]
 module"]
 #[doc(alias = "stall")]
 pub type STALL = crate::Reg<stall::STALL_SPEC>;
-#[doc = "usb0_ep_in stall register"]
+#[doc = "Stall register stalled: When this field contains '1', any IN tokens targeting `epno` will be responded to with a STALL token, rather than DATA or a NAK. For EP0, this field will automatically be cleared when a new SETUP token is received."]
 pub mod stall;
-#[doc = "idle (r) register accessor: usb0_ep_in idle register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`idle::R`].  See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@idle`]
-module"]
-#[doc(alias = "idle")]
-pub type IDLE = crate::Reg<idle::IDLE_SPEC>;
-#[doc = "usb0_ep_in idle register"]
-pub mod idle;
-#[doc = "have (r) register accessor: usb0_ep_in have register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`have::R`].  See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@have`]
-module"]
-#[doc(alias = "have")]
-pub type HAVE = crate::Reg<have::HAVE_SPEC>;
-#[doc = "usb0_ep_in have register"]
-pub mod have;
-#[doc = "pend (r) register accessor: usb0_ep_in pend register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`pend::R`].  See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@pend`]
-module"]
-#[doc(alias = "pend")]
-pub type PEND = crate::Reg<pend::PEND_SPEC>;
-#[doc = "usb0_ep_in pend register"]
-pub mod pend;
-#[doc = "pid (rw) register accessor: usb0_ep_in pid register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`pid::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`pid::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@pid`]
+#[doc = "pid (rw) register accessor: Pid register toggle: Sets the current PID toggle bit for the given endpoint.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`pid::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`pid::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@pid`]
 module"]
 #[doc(alias = "pid")]
 pub type PID = crate::Reg<pid::PID_SPEC>;
-#[doc = "usb0_ep_in pid register"]
+#[doc = "Pid register toggle: Sets the current PID toggle bit for the given endpoint."]
 pub mod pid;
-#[doc = "nak (r) register accessor: usb0_ep_in nak register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`nak::R`].  See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@nak`]
+#[doc = "status (rw) register accessor: Status register nak: Contains a bitmask of endpoints that have responded with a NAK since the last read of this register. epno: Contains the endpoint being transmitted on. idle: This value is `1` if no packet is actively being transmitted. have: This value is `1` if data is present in the transmit FIFO. pid: Contains the current PID toggle bit for the given endpoint.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`status::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`status::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@status`]
 module"]
-#[doc(alias = "nak")]
-pub type NAK = crate::Reg<nak::NAK_SPEC>;
-#[doc = "usb0_ep_in nak register"]
-pub mod nak;
-#[doc = "ev_status (r) register accessor: usb0_ep_in ev_status register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`ev_status::R`].  See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@ev_status`]
+#[doc(alias = "status")]
+pub type STATUS = crate::Reg<status::STATUS_SPEC>;
+#[doc = "Status register nak: Contains a bitmask of endpoints that have responded with a NAK since the last read of this register. epno: Contains the endpoint being transmitted on. idle: This value is `1` if no packet is actively being transmitted. have: This value is `1` if data is present in the transmit FIFO. pid: Contains the current PID toggle bit for the given endpoint."]
+pub mod status;
+#[doc = "reset (rw) register accessor: Reset register fifo: A write to this field Clears the FIFO without transmitting.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`reset::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`reset::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@reset`]
 module"]
-#[doc(alias = "ev_status")]
-pub type EV_STATUS = crate::Reg<ev_status::EV_STATUS_SPEC>;
-#[doc = "usb0_ep_in ev_status register"]
-pub mod ev_status;
-#[doc = "ev_pending (rw) register accessor: usb0_ep_in ev_pending register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`ev_pending::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`ev_pending::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@ev_pending`]
+#[doc(alias = "reset")]
+pub type RESET = crate::Reg<reset::RESET_SPEC>;
+#[doc = "Reset register fifo: A write to this field Clears the FIFO without transmitting."]
+pub mod reset;
+#[doc = "data (rw) register accessor: Data register Each write enqueues a byte to be transmitted; gradually building a single packet to be transmitted. This queue should only ever contain a single packet; it is the software's responsibility to handle breaking requests down into packets.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`data::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`data::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@data`]
 module"]
-#[doc(alias = "ev_pending")]
-pub type EV_PENDING = crate::Reg<ev_pending::EV_PENDING_SPEC>;
-#[doc = "usb0_ep_in ev_pending register"]
-pub mod ev_pending;
-#[doc = "ev_enable (rw) register accessor: usb0_ep_in ev_enable register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`ev_enable::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`ev_enable::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@ev_enable`]
+#[doc(alias = "data")]
+pub type DATA = crate::Reg<data::DATA_SPEC>;
+#[doc = "Data register Each write enqueues a byte to be transmitted; gradually building a single packet to be transmitted. This queue should only ever contain a single packet; it is the software's responsibility to handle breaking requests down into packets."]
+pub mod data;
+#[doc = "ev_enable (rw) register accessor: A CSR register. Parameters ---------- fields : :class:`dict` or :class:`list` or :class:`Field` Collection of register fields. If ``None`` (default), a dict is populated from Python :term:`variable annotations &lt;python:variable annotations>`. ``fields`` is used to create a :class:`FieldActionMap`, :class:`FieldActionArray`, or :class:`FieldAction`, depending on its type (dict, list, or Field). Interface attributes -------------------- element : :class:`Element` Interface between this register and a CSR bus primitive. Attributes ---------- field : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Collection of field instances. f : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Shorthand for :attr:`Register.field`. Raises ------ :exc:`TypeError` If ``fields`` is neither ``None``, a :class:`dict`, a :class:`list`, or a :class:`Field`. :exc:`ValueError` If ``fields`` is not ``None`` and at least one variable annotation is a :class:`Field`. :exc:`ValueError` If ``element.access`` is not readable and at least one field is readable. :exc:`ValueError` If ``element.access`` is not writable and at least one field is writable.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`ev_enable::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`ev_enable::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@ev_enable`]
 module"]
 #[doc(alias = "ev_enable")]
 pub type EV_ENABLE = crate::Reg<ev_enable::EV_ENABLE_SPEC>;
-#[doc = "usb0_ep_in ev_enable register"]
+#[doc = "A CSR register. Parameters ---------- fields : :class:`dict` or :class:`list` or :class:`Field` Collection of register fields. If ``None`` (default), a dict is populated from Python :term:`variable annotations &lt;python:variable annotations>`. ``fields`` is used to create a :class:`FieldActionMap`, :class:`FieldActionArray`, or :class:`FieldAction`, depending on its type (dict, list, or Field). Interface attributes -------------------- element : :class:`Element` Interface between this register and a CSR bus primitive. Attributes ---------- field : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Collection of field instances. f : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Shorthand for :attr:`Register.field`. Raises ------ :exc:`TypeError` If ``fields`` is neither ``None``, a :class:`dict`, a :class:`list`, or a :class:`Field`. :exc:`ValueError` If ``fields`` is not ``None`` and at least one variable annotation is a :class:`Field`. :exc:`ValueError` If ``element.access`` is not readable and at least one field is readable. :exc:`ValueError` If ``element.access`` is not writable and at least one field is writable."]
 pub mod ev_enable;
+#[doc = "ev_pending (rw) register accessor: A CSR register. Parameters ---------- fields : :class:`dict` or :class:`list` or :class:`Field` Collection of register fields. If ``None`` (default), a dict is populated from Python :term:`variable annotations &lt;python:variable annotations>`. ``fields`` is used to create a :class:`FieldActionMap`, :class:`FieldActionArray`, or :class:`FieldAction`, depending on its type (dict, list, or Field). Interface attributes -------------------- element : :class:`Element` Interface between this register and a CSR bus primitive. Attributes ---------- field : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Collection of field instances. f : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Shorthand for :attr:`Register.field`. Raises ------ :exc:`TypeError` If ``fields`` is neither ``None``, a :class:`dict`, a :class:`list`, or a :class:`Field`. :exc:`ValueError` If ``fields`` is not ``None`` and at least one variable annotation is a :class:`Field`. :exc:`ValueError` If ``element.access`` is not readable and at least one field is readable. :exc:`ValueError` If ``element.access`` is not writable and at least one field is writable.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`ev_pending::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`ev_pending::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@ev_pending`]
+module"]
+#[doc(alias = "ev_pending")]
+pub type EV_PENDING = crate::Reg<ev_pending::EV_PENDING_SPEC>;
+#[doc = "A CSR register. Parameters ---------- fields : :class:`dict` or :class:`list` or :class:`Field` Collection of register fields. If ``None`` (default), a dict is populated from Python :term:`variable annotations &lt;python:variable annotations>`. ``fields`` is used to create a :class:`FieldActionMap`, :class:`FieldActionArray`, or :class:`FieldAction`, depending on its type (dict, list, or Field). Interface attributes -------------------- element : :class:`Element` Interface between this register and a CSR bus primitive. Attributes ---------- field : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Collection of field instances. f : :class:`FieldActionMap` or :class:`FieldActionArray` or :class:`FieldAction` Shorthand for :attr:`Register.field`. Raises ------ :exc:`TypeError` If ``fields`` is neither ``None``, a :class:`dict`, a :class:`list`, or a :class:`Field`. :exc:`ValueError` If ``fields`` is not ``None`` and at least one variable annotation is a :class:`Field`. :exc:`ValueError` If ``element.access`` is not readable and at least one field is readable. :exc:`ValueError` If ``element.access`` is not writable and at least one field is writable."]
+pub mod ev_pending;

@@ -259,7 +259,7 @@ impl Moondancer {
         unsafe {
             riscv::asm::delay(20_000_000);
         }
-        let speed: Speed = self.usb0.controller.speed().read().speed().bits().into();
+        let speed: Speed = self.usb0.device.status().read().speed().bits().into();
 
         log::info!("Moondancer connected {:?}-speed device to host.", speed);
 
@@ -592,13 +592,13 @@ impl Moondancer {
         _arguments: &[u8],
     ) -> GreatResult<impl Iterator<Item = u8>> {
         // 0. clear receive fifo in case the previous transaction wasn't handled
-        if self.usb0.ep_out.have().read().have().bit() {
+        if self.usb0.ep_out.status().read().have().bit() {
             log::warn!("Re-enabling interface with unread data: Usb0");
-            self.usb0.ep_out.reset().write(|w| w.reset().bit(true));
+            self.usb0.ep_out.reset().write(|w| w.fifo().bit(true));
         }
 
         // 1. re-enable ep_out interface
-        self.usb0.ep_out.enable().write(|w| w.enable().bit(true));
+        self.usb0.ep_out.enable().write(|w| w.enabled().bit(true));
 
         debug!("MD moondancer::ep_out_interface_enable()");
 
@@ -701,7 +701,7 @@ impl Moondancer {
             self.usb0
                 .ep_in
                 .data()
-                .write(|w| unsafe { w.data().bits(*byte) });
+                .write(|w| unsafe { w.byte().bits(*byte) });
             bytes_written += 1;
 
             // send data if we've written max_packet_size
@@ -711,8 +711,8 @@ impl Moondancer {
                 }
                 self.usb0
                     .ep_in
-                    .epno()
-                    .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                    .endpoint()
+                    .write(|w| unsafe { w.number().bits(endpoint_number) });
 
                 if self.usb0.ep_in_busy(endpoint_number, "moondancer::write_endpoint()") {
                     log::error!(
@@ -738,8 +738,8 @@ impl Moondancer {
             }
             self.usb0
                 .ep_in
-                .epno()
-                .write(|w| unsafe { w.epno().bits(endpoint_number) });
+                .endpoint()
+                .write(|w| unsafe { w.number().bits(endpoint_number) });
         }
 
         // wait for send to complete if we're blocking
@@ -844,7 +844,7 @@ impl Moondancer {
     ///
     /// bitmask
     pub fn get_nak_status(&mut self, _arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
-        let nak_status = (self.usb0.ep_in.nak().read().bits() & 0xffff) as u16;
+        let nak_status = self.usb0.ep_in.status().read().nak().bits();
         Ok(nak_status.to_le_bytes().into_iter())
     }
 }
@@ -1045,6 +1045,7 @@ pub static VERBS: [Verb; 19] = [
 
 // - dispatch -----------------------------------------------------------------
 
+#[allow(clippy::too_many_lines)]
 impl GreatDispatch for Moondancer {
     fn dispatch(
         &mut self,

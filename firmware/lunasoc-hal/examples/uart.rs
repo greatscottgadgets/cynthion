@@ -12,11 +12,11 @@ use moondancer_pac as pac;
 use hal::hal::delay::DelayUs;
 
 lunasoc_hal::impl_serial! {
-    Serial: pac::UART,
+    Serial: pac::UART0,
 }
 
 lunasoc_hal::impl_timer! {
-    Timer: pac::TIMER,
+    Timer: pac::TIMER0,
 }
 
 const SYSTEM_CLOCK_FREQUENCY: u32 = pac::clock::sysclk();
@@ -26,8 +26,8 @@ fn main() -> ! {
     let peripherals = pac::Peripherals::take().unwrap();
 
     let leds = &peripherals.LEDS;
-    let mut serial = Serial::new(peripherals.UART);
-    let mut timer = Timer::new(peripherals.TIMER, SYSTEM_CLOCK_FREQUENCY);
+    let mut serial = Serial::new(peripherals.UART0);
+    let mut timer = Timer::new(peripherals.TIMER0, SYSTEM_CLOCK_FREQUENCY);
 
     writeln!(serial, "Peripherals initialized, entering main loop.").unwrap();
 
@@ -57,7 +57,6 @@ fn main() -> ! {
             }
         }
 
-        leds.output()
-            .write(|w| unsafe { w.output().bits(led_state) });
+        leds.output().write(|w| unsafe { w.bits(led_state) });
     }
 }
