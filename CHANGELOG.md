@@ -9,6 +9,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+
+## [0.2.0] - 2025-05-19
+> This is a breaking release which primarily affects usage of the SoC peripherals and their register interfaces.
+>
+> For migration information see: https://github.com/greatscottgadgets/cynthion/pull/193
+>
+> Please refer to the [v0.1.x](https://github.com/greatscottgadgets/cynthion/tree/v0.1.x) branch for compatibility with older Cynthion `0.1.x` releases.
+
+### Changed
+* luna-usb 0.1.x has been deprecated in favour of luna-usb 0.2.x
+* luna-soc 0.2.x has been deprecated in favour of luna-soc 0.3.x
+* Amaranth 0.4.x has been deprecated in favour of Amaranth 0.5.x
+
+### Fixed
+* Gateware fails to build on new oss-cad-suite releases.
+
+---
+
 ## [0.1.9] - 2025-05-16
 ### Added
 * Cynthion Gateware Tutorials

@@ -8,6 +8,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+## [0.2.0] - 2025-05-19
+> This is a breaking release which primarily affects usage of the SoC peripherals and their register interfaces.
+>
+> For migration information see: https://github.com/greatscottgadgets/cynthion/pull/193
+>
+> Please refer to the [v0.1.x](https://github.com/greatscottgadgets/cynthion/tree/v0.1.x) branch for compatibility with older `0.1.x` releases.
+
+### Changed
+* Update luna-soc usage to 0.3.x
+
+---
+
 ## [0.1.8] - 2024-11-25
 ### Fixed
 - Un-prime all OUT endpoints and disable interface when connecting or disconnecting the device controller.
