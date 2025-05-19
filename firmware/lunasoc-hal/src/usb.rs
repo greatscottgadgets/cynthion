@@ -85,7 +85,7 @@ macro_rules! impl_usb {
                             unsafe {
                                 self.clear_tx_ack_active(endpoint_number);
                             }
-                            self.ep_in.reset().write(|w| w.reset().bit(true));
+                            self.ep_in.reset().write(|w| w.fifo().bit(true));
                             log::error!("  {} {} {} timeout", stringify!($USBX), message, endpoint_number);
                             return true;
                         }
