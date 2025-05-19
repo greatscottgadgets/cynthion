@@ -321,13 +321,16 @@ class Soc(Component):
             logging.warning("Platform does not support a user button for cpu reset")
 
         # wire up the cpu jtag signals
-        jtag0_io = platform.request("jtag", 0)
-        m.d.comb += [
-            self.cpu.jtag_tms     .eq(jtag0_io.tms.i),
-            self.cpu.jtag_tdi     .eq(jtag0_io.tdi.i),
-            jtag0_io.tdo.o        .eq(self.cpu.jtag_tdo),
-            self.cpu.jtag_tck     .eq(jtag0_io.tck.i),
-        ]
+        try:
+            jtag0_io = platform.request("jtag", 0)
+            m.d.comb += [
+                self.cpu.jtag_tms     .eq(jtag0_io.tms.i),
+                self.cpu.jtag_tdi     .eq(jtag0_io.tdi.i),
+                jtag0_io.tdo.o        .eq(self.cpu.jtag_tdo),
+                self.cpu.jtag_tck     .eq(jtag0_io.tck.i),
+            ]
+        except:
+            logging.warning("Platform does not support jtag")
 
         return DomainRenamer({
             "sync": self.domain,
