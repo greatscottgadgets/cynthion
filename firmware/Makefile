@@ -38,7 +38,7 @@ CLIPPY_DISABLE=-Aclippy::enum_glob_use \
 			   -Aclippy::inline_always \
 			   -Aclippy::multiple_crate_versions \
 			   -Aclippy::new-without-default \
-			   -A clippy::missing-panics-doc
+			   -Aclippy::missing-panics-doc
 
 clippy:
 	cargo clippy --target riscv32imac-unknown-none-elf -- -Dwarnings $(CLIPPY_GROUPS) $(CLIPPY_DISABLE)

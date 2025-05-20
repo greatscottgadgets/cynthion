@@ -18,18 +18,16 @@ impl R {
 impl W {
     #[doc = "Bit 0 - stalled field"]
     #[inline(always)]
-    #[must_use]
     pub fn stalled(&mut self) -> STALLED_W<STALL_SPEC> {
         STALLED_W::new(self, 0)
     }
     #[doc = "Bits 1:7 - _0 field"]
     #[inline(always)]
-    #[must_use]
     pub fn _0(&mut self) -> _0_W<STALL_SPEC> {
         _0_W::new(self, 1)
     }
 }
-#[doc = "Stall register stalled: Controls STALL'ing the active endpoint. Setting or clearing this bit will set or clear STALL on the provided endpoint. Endpoint STALLs persist even after `epno` is changed; so multiple endpoints can be stalled at once by writing their respective endpoint numbers into `epno` register and then setting their `stall` bits.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`stall::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`stall::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Stall register stalled: Controls STALL'ing the active endpoint. Setting or clearing this bit will set or clear STALL on the provided endpoint. Endpoint STALLs persist even after `epno` is changed; so multiple endpoints can be stalled at once by writing their respective endpoint numbers into `epno` register and then setting their `stall` bits.\n\nYou can [`read`](crate::Reg::read) this register and get [`stall::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`stall::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct STALL_SPEC;
 impl crate::RegisterSpec for STALL_SPEC {
     type Ux = u8;

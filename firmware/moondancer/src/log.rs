@@ -134,9 +134,6 @@ impl log::Log for CynthionLogger {
 ///
 /// Props: <https://stackoverflow.com/questions/50200268/>
 /// Props: <https://github.com/Simsys/arrform>
-///
-/// TODO Re-use buffer
-
 #[cfg(not(feature = "alloc"))]
 pub mod format_nostd {
     #[macro_export]
@@ -189,7 +186,7 @@ pub mod format_nostd {
             {
                 *i = b;
             }
-            self.cursor = usize::min(len, self.cursor + s.as_bytes().len());
+            self.cursor = usize::min(len, self.cursor + s.len());
             Ok(())
         }
     }

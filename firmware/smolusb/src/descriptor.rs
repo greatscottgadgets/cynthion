@@ -559,7 +559,7 @@ impl<'a> Utf16ByteIterator<'a> {
     }
 }
 
-impl<'a> Iterator for Utf16ByteIterator<'a> {
+impl Iterator for Utf16ByteIterator<'_> {
     type Item = u8;
     fn next(&mut self) -> Option<Self::Item> {
         match self.byte {

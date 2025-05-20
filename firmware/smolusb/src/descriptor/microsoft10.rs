@@ -59,7 +59,7 @@ pub struct StringDescriptor<'a> {
     _marker: PhantomData<&'a ()>,
 }
 
-impl<'a> StringDescriptor<'a> {
+impl StringDescriptor<'_> {
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
     pub const fn new(vendor_code: u8) -> Self {

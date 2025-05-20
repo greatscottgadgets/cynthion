@@ -5855,5 +5855,207 @@
         </register>
       </registers>
     </peripheral>
+    <peripheral>
+      <name>user0</name>
+      <groupName/>
+      <baseAddress>0xf0001600</baseAddress>
+      <addressBlock>
+        <offset>0</offset>
+        <size>0x04</size>
+        <usage>registers</usage>
+      </addressBlock>
+      <registers>
+        <register>
+          <name>Mode</name>
+          <description>Mode register.
+
+        This :class:`csr.Register` contains an array of ``pin_count`` read/write fields. Each field
+        is 2-bit wide and its possible values are defined by the :class:`PinMode` enumeration.
+
+        If ``pin_count`` is 8, then the register has the following fields:
+
+        .. bitfield::
+            :bits: 16
+
+                [
+                    { &quot;name&quot;: &quot;pin[0]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[1]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[2]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[3]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[4]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[5]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[6]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[7]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;RW&quot; },
+                ]
+
+        Parameters
+        ----------
+        pin_count : :class:`int`
+            Number of GPIO pins.
+        </description>
+          <addressOffset>0x0000</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>pin_0 field</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>2</bitWidth>
+              <bitRange>[1:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>Input</name>
+          <description>Input register.
+
+        This :class:`csr.Register` contains an array of ``pin_count`` read-only fields. Each field
+        is 1-bit wide and driven by the input of its associated pin in the :attr:`Peripheral.pins`
+        array.
+
+        Values sampled from pin inputs go through :attr:`Peripheral.input_stages` synchronization
+        stages (on a rising edge of ``ClockSignal(&quot;sync&quot;)``) before reaching the register.
+
+        If ``pin_count`` is 8, then the register has the following fields:
+
+        .. bitfield::
+            :bits: 8
+
+                [
+                    { &quot;name&quot;: &quot;pin[0]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;R&quot; },
+                    { &quot;name&quot;: &quot;pin[1]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;R&quot; },
+                    { &quot;name&quot;: &quot;pin[2]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;R&quot; },
+                    { &quot;name&quot;: &quot;pin[3]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;R&quot; },
+                    { &quot;name&quot;: &quot;pin[4]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;R&quot; },
+                    { &quot;name&quot;: &quot;pin[5]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;R&quot; },
+                    { &quot;name&quot;: &quot;pin[6]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;R&quot; },
+                    { &quot;name&quot;: &quot;pin[7]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;R&quot; },
+                ]
+
+        Parameters
+        ----------
+        pin_count : :class:`int`
+            Number of GPIO pins.
+        </description>
+          <addressOffset>0x0001</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>pin_0 field</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-only</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>Output</name>
+          <description>Output register.
+
+        This :class:`csr.Register` contains an array of ``pin_count`` read/write fields. Each field
+        is 1-bit wide and drives the output of its associated pin in the :attr:`Peripheral.pins`
+        array, depending on its associated :class:`~Peripheral.Mode` field.
+
+        If ``pin_count`` is 8, then the register has the following fields:
+
+        .. bitfield::
+            :bits: 8
+
+                [
+                    { &quot;name&quot;: &quot;pin[0]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[1]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[2]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[3]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[4]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[5]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[6]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;RW&quot; },
+                    { &quot;name&quot;: &quot;pin[7]&quot;, &quot;bits&quot;: 1, &quot;attr&quot;: &quot;RW&quot; },
+                ]
+
+        Parameters
+        ----------
+        pin_count : :class:`int`
+            Number of GPIO pins.
+        </description>
+          <addressOffset>0x0002</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pin_0</name>
+              <description>pin_0 field</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>read-write</access>
+            </field>
+          </fields>
+        </register>
+        <register>
+          <name>SetClr</name>
+          <description>Output set/clear register.
+
+        This :class:`csr.Register` contains an array of ``pin_count`` write-only fields. Each field
+        is 2-bit wide; writing it can modify its associated :class:`~Peripheral.Output` field as a
+        side-effect.
+
+        If ``pin_count`` is 8, then the register has the following fields:
+
+        .. bitfield::
+            :bits: 16
+
+                [
+                    { &quot;name&quot;: &quot;pin[0]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;W&quot; },
+                    { &quot;name&quot;: &quot;pin[1]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;W&quot; },
+                    { &quot;name&quot;: &quot;pin[2]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;W&quot; },
+                    { &quot;name&quot;: &quot;pin[3]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;W&quot; },
+                    { &quot;name&quot;: &quot;pin[4]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;W&quot; },
+                    { &quot;name&quot;: &quot;pin[5]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;W&quot; },
+                    { &quot;name&quot;: &quot;pin[6]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;W&quot; },
+                    { &quot;name&quot;: &quot;pin[7]&quot;, &quot;bits&quot;: 2, &quot;attr&quot;: &quot;W&quot; },
+                ]
+
+        - Writing `0b01` to a field sets its associated :class:`~Peripheral.Output` field.
+        - Writing `0b10` to a field clears its associated :class:`~Peripheral.Output` field.
+        - Writing `0b00` or `0b11` to a field has no side-effect.
+
+        Parameters
+        ----------
+        pin_count : :class:`int`
+            Number of GPIO pins.
+        </description>
+          <addressOffset>0x0003</addressOffset>
+          <size>8</size>
+          <resetValue>0x00</resetValue>
+          <access>read-write</access>
+          <fields>
+            <field>
+              <name>pin_0_set</name>
+              <description>pin_0_set field</description>
+              <bitOffset>0</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[0:0]</bitRange>
+              <access>write-only</access>
+            </field>
+            <field>
+              <name>pin_0_clr</name>
+              <description>pin_0_clr field</description>
+              <bitOffset>1</bitOffset>
+              <bitWidth>1</bitWidth>
+              <bitRange>[1:1]</bitRange>
+              <access>write-only</access>
+            </field>
+          </fields>
+        </register>
+      </registers>
+    </peripheral>
   </peripherals>
 </device>

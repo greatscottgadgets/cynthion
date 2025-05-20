@@ -24,7 +24,7 @@ pub struct Descriptors<'a> {
     pub microsoft10: Option<microsoft10::Descriptors<'a>>,
 }
 
-impl<'a> Descriptors<'a> {
+impl Descriptors<'_> {
     /// Calculates the total length of the descriptor and returns an updated instance.
     ///
     /// TODO ugly hack because I haven't figured out how to do this at compile time yet

@@ -644,13 +644,17 @@ impl Moondancer {
         );
 
         // wait for send to complete if we're blocking
-        if blocking && self.usb0.ep_in_busy(endpoint_number, "moondancer::write_control_endpoint()") {
-                log::error!(
+        if blocking
+            && self
+                .usb0
+                .ep_in_busy(endpoint_number, "moondancer::write_control_endpoint()")
+        {
+            log::error!(
                     "moondancer::write_control_endpoint timed out after {} bytes during write of {} bytes",
                     payload_length,
                     bytes_written
                 );
-                return Err(GreatError::StreamIoctlTimeout);
+            return Err(GreatError::StreamIoctlTimeout);
         }
 
         log::debug!(
@@ -691,7 +695,10 @@ impl Moondancer {
         let max_packet_size = self.ep_in_max_packet_size[endpoint_number as usize] as usize;
 
         // check if ep_in is available
-        if self.usb0.ep_in_busy(endpoint_number, "moondancer::write_endpoint()") {
+        if self
+            .usb0
+            .ep_in_busy(endpoint_number, "moondancer::write_endpoint()")
+        {
             return Err(GreatError::StreamIoctlTimeout);
         }
 
@@ -714,7 +721,10 @@ impl Moondancer {
                     .endpoint()
                     .write(|w| unsafe { w.number().bits(endpoint_number) });
 
-                if self.usb0.ep_in_busy(endpoint_number, "moondancer::write_endpoint()") {
+                if self
+                    .usb0
+                    .ep_in_busy(endpoint_number, "moondancer::write_endpoint()")
+                {
                     log::error!(
                         "moondancer::write_endpoint timed out after {} bytes",
                         bytes_written
@@ -743,7 +753,11 @@ impl Moondancer {
         }
 
         // wait for send to complete if we're blocking
-        if blocking && self.usb0.ep_in_busy(endpoint_number, "moondancer::write_control_endpoint()") {
+        if blocking
+            && self
+                .usb0
+                .ep_in_busy(endpoint_number, "moondancer::write_control_endpoint()")
+        {
             log::error!(
                 "moondancer::write_endpoint timed out after {} bytes during write of {} bytes",
                 payload_length,

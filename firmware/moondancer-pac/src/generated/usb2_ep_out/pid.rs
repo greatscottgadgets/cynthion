@@ -18,18 +18,16 @@ impl R {
 impl W {
     #[doc = "Bit 0 - toggle field"]
     #[inline(always)]
-    #[must_use]
     pub fn toggle(&mut self) -> TOGGLE_W<PID_SPEC> {
         TOGGLE_W::new(self, 0)
     }
     #[doc = "Bits 1:7 - _0 field"]
     #[inline(always)]
-    #[must_use]
     pub fn _0(&mut self) -> _0_W<PID_SPEC> {
         _0_W::new(self, 1)
     }
 }
-#[doc = "Pid register toggle: Sets the current PID toggle bit for the given endpoint.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`pid::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`pid::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Pid register toggle: Sets the current PID toggle bit for the given endpoint.\n\nYou can [`read`](crate::Reg::read) this register and get [`pid::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`pid::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct PID_SPEC;
 impl crate::RegisterSpec for PID_SPEC {
     type Ux = u8;

@@ -7,12 +7,11 @@ pub type DATA_W<'a, REG> = crate::FieldWriter<'a, REG, 8>;
 impl W {
     #[doc = "Bits 0:7 - data field"]
     #[inline(always)]
-    #[must_use]
     pub fn data(&mut self) -> DATA_W<TX_DATA_SPEC> {
         DATA_W::new(self, 0)
     }
 }
-#[doc = "valid to write to when tx_rdy is high, will trigger a transmit\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`tx_data::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`tx_data::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "valid to write to when tx_rdy is high, will trigger a transmit\n\nYou can [`read`](crate::Reg::read) this register and get [`tx_data::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`tx_data::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct TX_DATA_SPEC;
 impl crate::RegisterSpec for TX_DATA_SPEC {
     type Ux = u8;
