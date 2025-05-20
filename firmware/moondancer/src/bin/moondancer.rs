@@ -105,7 +105,8 @@ struct Firmware<'a> {
 
 // - lifecycle ----------------------------------------------------------------
 
-impl<'a> Firmware<'a> {
+impl Firmware<'_> {
+    #[allow(clippy::too_many_lines)]
     fn new(peripherals: pac::Peripherals) -> Self {
         // initialize libgreat class registry
         static CLASSES: [libgreat::gcp::Class; 6] = [
@@ -220,7 +221,11 @@ impl<'a> Firmware<'a> {
         // initialize libgreat classes
         let core = libgreat::gcp::class_core::Core::new(classes, moondancer::BOARD_INFORMATION);
         let moondancer = moondancer::gcp::moondancer::Moondancer::new(usb0);
-        let gpio = moondancer::gcp::gpio::Gpio::new(Some(peripherals.GPIO0), None, Some(peripherals.USER0));
+        let gpio = moondancer::gcp::gpio::Gpio::new(
+            Some(peripherals.GPIO0),
+            None,
+            Some(peripherals.USER0),
+        );
         let leds = moondancer::gcp::leds::Leds::new(peripherals.LEDS);
 
         Self {
@@ -332,7 +337,7 @@ impl<'a> Firmware<'a> {
 
 // - usb2 control handler -----------------------------------------------------
 
-impl<'a> Firmware<'a> {
+impl Firmware<'_> {
     /// Handle GCP vendor requests
     fn handle_vendor_request(&mut self, setup_packet: SetupPacket) -> GreatResult<()> {
         let direction = setup_packet.direction();
@@ -436,7 +441,7 @@ impl<'a> Firmware<'a> {
 
 // - libgreat command dispatch ------------------------------------------------
 
-impl<'a> Firmware<'a> {
+impl Firmware<'_> {
     fn dispatch_libgreat_request(&mut self) -> GreatResult<()> {
         let command_buffer = self.usb2_control.data();
 

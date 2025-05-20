@@ -10,7 +10,6 @@ use libgreat::gcp::{
     self, iter_to_response, GreatDispatch, GreatResponse, Verb, LIBGREAT_MAX_COMMAND_SIZE,
 };
 
-
 // - types --------------------------------------------------------------------
 
 #[allow(non_snake_case)]
@@ -41,7 +40,7 @@ pub mod _Mode {
 #[repr(u8)]
 pub enum Mode {
     InputOnly = 0b00,
-    PushPull  = 0b01,
+    PushPull = 0b01,
     OpenDrain = 0b10,
     Alternate = 0b11,
 }
@@ -55,10 +54,13 @@ pub struct Gpio {
     user0: Option<pac::USER0>,
 }
 
-
 impl Gpio {
     #[must_use]
-    pub fn new(gpio0: Option<pac::GPIO0>, gpio1: Option<pac::GPIO1>, user0: Option<pac::USER0>) -> Self {
+    pub fn new(
+        gpio0: Option<pac::GPIO0>,
+        gpio1: Option<pac::GPIO1>,
+        user0: Option<pac::USER0>,
+    ) -> Self {
         Self {
             gpio0,
             gpio1,
@@ -66,20 +68,13 @@ impl Gpio {
         }
     }
 
+    #[must_use]
     pub fn have_pin(&self, port: u8, pin: u8) -> bool {
         match (port, pin) {
-            (Port::Gpio0, 0..=7) => {
-                self.gpio0.is_some()
-            }
-            (Port::Gpio1, 0..=7) => {
-                self.gpio1.is_some()
-            }
-            (Port::User0, 0) => {
-                self.user0.is_some()
-            }
-            _ => {
-                false
-            }
+            (Port::Gpio0, 0..=7) => self.gpio0.is_some(),
+            (Port::Gpio1, 0..=7) => self.gpio1.is_some(),
+            (Port::User0, 0) => self.user0.is_some(),
+            _ => false,
         }
     }
 }
@@ -100,8 +95,11 @@ impl Gpio {
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
         if !self.have_pin(args.port, args.pin) {
-            log::error!("gpio::configure_pin() - invalid port/pin: ({}, {}) ",
-                        args.port, args.pin);
+            log::error!(
+                "gpio::configure_pin() - invalid port/pin: ({}, {}) ",
+                args.port,
+                args.pin
+            );
             return Err(GreatError::InvalidArgument);
         }
 
@@ -112,7 +110,11 @@ impl Gpio {
         if Self::is_output(args.mode) {
             self.port_write_output(args.port, args.pin, args.initial_value != 0)?;
         } else if args.initial_value != 0 {
-            log::warn!("gpion::configure_pin() - the given pin is not configured as an output: ({}, {})", args.port, args.pin);
+            log::warn!(
+                "gpion::configure_pin() - the given pin is not configured as an output: ({}, {})",
+                args.port,
+                args.pin
+            );
         }
 
         Ok([].into_iter())
@@ -137,11 +139,14 @@ impl Gpio {
     /// Reads the pin mode register of a GPIO pin or pins given tuples of (port, pin).
     ///
     /// Returns the 2-bit [Mode] register block for each pin.
-    pub fn get_pin_configurations(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+    pub fn get_pin_configurations(
+        &mut self,
+        arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
         #[derive(FromBytes, FromZeroes, Unaligned)]
         struct ArgPin {
-            port:   u8,
+            port: u8,
             number: u8,
         }
 
@@ -151,22 +156,31 @@ impl Gpio {
 
         // while we have pins to handle
         let mut byte_slice = arguments;
-        while let Some((pin, next)) =
-            zerocopy::Ref::<_, ArgPin>::new_from_prefix(byte_slice)
-        {
+        while let Some((pin, next)) = zerocopy::Ref::<_, ArgPin>::new_from_prefix(byte_slice) {
             if !self.have_pin(pin.port, pin.number) {
-                log::error!("gpio::get_pin_configurations() - unknown port/pin: ({}, {}) ",
-                            pin.port, pin.number);
+                log::error!(
+                    "gpio::get_pin_configurations() - unknown port/pin: ({}, {}) ",
+                    pin.port,
+                    pin.number
+                );
                 return Err(GreatError::InvalidArgument);
             } else if count >= configurations.len() {
-                log::warn!("gpio::get_pin_configurations() - can only return {} configurations.",
-                            configurations.len());
+                log::warn!(
+                    "gpio::get_pin_configurations() - can only return {} configurations.",
+                    configurations.len()
+                );
                 return Err(GreatError::InvalidArgument);
             }
 
             let mode = self.port_read_mode(pin.port, pin.number)?;
 
-            log::debug!("#{} port:{} pin:{} mode:{:#04b}", count, pin.port, pin.number, mode);
+            log::debug!(
+                "#{} port:{} pin:{} mode:{:#04b}",
+                count,
+                pin.port,
+                pin.number,
+                mode
+            );
 
             configurations[count] = mode;
             count += 1;
@@ -179,11 +193,14 @@ impl Gpio {
     /// Reads the direction of a GPIO pin or pins given tuples of (port, pin).
     ///
     /// Returns 1 for output; 0 for input.
-    pub fn get_pin_directions(&mut self, arguments: &[u8]) -> GreatResult<impl Iterator<Item = u8>> {
+    pub fn get_pin_directions(
+        &mut self,
+        arguments: &[u8],
+    ) -> GreatResult<impl Iterator<Item = u8>> {
         #[repr(C)]
         #[derive(FromBytes, FromZeroes, Unaligned)]
         struct ArgPin {
-            port:   u8,
+            port: u8,
             number: u8,
         }
 
@@ -193,23 +210,33 @@ impl Gpio {
 
         // while we have pins to handle
         let mut byte_slice = arguments;
-        while let Some((pin, next)) =
-            zerocopy::Ref::<_, ArgPin>::new_from_prefix(byte_slice)
-        {
+        while let Some((pin, next)) = zerocopy::Ref::<_, ArgPin>::new_from_prefix(byte_slice) {
             if !self.have_pin(pin.port, pin.number) {
-                log::error!("gpio::get_pin_directions() - unknown port/pin: ({}, {}) ",
-                            pin.port, pin.number);
+                log::error!(
+                    "gpio::get_pin_directions() - unknown port/pin: ({}, {}) ",
+                    pin.port,
+                    pin.number
+                );
                 return Err(GreatError::InvalidArgument);
             } else if count >= directions.len() {
-                log::warn!("gpio::get_pin_directions() - can only return {} configurations.",
-                            directions.len());
+                log::warn!(
+                    "gpio::get_pin_directions() - can only return {} configurations.",
+                    directions.len()
+                );
                 return Err(GreatError::InvalidArgument);
             }
 
             let mode = self.port_read_mode(pin.port, pin.number)?;
-            let direction = ((mode == Mode::PushPull as u8) || (mode == Mode::OpenDrain as u8)) as u8;
+            let direction =
+                u8::from((mode == Mode::PushPull as u8) || (mode == Mode::OpenDrain as u8));
 
-            log::debug!("#{} port:{} pin:{} direction:{:#03b}", count, pin.port, pin.number, direction);
+            log::debug!(
+                "#{} port:{} pin:{} direction:{:#03b}",
+                count,
+                pin.port,
+                pin.number,
+                direction
+            );
 
             directions[count] = direction;
             count += 1;
@@ -224,7 +251,7 @@ impl Gpio {
         #[repr(C)]
         #[derive(FromBytes, FromZeroes, Unaligned)]
         struct ArgPin {
-            port:   u8,
+            port: u8,
             number: u8,
         }
 
@@ -234,24 +261,33 @@ impl Gpio {
 
         // while we have pins to handle
         let mut byte_slice = arguments;
-        while let Some((pin, next)) =
-            zerocopy::Ref::<_, ArgPin>::new_from_prefix(byte_slice)
-        {
+        while let Some((pin, next)) = zerocopy::Ref::<_, ArgPin>::new_from_prefix(byte_slice) {
             if !self.have_pin(pin.port, pin.number) {
-                log::error!("gpio::read_pins() - unknown port/pin: ({}, {}) ",
-                            pin.port, pin.number);
+                log::error!(
+                    "gpio::read_pins() - unknown port/pin: ({}, {}) ",
+                    pin.port,
+                    pin.number
+                );
                 return Err(GreatError::InvalidArgument);
             } else if count >= values.len() {
-                log::error!("gpio::read_pins() - can only return {} values.",
-                            values.len());
+                log::error!(
+                    "gpio::read_pins() - can only return {} values.",
+                    values.len()
+                );
                 return Err(GreatError::InvalidArgument);
             }
 
             let value = self.port_read_input(pin.port, pin.number)?;
 
-            log::debug!("#{} port:{} pin:{} value:{}", count, pin.port, pin.number, value);
+            log::debug!(
+                "#{} port:{} pin:{} value:{}",
+                count,
+                pin.port,
+                pin.number,
+                value
+            );
 
-            values[count] = value as u8;
+            values[count] = u8::from(value);
             count += 1;
             byte_slice = next;
         }
@@ -264,19 +300,20 @@ impl Gpio {
         #[repr(C)]
         #[derive(FromBytes, FromZeroes, Unaligned)]
         struct ArgPin {
-            port:   u8,
+            port: u8,
             number: u8,
-            value:  u8,
+            value: u8,
         }
 
         // while we have pins to handle
         let mut byte_slice = arguments;
-        while let Some((pin, next)) =
-            zerocopy::Ref::<_, ArgPin>::new_from_prefix(byte_slice)
-        {
+        while let Some((pin, next)) = zerocopy::Ref::<_, ArgPin>::new_from_prefix(byte_slice) {
             if !self.have_pin(pin.port, pin.number) {
-                log::error!("gpio::write_pins() - unknown port/pin: ({}, {}) ",
-                            pin.port, pin.number);
+                log::error!(
+                    "gpio::write_pins() - unknown port/pin: ({}, {}) ",
+                    pin.port,
+                    pin.number
+                );
                 return Err(GreatError::InvalidArgument);
             }
 
@@ -287,7 +324,11 @@ impl Gpio {
             if Self::is_output(mode) {
                 self.port_write_output(pin.port, pin.number, pin.value != 0)?;
             } else {
-                log::warn!("gpion::write_pins() - the given pin is not configured as an output: ({}, {})", pin.port, pin.number);
+                log::warn!(
+                    "gpion::write_pins() - the given pin is not configured as an output: ({}, {})",
+                    pin.port,
+                    pin.number
+                );
             }
 
             byte_slice = next;
@@ -303,18 +344,36 @@ impl Gpio {
     pub fn port_read_input(&self, port: u8, pin: u8) -> GreatResult<bool> {
         let value = match (port, pin) {
             (Port::Gpio0, 0..=7) => {
-                let bits = self.gpio0.as_ref().ok_or(GreatError::InvalidArgument)?.input().read().bits();
+                let bits = self
+                    .gpio0
+                    .as_ref()
+                    .ok_or(GreatError::InvalidArgument)?
+                    .input()
+                    .read()
+                    .bits();
                 Self::read_input(bits, pin)
-            },
+            }
             (Port::Gpio1, 0..=7) => {
-                let bits = self.gpio1.as_ref().ok_or(GreatError::InvalidArgument)?.input().read().bits();
+                let bits = self
+                    .gpio1
+                    .as_ref()
+                    .ok_or(GreatError::InvalidArgument)?
+                    .input()
+                    .read()
+                    .bits();
                 Self::read_input(bits, pin)
-            },
+            }
             (Port::User0, 0) => {
-                let bits = self.user0.as_ref().ok_or(GreatError::InvalidArgument)?.input().read().bits();
+                let bits = self
+                    .user0
+                    .as_ref()
+                    .ok_or(GreatError::InvalidArgument)?
+                    .input()
+                    .read()
+                    .bits();
                 Self::read_input(bits, pin)
-            },
-            _ => return Err(GreatError::InvalidArgument)
+            }
+            _ => return Err(GreatError::InvalidArgument),
         };
         Ok(value)
     }
@@ -322,19 +381,27 @@ impl Gpio {
     pub fn port_write_output(&self, port: u8, pin: u8, value: bool) -> GreatResult<()> {
         match (port, pin) {
             (Port::Gpio0, 0..=7) => {
-                self.gpio0.as_ref().ok_or(GreatError::InvalidArgument)?.output().modify(|r, w| {
-                    let bits = Self::write_output(r.bits(), pin, value);
-                    unsafe { w.bits(bits as u8) }
-                });
-            },
+                self.gpio0
+                    .as_ref()
+                    .ok_or(GreatError::InvalidArgument)?
+                    .output()
+                    .modify(|r, w| {
+                        let bits = Self::write_output(r.bits(), pin, value);
+                        unsafe { w.bits(bits) }
+                    });
+            }
             (Port::Gpio1, 0..=7) => {
-                self.gpio1.as_ref().ok_or(GreatError::InvalidArgument)?.output().modify(|r, w| {
-                    let bits = Self::write_output(r.bits(), pin, value);
-                    unsafe { w.bits(bits as u8) }
-                });
-            },
+                self.gpio1
+                    .as_ref()
+                    .ok_or(GreatError::InvalidArgument)?
+                    .output()
+                    .modify(|r, w| {
+                        let bits = Self::write_output(r.bits(), pin, value);
+                        unsafe { w.bits(bits) }
+                    });
+            }
             // Port::User0 is a button and cannot be written to.
-            _ => return Err(GreatError::InvalidArgument)
+            _ => return Err(GreatError::InvalidArgument),
         }
         Ok(())
     }
@@ -342,24 +409,36 @@ impl Gpio {
     pub fn port_write_mode(&self, port: u8, pin: u8, mode: u8) -> GreatResult<()> {
         match (port, pin, mode) {
             (Port::Gpio0, 0..=7, 0..=3) => {
-                self.gpio0.as_ref().ok_or(GreatError::InvalidArgument)?.mode().modify(|r, w| {
-                    let bits = Self::write_mode(r.bits(), pin, mode);
-                    unsafe { w.bits(bits) }
-                });
+                self.gpio0
+                    .as_ref()
+                    .ok_or(GreatError::InvalidArgument)?
+                    .mode()
+                    .modify(|r, w| {
+                        let bits = Self::write_mode(r.bits(), pin, mode);
+                        unsafe { w.bits(bits) }
+                    });
             }
             (Port::Gpio1, 0..=7, 0..=3) => {
-                self.gpio1.as_ref().ok_or(GreatError::InvalidArgument)?.mode().modify(|r, w| {
-                    let bits = Self::write_mode(r.bits(), pin, mode);
-                    unsafe { w.bits(bits) }
-                });
-            },
+                self.gpio1
+                    .as_ref()
+                    .ok_or(GreatError::InvalidArgument)?
+                    .mode()
+                    .modify(|r, w| {
+                        let bits = Self::write_mode(r.bits(), pin, mode);
+                        unsafe { w.bits(bits) }
+                    });
+            }
             (Port::User0, 0, 0) => {
-                self.user0.as_ref().ok_or(GreatError::InvalidArgument)?.mode().modify(|r, w| {
-                    let bits = Self::write_mode(r.bits().into(), pin, mode) as u8;
-                    unsafe { w.bits(bits) }
-                });
-            },
-            _ => return Err(GreatError::InvalidArgument)
+                self.user0
+                    .as_ref()
+                    .ok_or(GreatError::InvalidArgument)?
+                    .mode()
+                    .modify(|r, w| {
+                        let bits = Self::write_mode(r.bits().into(), pin, mode) as u8;
+                        unsafe { w.bits(bits) }
+                    });
+            }
+            _ => return Err(GreatError::InvalidArgument),
         }
         Ok(())
     }
@@ -367,18 +446,36 @@ impl Gpio {
     pub fn port_read_mode(&self, port: u8, pin: u8) -> GreatResult<u8> {
         let mode = match (port, pin) {
             (Port::Gpio0, 0..=7) => {
-                let bits = self.gpio0.as_ref().ok_or(GreatError::InvalidArgument)?.mode().read().bits();
+                let bits = self
+                    .gpio0
+                    .as_ref()
+                    .ok_or(GreatError::InvalidArgument)?
+                    .mode()
+                    .read()
+                    .bits();
                 Self::read_mode(bits, pin)
-            },
+            }
             (Port::Gpio1, 0..=7) => {
-                let bits = self.gpio1.as_ref().ok_or(GreatError::InvalidArgument)?.mode().read().bits();
+                let bits = self
+                    .gpio1
+                    .as_ref()
+                    .ok_or(GreatError::InvalidArgument)?
+                    .mode()
+                    .read()
+                    .bits();
                 Self::read_mode(bits, pin)
-            },
+            }
             (Port::User0, 0) => {
-                let bits = self.user0.as_ref().ok_or(GreatError::InvalidArgument)?.mode().read().bits();
+                let bits = self
+                    .user0
+                    .as_ref()
+                    .ok_or(GreatError::InvalidArgument)?
+                    .mode()
+                    .read()
+                    .bits();
                 Self::read_mode(bits.into(), pin)
-            },
-            _ => return Err(GreatError::InvalidArgument)
+            }
+            _ => return Err(GreatError::InvalidArgument),
         };
         Ok(mode)
     }
@@ -393,7 +490,7 @@ impl Gpio {
     /// Writes 1 bit at pin index.
     fn write_output(bits: u8, pin: u8, value: bool) -> u8 {
         assert!(u32::from(pin) < u8::BITS);
-        let value = value as u8;
+        let value = u8::from(value);
 
         let mask = (0b1 << pin) ^ (u8::pow(2, u8::BITS) - 1);
         (bits & mask) | (value << pin)
@@ -415,7 +512,7 @@ impl Gpio {
         assert!(mode < 4);
 
         let mask = (0b11 << index) ^ (u16::pow(2, u16::BITS) - 1);
-        (bits & mask) | (mode << index) as u16
+        (bits & mask) | (mode << index)
     }
 
     /// Returns true if the given mode is an output.

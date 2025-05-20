@@ -9,7 +9,6 @@ use libgreat::gcp::{
     self, iter_to_response, GreatDispatch, GreatResponse, Verb, LIBGREAT_MAX_COMMAND_SIZE,
 };
 
-
 // - Leds ---------------------------------------------------------------------
 
 /// Led
@@ -40,8 +39,7 @@ impl Leds {
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
         if args.led_num >= 6 {
-            log::error!("leds::toggle() - invalid led number: ({}) ",
-                        args.led_num);
+            log::error!("leds::toggle() - invalid led number: ({}) ", args.led_num);
             return Err(GreatError::InvalidArgument);
         }
 
@@ -63,8 +61,7 @@ impl Leds {
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
         if args.led_num >= 6 {
-            log::error!("leds::on() - invalid led number: ({}) ",
-                        args.led_num);
+            log::error!("leds::on() - invalid led number: ({}) ", args.led_num);
             return Err(GreatError::InvalidArgument);
         }
 
@@ -86,8 +83,7 @@ impl Leds {
         let args = Args::read_from(arguments).ok_or(GreatError::InvalidArgument)?;
 
         if args.led_num >= 6 {
-            log::error!("leds::off() - invalid led number: ({}) ",
-                        args.led_num);
+            log::error!("leds::off() - invalid led number: ({}) ", args.led_num);
             return Err(GreatError::InvalidArgument);
         }
 
