@@ -70,7 +70,7 @@ class GPIOProvider(CynthionInterface):
     ALLOW_EXTERNAL_REGISTRATION = True
 
 
-    def __init__(self, name_mappings=None):
+    def __init__(self, board, name_mappings=None):
         """ Sets up the basic fields for a GPIOProvider.
 
         Parameters:
@@ -81,6 +81,8 @@ class GPIOProvider(CynthionInterface):
                 This allows instantiators to give a given GPIO collection more specific names, or
                 to hide them from general API display/usage.
         """
+
+        super().__init__(board)
 
         if name_mappings is None:
             name_mappings = {}
@@ -333,7 +335,7 @@ class GPIO(GPIOProvider):
         """
 
         # Set up our basic fields...
-        super(GPIO, self).__init__()
+        super(GPIO, self).__init__(board)
 
         # ... and store information about the our low-level connection.
         self.board = board
