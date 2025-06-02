@@ -227,6 +227,7 @@ impl Firmware<'_> {
             Some(peripherals.USER0),
         );
         let leds = moondancer::gcp::leds::Leds::new(peripherals.LEDS);
+        info!("Peripherals initialized");
 
         Self {
             usb2,
@@ -276,7 +277,7 @@ impl<'a> Firmware<'a> {
         let mut max_queue_length: usize = 0;
         let mut queue_length: usize = 0;
 
-        info!("Peripherals initialized, entering main loop");
+        info!("Entering main loop");
 
         loop {
             if queue_length > max_queue_length {
