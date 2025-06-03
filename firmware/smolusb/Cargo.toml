@@ -1,6 +1,6 @@
 [package]
 name = "smolusb"
-version = "0.2.0"
+version = "0.2.2"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
 description = "An experimental lightweight library for implementing USB on embedded systems."
