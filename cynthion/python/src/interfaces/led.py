@@ -1,6 +1,9 @@
-#
 # This file is part of Cynthion
 #
+# Copyright (c) 2020-2025 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
+
+import time
 
 from ..interface import CynthionInterface
 
@@ -19,8 +22,7 @@ class LED(CynthionInterface):
         # Store a reference to the parent board.
         self.board = board
 
-        # Store which of the four(?) LEDs we refer to.
-        # TODO: Validate this?
+        # Store which of the LEDs we refer to.
         self.led_number = led_number
 
     # Function that toggles the relevant LED value. """
@@ -33,4 +35,11 @@ class LED(CynthionInterface):
 
     # Function that turns off the relevant LED value. """
     def off(self):
+        self.board.apis.leds.off(self.led_number)
+
+    # Function that strobes the relevant LED value on and off. """
+    def strobe(self, duration=None):
+        self.board.apis.leds.on(self.led_number)
+        if duration:
+            time.sleep(duration)
         self.board.apis.leds.off(self.led_number)

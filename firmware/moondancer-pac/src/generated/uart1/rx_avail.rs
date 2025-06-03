@@ -12,7 +12,7 @@ impl R {
     }
 }
 impl W {}
-#[doc = "is '1' when 1-byte receive buffer is full; reset by a read from rx_data\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`rx_avail::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`rx_avail::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "is '1' when 1-byte receive buffer is full; reset by a read from rx_data\n\nYou can [`read`](crate::Reg::read) this register and get [`rx_avail::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`rx_avail::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct RX_AVAIL_SPEC;
 impl crate::RegisterSpec for RX_AVAIL_SPEC {
     type Ux = u8;

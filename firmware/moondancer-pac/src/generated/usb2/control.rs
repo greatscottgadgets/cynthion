@@ -52,36 +52,31 @@ impl R {
 impl W {
     #[doc = "Bit 0 - connect field"]
     #[inline(always)]
-    #[must_use]
     pub fn connect(&mut self) -> CONNECT_W<CONTROL_SPEC> {
         CONNECT_W::new(self, 0)
     }
     #[doc = "Bits 1:7 - _0 field"]
     #[inline(always)]
-    #[must_use]
     pub fn _0(&mut self) -> _0_W<CONTROL_SPEC> {
         _0_W::new(self, 1)
     }
     #[doc = "Bit 8 - low_speed_only field"]
     #[inline(always)]
-    #[must_use]
     pub fn low_speed_only(&mut self) -> LOW_SPEED_ONLY_W<CONTROL_SPEC> {
         LOW_SPEED_ONLY_W::new(self, 8)
     }
     #[doc = "Bit 9 - full_speed_only field"]
     #[inline(always)]
-    #[must_use]
     pub fn full_speed_only(&mut self) -> FULL_SPEED_ONLY_W<CONTROL_SPEC> {
         FULL_SPEED_ONLY_W::new(self, 9)
     }
     #[doc = "Bits 10:15 - _1 field"]
     #[inline(always)]
-    #[must_use]
     pub fn _1(&mut self) -> _1_W<CONTROL_SPEC> {
         _1_W::new(self, 10)
     }
 }
-#[doc = "Control register connect: Set this bit to '1' to allow the associated USB device to connect to a host. low_speed_only: Set this bit to '1' to force the device to operate at low speed. full_speed_only: Set this bit to '1' to force the device to operate at full speed.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`control::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`control::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Control register connect: Set this bit to '1' to allow the associated USB device to connect to a host. low_speed_only: Set this bit to '1' to force the device to operate at low speed. full_speed_only: Set this bit to '1' to force the device to operate at full speed.\n\nYou can [`read`](crate::Reg::read) this register and get [`control::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`control::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct CONTROL_SPEC;
 impl crate::RegisterSpec for CONTROL_SPEC {
     type Ux = u16;

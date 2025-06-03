@@ -21,7 +21,6 @@ except:
 
 # Alias objects to make them easier to import.
 from .cynthion import Cynthion
-from .cynthion import CynthionSingleton
 from .cynthion import CynthionBoard
 
 from . import gateware
@@ -31,37 +30,6 @@ import importlib.metadata
 __version__ = importlib.metadata.version(__package__)
 
 Cynthion = Cynthion  # pyflakes
-
-
-class _CynthionSingletonWrapper(object):
-
-    """
-    Convenience function that acts like CynthionSingleton, but also allows Magic:
-    accessing a property on this object will act as though that property had been
-    accessed on a result of a CynthionSingleton() call.
-
-    That's heckin' unreadable, so in short-- accessing a property on a relevant object
-    will attempt to 1) call the property on the sanest existing Cynthion object; or
-    2) create a new Cynthion object, if necessary.
-    """
-
-    def __init__(self, serial=None):
-        self.serial = serial
-
-    def __getitem__(self, serial):
-        return _CynthionSingletonWrapper(serial)
-
-    def __getattr__(self, name):
-        return getattr(CynthionSingleton(self.serial), name)
-
-    def __call__(self, serial=None):
-        return CynthionSingleton(serial)
-
-    def __dir__(self):
-        return dir(CynthionSingleton(self.serial))
-
-CynthionSingleton = _CynthionSingletonWrapper()
-
 
 # TODO deprecate in favor of:
 #

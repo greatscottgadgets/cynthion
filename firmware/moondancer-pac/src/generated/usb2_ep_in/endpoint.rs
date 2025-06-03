@@ -18,18 +18,16 @@ impl R {
 impl W {
     #[doc = "Bits 0:3 - number field"]
     #[inline(always)]
-    #[must_use]
     pub fn number(&mut self) -> NUMBER_W<ENDPOINT_SPEC> {
         NUMBER_W::new(self, 0)
     }
     #[doc = "Bits 4:7 - _0 field"]
     #[inline(always)]
-    #[must_use]
     pub fn _0(&mut self) -> _0_W<ENDPOINT_SPEC> {
         _0_W::new(self, 4)
     }
 }
-#[doc = "Endpoint register number: Contains the endpoint the enqueued packet is to be transmitted on. Writing to this field marks the relevant packet as ready to transmit; and thus should only be written after a full packet has been written into the FIFO. If no data has been placed into the DATA FIFO, a zero-length packet is generated. Note that any IN requests that do not match the endpoint number are automatically NAK'd.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`endpoint::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`endpoint::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Endpoint register number: Contains the endpoint the enqueued packet is to be transmitted on. Writing to this field marks the relevant packet as ready to transmit; and thus should only be written after a full packet has been written into the FIFO. If no data has been placed into the DATA FIFO, a zero-length packet is generated. Note that any IN requests that do not match the endpoint number are automatically NAK'd.\n\nYou can [`read`](crate::Reg::read) this register and get [`endpoint::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`endpoint::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct ENDPOINT_SPEC;
 impl crate::RegisterSpec for ENDPOINT_SPEC {
     type Ux = u8;

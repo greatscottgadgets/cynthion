@@ -22,19 +22,28 @@ class CynthionMoondancer(CynthionBoard):
         0x1000, # r1.0.0
         0x1100, # r1.1.0
         0x1101, # r1.1.1
+        0x1400, # r1.4.0
     ]
 
     # Currently, all Cynthion Moondancer boards have an ID of 0x10.
     HANDLED_BOARD_IDS = [0x10]
 
-    BOARD_NAME = "Cynthion in Moondancer mode"
+    BOARD_NAME = "Facedancer (Cynthion Project)"
 
     # The Cynthion has six LEDs.
     SUPPORTED_LEDS = 6
 
     # All of the GPIO mappings accessible from the Cynthion pmod headers.
-    # TODO: add pmod gpio mappings for cynthion
     GPIO_MAPPINGS = {
+        "A1":   (0, 0),
+        "A2":   (0, 1),
+        "A3":   (0, 2),
+        "A4":   (0, 3),
+        "A7":   (0, 4),
+        "A8":   (0, 5),
+        "A9":   (0, 6),
+        "A10":  (0, 7),
+        "USER": (2, 0),
     }
 
     def initialize_apis(self):

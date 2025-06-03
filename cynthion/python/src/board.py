@@ -11,8 +11,7 @@ from weakref import WeakSet
 
 from pygreat.board import GreatBoard
 
-from .interfaces.led import LED
-from .interfaces.gpio import GPIO
+from .interfaces import led, gpio
 
 from .shared import usb
 
@@ -59,7 +58,7 @@ class CynthionBoard(GreatBoard):
     #
     SIMPLE_CLASS_MAPPINGS = {
         # TODO 'firmware': ('onboard_flash', DeviceFirmwareManager),
-        # TODO 'gpio': ('gpio', GPIO),
+        'gpio': ('gpio', gpio.GPIO),
     }
 
     def __init__(self, *args, **device_identifiers):
@@ -90,8 +89,8 @@ class CynthionBoard(GreatBoard):
 
         self._add_interface('leds', {})
 
-        for i in range(1, led_count + 1):
-            self.leds[i] = LED(self, i)
+        for i in range(0, led_count):
+            self.leds[i] = led.LED(self, i)
 
 
     def _populate_gpio(self):

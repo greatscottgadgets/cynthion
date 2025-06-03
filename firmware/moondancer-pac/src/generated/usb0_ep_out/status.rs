@@ -46,18 +46,16 @@ impl R {
 impl W {
     #[doc = "Bits 4:7 - _0 field"]
     #[inline(always)]
-    #[must_use]
     pub fn _0(&mut self) -> _0_W<STATUS_SPEC> {
         _0_W::new(self, 4)
     }
     #[doc = "Bits 10:15 - _1 field"]
     #[inline(always)]
-    #[must_use]
     pub fn _1(&mut self) -> _1_W<STATUS_SPEC> {
         _1_W::new(self, 10)
     }
 }
-#[doc = "Status register epno: Contains the endpoint number associated with the data in the FIFO -- that is, the endpoint number on which the relevant data was received. have: `1` iff data is available in the FIFO. pid: Contains the current PID toggle bit for the given endpoint.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`status::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`status::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Status register epno: Contains the endpoint number associated with the data in the FIFO -- that is, the endpoint number on which the relevant data was received. have: `1` iff data is available in the FIFO. pid: Contains the current PID toggle bit for the given endpoint.\n\nYou can [`read`](crate::Reg::read) this register and get [`status::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`status::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct STATUS_SPEC;
 impl crate::RegisterSpec for STATUS_SPEC {
     type Ux = u16;

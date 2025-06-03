@@ -25,18 +25,16 @@ impl R {
 impl W {
     #[doc = "Bits 0:3 - number field"]
     #[inline(always)]
-    #[must_use]
     pub fn number(&mut self) -> NUMBER_W<ENDPOINT_SPEC> {
         NUMBER_W::new(self, 0)
     }
     #[doc = "Bits 4:7 - _0 field"]
     #[inline(always)]
-    #[must_use]
     pub fn _0(&mut self) -> _0_W<ENDPOINT_SPEC> {
         _0_W::new(self, 4)
     }
 }
-#[doc = "Endpoint register number: Selects the endpoint number to prime. This interface allows priming multiple endpoints at once. That is, multiple endpoints can be ready to receive data at a time. See the `prime` and `enable` bits for usage.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`endpoint::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`endpoint::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "Endpoint register number: Selects the endpoint number to prime. This interface allows priming multiple endpoints at once. That is, multiple endpoints can be ready to receive data at a time. See the `prime` and `enable` bits for usage.\n\nYou can [`read`](crate::Reg::read) this register and get [`endpoint::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`endpoint::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct ENDPOINT_SPEC;
 impl crate::RegisterSpec for ENDPOINT_SPEC {
     type Ux = u8;

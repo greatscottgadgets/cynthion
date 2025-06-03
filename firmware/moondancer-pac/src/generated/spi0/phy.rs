@@ -34,24 +34,21 @@ impl R {
 impl W {
     #[doc = "Bits 0:5 - length field"]
     #[inline(always)]
-    #[must_use]
     pub fn length(&mut self) -> LENGTH_W<PHY_SPEC> {
         LENGTH_W::new(self, 0)
     }
     #[doc = "Bits 6:9 - width field"]
     #[inline(always)]
-    #[must_use]
     pub fn width(&mut self) -> WIDTH_W<PHY_SPEC> {
         WIDTH_W::new(self, 6)
     }
     #[doc = "Bits 10:17 - mask field"]
     #[inline(always)]
-    #[must_use]
     pub fn mask(&mut self) -> MASK_W<PHY_SPEC> {
         MASK_W::new(self, 10)
     }
 }
-#[doc = "PHY control register length : SPI transfer length in bits. width : SPI transfer bus width (1/2/4/8). mask : SPI DQ output enable mask.\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`phy::R`](R).  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`phy::W`](W). You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
+#[doc = "PHY control register length : SPI transfer length in bits. width : SPI transfer bus width (1/2/4/8). mask : SPI DQ output enable mask.\n\nYou can [`read`](crate::Reg::read) this register and get [`phy::R`](R). You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`phy::W`](W). You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api)."]
 pub struct PHY_SPEC;
 impl crate::RegisterSpec for PHY_SPEC {
     type Ux = u32;

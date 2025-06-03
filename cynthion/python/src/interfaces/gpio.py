@@ -1,38 +1,66 @@
-#
 # This file is part of Cynthion
 #
+# Copyright (c) 2020-2025 Great Scott Gadgets <info@greatscottgadgets.com>
+# SPDX-License-Identifier: BSD-3-Clause
 
+import asyncio
+import time
 
 from enum import IntEnum
 from warnings import warn
 
 from ..interface import CynthionInterface
 
-
-# TODOs:
-#  - XXX: Overhaul the GPIO(Collection) class to be more efficient
-#  - More cleanup to use the GPIOPin model.
-#  - Support ranges of pins from the same port (GPIOPort objects?)
-#  - Implement a release function so if e.g. an I2C device is no longer in use
-#    it releases its pins back to the GPIO pool.
-
-class Directions(IntEnum):
-    IN = 0
-    OUT = 1
+class PinMode(IntEnum):
+    """ The pin output is disabled but remains connected to its Output field. """
+    InputOnly = 0b00
+    """ The pin output is enabled and connected to its Output field. """
+    PushPull  = 0b01
+    """ The pin output is enabled when the value of its Output field is 0 and is itself wired to 0. """
+    OpenDrain = 0b10
+    """ The pin output is disabled but remains connected to its Output field. """
+    Alternate = 0b11
 
 
-# Legacy convenience constants.
-DIRECTION_IN  = Directions.IN
-DIRECTION_OUT = Directions.OUT
+class PinDirection(IntEnum):
+    Input = 0
+    Output = 1
 
+
+class PinConfiguration():
+    def __init__(self, direction, mode):
+        if direction == PinDirection.Input and mode not in (PinMode.InputOnly, PinMode.Alternate):
+            raise ValueError("Pin mode {} is not an input.".format(mode))
+        if direction != PinDirection.Input and mode not in (PinMode.PushPull, PinMode.OpenDrain):
+            raise ValueError("Pin mode {} is not an output.".format(mode))
+        self.direction = direction
+        self.mode      = mode
+
+
+class InputConfiguration(PinConfiguration):
+    def __init__(self, mode=PinMode.InputOnly):
+        """
+        Specify the configuration of a GPIO line to be used as an input.
+
+        Parameters:
+            mode -- PinMode.InputOnly or PinMode.Alternate
+        """
+        super().__init__(direction=PinDirection.Input, mode=mode)
+
+
+class OutputConfiguration(PinConfiguration):
+    def __init__(self, mode=PinMode.PushPull):
+        """
+        Specify the configuration of a GPIO line to be used as an output.
+
+        Parameters:
+            mode -- PinMode.PushPull or PinMode.OpenDrain
+        """
+        super().__init__(direction=PinDirection.Output, mode=mode)
 
 
 class GPIOProvider(CynthionInterface):
     """ Base class for an object that provides access to GPIO pins. """
-
-    # For convenience.
-    DIRECTION_IN  = Directions.IN
-    DIRECTION_OUT = Directions.OUT
 
     # If the subclass has a fixed set of pins, it can override this mapping to
     # specify the fixed pin names to be automatically registered.
@@ -42,7 +70,7 @@ class GPIOProvider(CynthionInterface):
     ALLOW_EXTERNAL_REGISTRATION = True
 
 
-    def __init__(self, name_mappings=None):
+    def __init__(self, board, name_mappings=None):
         """ Sets up the basic fields for a GPIOProvider.
 
         Parameters:
@@ -53,6 +81,8 @@ class GPIOProvider(CynthionInterface):
                 This allows instantiators to give a given GPIO collection more specific names, or
                 to hide them from general API display/usage.
         """
+
+        super().__init__(board)
 
         if name_mappings is None:
             name_mappings = {}
@@ -173,7 +203,6 @@ class GPIOProvider(CynthionInterface):
         raise ValueError("No available GPIO pin {}".format(name))
 
 
-
     def get_port(self, *pin_names):
         """ Creates a GPIOPort object that can set multiple pins to a binary value.
 
@@ -201,9 +230,8 @@ class GPIOProvider(CynthionInterface):
         if gpio_pin.name not in self.active_gpio:
             raise ValueError("Trying to release a pin we don't own!")
 
-        # Mark the pin as an input, placing it into High-Z mode.
-        # TODO: Disable any pull-ups present on the pin.
-        gpio_pin.set_direction(DIRECTION_IN)
+        # Mark the pin as an input.
+        gpio_pin.set_direction(PinDirection.Input)
 
         # Remove the GPIO pin from our active array, and add it back to the
         # available pool.
@@ -211,14 +239,16 @@ class GPIOProvider(CynthionInterface):
         self.mark_pin_as_unused(gpio_pin.name)
 
 
-    def set_up_pin(self, line, direction, initial_value=False):
+    def configure_pin(self, line, configuration, initial_value=False):
         """
         Configure a GPIO line for use as an input or output.  This must be
         called before the line can be used by other functions.
 
         Parameters:
-            line      -- A unique identifier for the given pin that has meaning to the subclass.
-            direction -- Directions.IN (input) or Directions.OUT (output)
+            line          -- A unique identifier for the given pin that has meaning to the subclass.
+            configuration -- An InputConfiguration or OutputConfiguration instance.
+            initial_value -- Initial value if the pin is an output.
+            direction     -- PinDirection.Input (input) or PinDirection.Output (output)
         """
         pass
 
@@ -258,6 +288,19 @@ class GPIOProvider(CynthionInterface):
 
         Return:
             bool -- True if line is an output, False if line is an input
+        """
+        pass
+
+
+    def get_pin_configuration(self, line):
+        """
+        Gets the configuration for a GPIO pin.
+
+        Args:
+            line  -- A unique identifier for the given pin that has meaning to the subclass.
+
+        Return:
+            Configuration -- OutputConfiguration if line is an output, InputConfiguration if line is an input
         """
         pass
 
@@ -292,27 +335,26 @@ class GPIO(GPIOProvider):
         """
 
         # Set up our basic fields...
-        super(GPIO, self).__init__()
+        super(GPIO, self).__init__(board)
 
         # ... and store information about the our low-level connection.
         self.board = board
         self.api   = self.board.apis.gpio
 
-        # TODO: provide functionality to restore GPIO state on reconnect?
 
-
-    def set_up_pin(self, line, direction, initial_value=False):
+    def configure_pin(self, line, configuration, initial_value=False):
         """
         Configure a GPIO line for use as an input or output.  This must be
         called before the line can be used by other functions.
 
         Args:
             line -- (port, pin); typically a tuple from J1, J2, J7 below
-            direction -- Directions.IN (input) or Directions.OUT (output)
-
-        TODO: allow pull-up/pull-down resistors to be configured for inputs
+            configuration -- An InputConfiguration or OutputConfiguration instance.
+            initial_value -- Initial value if the pin is an output.
+            direction -- PinDirection.Input (input) or PinDirection.Output (output)
         """
-        self.api.set_up_pin(line[0], line[1], direction, initial_value)
+
+        self.api.configure_pin(line[0], line[1], initial_value, configuration.mode)
 
 
     def set_pin_state(self, line, state):
@@ -325,11 +367,8 @@ class GPIO(GPIOProvider):
             state -- True sets line high, False sets line low
         """
 
-        # TODO: validate GPIO direction?
-
         single_write = (line[0], line[1], state,)
         self.api.write_pins(single_write)
-
 
 
     def read_pin_state(self, line):
@@ -360,32 +399,35 @@ class GPIO(GPIOProvider):
         directions = self.api.get_pin_directions(line)
         return directions[0]
 
+
+    def get_pin_configuration(self, line):
+        """
+        Gets the configuration for a GPIO pin.
+
+        Args:
+            line  -- (port, pin); typically a tuple from J1, J2, J7 below
+
+        Return:
+            Configuration -- OutputConfiguration if line is an output, InputConfiguration if line is an input
+        """
+        if self.get_pin_direction(line) == PinDirection.Input:
+            configuration = InputConfiguration()
+        else:
+            configuration = OutputConfiguration()
+
+        configuration.mode = self.api.get_pin_configurations(line)[0]
+
+        return configuration
+
+
     def get_pin_port(self, line):
         """ Returns the 'port number' for a given GPIO pin."""
         return line[0]
 
+
     def get_pin_identifier(self, line):
         """ Returns the 'pin number' for a given GPIO pin. """
         return line[1]
-
-
-
-    #
-    # Deprecated methods.
-    #
-    def output(self, line, state):
-        warn("GPIO.output is deprecated; prefer set_pin_state.", DeprecationWarning)
-        self.set_pin_state(line, state)
-
-    def input(self, line):
-        warn("GPIO.input is deprecated; prefer read_pin_state.", DeprecationWarning)
-        return self.read_pin_state(line)
-
-    def setup(self, line, direction):
-        warn("GPIO.setup is deprecated; prefer set_up_pin.", DeprecationWarning)
-        self.set_up_pin(line, direction)
-
-
 
 
 class GPIOPin(object):
@@ -412,34 +454,52 @@ class GPIOPin(object):
         self._parent = gpio_provider
         self._line   = line
 
-        # For convenience:
-        self.DIRECTION_IN  = Directions.IN
-        self.DIRECTION_OUT = Directions.OUT
-
         # Set up the pin for use. Idempotent.
-        self._parent.set_up_pin(self._line, self.get_direction(), self.read())
+        self._parent.configure_pin(self._line, self.get_configuration(), self.read())
 
-
-    def set_direction(self, direction, initial_value=False):
+    def set_direction(self, direction, initial_value=False, configuration=None):
         """
         Sets the GPIO pin to use a given direction.
         """
-        self._parent.set_up_pin(self._line, direction, initial_value)
+
+        if configuration is not None and direction != configuration.direction:
+            warn(f"Direction does not match configuration. Ignoring configuration.")
+            configuration = None
+
+        if configuration is None:
+            if direction == PinDirection.Input:
+                configuration = InputConfiguration()
+            else:
+                configuration = OutputConfiguration()
+
+        self._parent.configure_pin(self._line, configuration, initial_value)
 
 
     def get_direction(self):
-        """ Returns the pin's direction; will be either Directions.IN or Directions.OUT """
+        """ Returns the pin's direction; will be either PinDirection.Input or PinDirection.Output """
         return self._parent.get_pin_direction(self._line)
+
+
+    def set_configuration(self, configuration, initial_value=False):
+        """
+        Sets the GPIO pin configuration to use a given InputConfiguration or OutputConfiguration.
+        """
+        return self._parent.configure_pin(self._line, configuration, initial_value)
+
+
+    def get_configuration(self):
+        """ Returns the pin's configuration; will be either InputConfiguration or OutputConfiguration """
+        return self._parent.get_pin_configuration(self._line)
 
 
     def is_input(self):
         """ Convenience function that returns True iff the pin is configured as an input. """
-        return (self.get_direction() == self.DIRECTION_IN)
+        return (self.get_direction() == PinDirection.Input)
 
 
     def is_output(self):
         """ Convenience function that returns True iff the pin is configured as an output. """
-        return (self.get_direction() == self.DIRECTION_OUT)
+        return (self.get_direction() == PinDirection.Output)
 
 
     def read(self, high_value=True, low_value=False, check_pin_direction=False, set_pin_direction=False):
@@ -457,7 +517,7 @@ class GPIOPin(object):
 
         # If we're setting the pin direction while we're getting the state, set it.
         if set_pin_direction:
-            self.set_direction(self.DIRECTION_IN)
+            self.set_direction(PinDirection.Input)
 
         # Otherwise, enforce the direction, if desired.
         elif check_pin_direction and not self.is_input():
@@ -469,7 +529,7 @@ class GPIOPin(object):
 
 
     def write(self, high, check_direction=False):
-        """ Convenience alias for set_state."""
+        """ Convenience alias for set_state. """
         self.set_state(high, check_direction)
 
 
@@ -492,7 +552,7 @@ class GPIOPin(object):
 
         # Note that we can't rely on initial_direction to set the actual port value; as some
         # GPIOProviders may not support that.
-        self.set_direction(self.DIRECTION_OUT, True)
+        self.set_direction(PinDirection.Output, True)
         self.write(True)
 
 
@@ -501,8 +561,16 @@ class GPIOPin(object):
 
         # Note that we can't rely on initial_direction to set the actual port value; as some
         # GPIOProviders may not support that.
-        self.set_direction(self.DIRECTION_OUT, False)
+        self.set_direction(PinDirection.Output, False)
         self.write(False)
+
+
+    def strobe(self, check_direction=False, duration=None):
+        """ Convenience function that strobes the pin on and off. """
+        self.set_state(True, check_direction)
+        if duration:
+            time.sleep(duration)
+        self.set_state(False, check_direction)
 
 
     def get_port(self):
@@ -513,11 +581,6 @@ class GPIOPin(object):
     def get_pin(self):
         """ Returns pin's pin number within its port, if possible. """
         return self._parent.get_pin_identifier(self._line)
-
-
-    # TODO: Toggle-- we have the hardware for this :)
-
-    # TODO: handle pulldowns/pull-ups, etc.
 
 
 
@@ -556,7 +619,7 @@ class VirtualGPIOPort(object):
         """
 
         for bit, pin in enumerate(self.pins):
-            direction = DIRECTION_OUT if (word & (1 << bit)) else DIRECTION_IN
+            direction = PinDirection.Output if (word & (1 << bit)) else PinDirection.Input
             initial_value = bool(initial_value & (1 << bit))
 
             pin.set_direction(direction, initial_value=initial_value)
@@ -570,14 +633,14 @@ class VirtualGPIOPort(object):
         """
 
         for pin in self.pins:
-            pin.set_direction(DIRECTION_OUT, initial_value)
+            pin.set_direction(PinDirection.Output, initial_value)
 
 
     def all_input(self):
         """ Sets all of the pins in this port to output mode. """
 
         for pin in self.pins:
-            pin.set_direction(DIRECTION_IN)
+            pin.set_direction(PinDirection.Input)
 
 
 
