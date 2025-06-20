@@ -300,7 +300,7 @@ class USBAnalyzerApplet(Elaboratable):
                 p.PropertyData       = "{88bae032-5a81-49f0-bc3d-a4ff138216d6}"
 
         # Add our standard control endpoint to the device.
-        control_endpoint = usb.add_standard_control_endpoint(descriptors, avoid_blockram=True)
+        control_endpoint = usb.add_standard_control_endpoint(descriptors)
 
         # Add handler for Microsoft descriptors.
         msft_handler = MicrosoftOS10RequestHandler(msft_descriptors, request_code=0xee)
@@ -442,7 +442,6 @@ class AnalyzerTestDevice(Elaboratable):
             handler = StandardRequestHandler(
                 self.create_descriptors(speed),
                 self.EP0_MAX_SIZE[speed],
-                avoid_blockram=True,
                 blacklist=[lambda setup,speed=speed: current_speed != speed])
             control_ep.add_request_handler(handler)
 
