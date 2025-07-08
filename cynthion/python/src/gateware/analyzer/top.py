@@ -16,7 +16,7 @@ import usb
 from datetime import datetime
 from enum import IntEnum, IntFlag
 
-from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter
+from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter, C
 from amaranth.build.res                  import ResourceError
 from usb_protocol.emitters               import DeviceDescriptorCollection
 from usb_protocol.types                  import USBRequestType, USBRequestRecipient
@@ -56,6 +56,9 @@ BULK_ENDPOINT_NUMBER  = 1
 BULK_ENDPOINT_ADDRESS = 0x80 | BULK_ENDPOINT_NUMBER
 MAX_BULK_PACKET_SIZE  = 512
 
+# Minor version of the protocol supported by the analyzer.
+# The major version is specified in bInterfaceProtocol.
+MINOR_VERSION = 0
 
 class USBAnalyzerRegister(Elaboratable):
 
@@ -76,6 +79,7 @@ class USBAnalyzerVendorRequests(IntEnum):
     SET_STATE = 1
     GET_SPEEDS = 2
     SET_TEST_CONFIG = 3
+    GET_MINOR_VERSION = 4
 
 
 class USBAnalyzerSupportedSpeeds(IntFlag):
@@ -114,7 +118,8 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                 (setup.request == USBAnalyzerVendorRequests.GET_STATE) |
                 (setup.request == USBAnalyzerVendorRequests.SET_STATE) |
                 (setup.request == USBAnalyzerVendorRequests.GET_SPEEDS)|
-                (setup.request == USBAnalyzerVendorRequests.SET_TEST_CONFIG))
+                (setup.request == USBAnalyzerVendorRequests.SET_TEST_CONFIG) |
+                (setup.request == USBAnalyzerVendorRequests.GET_MINOR_VERSION))
 
             with m.FSM(domain="usb"):
 
@@ -135,6 +140,8 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                                 m.next = 'GET_SPEEDS'
                             with m.Case(USBAnalyzerVendorRequests.SET_TEST_CONFIG):
                                 m.next = 'SET_TEST_CONFIG'
+                            with m.Case(USBAnalyzerVendorRequests.GET_MINOR_VERSION):
+                                m.next = 'GET_MINOR_VERSION'
 
                 # GET_STATE -- Fetch the device's state
                 with m.State('GET_STATE'):
@@ -155,6 +162,10 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                 # SET_TEST_CONFIG -- The host is trying to configure our test device
                 with m.State('SET_TEST_CONFIG'):
                     self.handle_register_write_request(m, self.test_config.next, self.test_config.write)
+
+                # GET_STATE -- Fetch the device's state
+                with m.State('GET_MINOR_VERSION'):
+                    self.handle_simple_data_request(m, transmitter, C(MINOR_VERSION), length=1)
 
         return m
 
