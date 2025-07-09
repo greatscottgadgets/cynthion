@@ -16,7 +16,7 @@ import usb
 from datetime import datetime
 from enum import IntEnum, IntFlag
 
-from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter, C
+from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter, C, Mux
 from amaranth.build.res                  import ResourceError
 from usb_protocol.emitters               import DeviceDescriptorCollection
 from usb_protocol.types                  import USBRequestType, USBRequestRecipient
@@ -58,7 +58,7 @@ MAX_BULK_PACKET_SIZE  = 512
 
 # Minor version of the protocol supported by the analyzer.
 # The major version is specified in bInterfaceProtocol.
-MINOR_VERSION = 0
+MINOR_VERSION = 1
 
 class USBAnalyzerRegister(Elaboratable):
 
@@ -242,24 +242,38 @@ class USBAnalyzerApplet(Elaboratable):
         ulpi = platform.request("target_phy")
         m.submodules.utmi = utmi = UTMITranslator(ulpi=ulpi)
 
-        # Strap our power controls to be in VBUS passthrough by default,
-        # on the target port.
+        # Connect our power controls. The power_control_enable bit must be set
+        # to use this feature, otherwise the default pass-through is enabled.
+        power_control_enable = state.current[7]
         if platform.version >= (0, 6):
-            # On Cynthion r1.4, Target-C to Target-A VBUS passthrough is
-            # off by default and must be enabled by the gateware.
             m.d.comb += [
-                platform.request("target_c_vbus_en").o  .eq(1),
+                # Connect all the VBUS switch controls.
+                platform.request("target_c_vbus_en").o.eq(
+                    Mux(power_control_enable, state.current[3], True)),
+                platform.request("control_vbus_en").o.eq(
+                    Mux(power_control_enable, state.current[4], False)),
+                platform.request("aux_vbus_en").o.eq(
+                    Mux(power_control_enable, state.current[5], False)),
+
+                # And the TARGET-A discharge control.
+                platform.request("target_a_discharge").o.eq(
+                    Mux(power_control_enable, state.current[6], False)),
             ]
-            # On Cynthion r0.6 - r1.3 this passthrough is enabled by
-            # default, even with the hardware unpowered, but it does no
-            # harm to explicitly set it here.
         else:
-            # On Cynthion r0.1 - r0.5, there is no `target_c_vbus_en`
-            # signal. The following two signals are needed to have
-            # the same effect:
             m.d.comb += [
-                platform.request("power_a_port").o      .eq(0),
-                platform.request("pass_through_vbus").o .eq(1),
+                # On the r0.1 to r0.5 boards, power switching is different.
+
+                # `pass_through_vbus` is equivalent to `target_c_vbus_en`
+                # and controls VBUS from TARGET-C to TARGET-A.
+                platform.request("pass_through_vbus").o.eq(
+                    Mux(power_control_enable, state.current[3], True)),
+
+                # `power_a_port` controls VBUS from HOST to TARGET-A.
+                platform.request("power_a_port").o.eq(
+                    Mux(power_control_enable, state.current[4], False)),
+
+                # There is no way of powering TARGET-A from the SIDEBAND
+                # port, and no discharge capability on TARGET-A.
             ]
 
         # Set up our parameters.
