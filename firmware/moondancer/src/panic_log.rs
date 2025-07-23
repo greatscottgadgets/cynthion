@@ -5,7 +5,6 @@ use log::error;
 
 // - panic handler ------------------------------------------------------------
 
-#[no_mangle]
 #[inline(never)]
 #[panic_handler]
 extern "Rust" fn panic(_panic_info: &PanicInfo) -> ! {
