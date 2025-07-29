@@ -8,7 +8,6 @@ cynthion/python/**/build/
 # Rust
 cynthion/rust/**/target/
 firmware/**/target/
-**/Cargo.lock
 **/*.rs.bk
 firmware/moondancer-pac/build/
 

@@ -3,7 +3,6 @@
 
 // - panic handler ------------------------------------------------------------
 
-#[no_mangle]
 #[panic_handler]
 fn panic(_panic_info: &core::panic::PanicInfo) -> ! {
     unsafe { core::ptr::write_volatile(IO_LEDS as *mut u32, 0b10_0000) };
