@@ -2,6 +2,8 @@
 # This file is part of Cynthion
 #
 
+import logging
+
 from .board import CynthionBoard
 
 # Ensure that we have access to all Cynthion boards. Normally, we'd avoid
@@ -26,25 +28,28 @@ def Cynthion(**board_identifiers):
             Throws a DeviceNotFoundError if no device is avaiable and find_all is not set.
     """
 
-    if 'find_all' in board_identifiers and board_identifiers['find_all']:
-        del board_identifiers['find_all']
-        return CynthionBoard.autodetect_all(**board_identifiers)
+    global active_connections
+
+    # Grab serial number if it's in board_identifiers.
+    if 'serial_number' in board_identifiers and board_identifiers['serial_number']:
+        serial = board_identifiers['serial_number']
+        del board_identifiers['serial_number']
     else:
-        return CynthionBoard.autodetect(**board_identifiers)
+        # TODO support multiple Cynthion's by serial number
+        serial = "TODO"
 
-
-def CynthionSingleton(serial=None):
-    """ Returns a Cynthion object, re-using an existing object if we already have a connection to the given Cynthion. """
-
-    # If we already have a Cynthion with the given serial,
+    # If we already have an active connection with a Cynthion matching the serial number.
     if serial in active_connections:
-        device = active_connections[serial]
-        if device.comms.still_connected():
-            return device
+        return active_connections[serial]
 
     # Otherwise, try to create a new Cynthion instance.
-    Cynthion = Cynthion(serial_number=serial)
-    active_connections[serial] = Cynthion
+    if 'find_all' in board_identifiers and board_identifiers['find_all']:
+        del board_identifiers['find_all']
+        board = CynthionBoard.autodetect_all(**board_identifiers)[0]
+    else:
+        board = CynthionBoard.autodetect(**board_identifiers)
 
+    if board is not None:
+        active_connections[serial] = board
 
-    return Cynthion
+    return board

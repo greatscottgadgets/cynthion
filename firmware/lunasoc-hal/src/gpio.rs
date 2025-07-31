@@ -20,22 +20,22 @@ macro_rules! impl_gpio {
 
                 fn set_low(&mut self) -> Result<(), Self::Error> {
                     let reg = unsafe { &*<$PACGPIOX>::ptr() };
-                    let mask: u32 = !(1 << self.index);
+                    let mask: u8 = !(1 << self.index);
                     riscv::interrupt::free(|| {
-                        let val: u32 = reg.idr().read().bits() & mask;
+                        let val: u8 = reg.input().read().bits() & mask;
                         unsafe {
-                            reg.odr().write(|w| w.bits(val));
+                            reg.output().write(|w| w.bits(val));
                         }
                     });
                     Ok(())
                 }
                 fn set_high(&mut self) -> Result<(), Self::Error> {
                     let reg = unsafe { &*<$PACGPIOX>::ptr() };
-                    let mask: u32 = 1 << self.index;
+                    let mask: u8 = 1 << self.index;
                     riscv::interrupt::free(|| {
-                        let val: u32 = reg.idr().read().bits() | mask;
+                        let val: u8 = reg.input().read().bits() | mask;
                         unsafe {
-                            reg.odr().write(|w| w.bits(val));
+                            reg.output().write(|w| w.bits(val));
                         }
                     });
                     Ok(())
@@ -45,14 +45,14 @@ macro_rules! impl_gpio {
             impl $crate::hal_0::digital::v2::StatefulOutputPin for $GPIOX {
                 fn is_set_low(&self) -> Result<bool, Self::Error> {
                     let reg = unsafe { &*<$PACGPIOX>::ptr() };
-                    let mask: u32 = 1 << self.index;
-                    let val: u32 = reg.idr().read().bits() & mask;
+                    let mask: u8 = 1 << self.index;
+                    let val: u8 = reg.input().read().bits() & mask;
                     Ok(val == 0)
                 }
                 fn is_set_high(&self) -> Result<bool, Self::Error> {
                     let reg = unsafe { &*<$PACGPIOX>::ptr() };
-                    let mask: u32 = 1 << self.index;
-                    let val: u32 = reg.idr().read().bits() & mask;
+                    let mask: u8 = 1 << self.index;
+                    let val: u8 = reg.input().read().bits() & mask;
                     Ok(val != 0)
                 }
             }

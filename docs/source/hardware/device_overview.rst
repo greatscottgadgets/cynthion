@@ -16,7 +16,7 @@ Top View
     - **D** - FPGA has control of the **CONTROL** port.
     - **E** - Reserved for future use.
 
-- **0-5** - Six user LEDs managed by the FPGA.
+- **0-5** - Six USER LEDs managed by the FPGA.
 
 
 Left View

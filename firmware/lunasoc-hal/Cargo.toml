@@ -1,6 +1,6 @@
 [package]
 name = "lunasoc-hal"
-version = "0.1.8"
+version = "0.2.2"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
 description = "Hardware Abstraction Layer implementation for LunaSoC cores"
@@ -58,12 +58,12 @@ embedded-hal-nb = "=1.0.0-alpha.1"
 log = { version = "=0.4.17", optional = true }
 nb = "=1.1.0"
 riscv = { version = "=0.10.1" }
-smolusb = { version = "0.1.6", path = "../smolusb", optional = true }
+smolusb = { version = "0.2.2", path = "../smolusb", optional = true }
 
 # - dev-dependencies ----------------------------------------------------------
 
 [dev-dependencies]
-moondancer-pac = { version = "0.1.8", path = "../moondancer-pac", default-features = false, features = ["critical-section", "rt"]}
+moondancer-pac = { version = "0.2.2", path = "../moondancer-pac", default-features = false, features = ["critical-section", "rt"]}
 panic-halt = "=0.2.0"
 riscv = { version = "=0.10.1", features = ["critical-section-single-hart"] }
 riscv-rt = { version = "=0.11.0" }

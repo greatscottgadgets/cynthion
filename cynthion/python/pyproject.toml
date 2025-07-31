@@ -40,11 +40,11 @@ dependencies = [
     "tabulate",
     "tomli",
     "tqdm",
-    "pygreat~=2024.0",
+    "pygreat~=2024.0.5",
     "apollo_fpga~=1.1",
-    "amaranth==0.4.1",
-    "luna-usb~=0.1",
-    "luna-soc~=0.2",
+    "amaranth~=0.5",
+    "luna-usb~=0.2",
+    "luna-soc~=0.3.2",
 ]
 
 [project.scripts]

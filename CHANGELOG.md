@@ -9,6 +9,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 -->
 
+
+## [0.2.2] - 2025-06-03
+### Added
+* New libgreat classes for controlling the Cynthion PMODs, USER button and leds from Python.
+* Documentation for controlling the Cynthion PMODs, USER button and leds from Python and Facedancer.
+### Changed
+* Fixed capitalisation of USER LEDs in the device overview documentation.
+
+
+## [0.2.0] - 2025-05-19
+> This is a breaking release which primarily affects usage of the SoC peripherals and their register interfaces.
+>
+> For migration information see: https://github.com/greatscottgadgets/cynthion/pull/193
+>
+> Please refer to the [v0.1.x](https://github.com/greatscottgadgets/cynthion/tree/v0.1.x) branch for compatibility with older Cynthion `0.1.x` releases.
+
+### Changed
+* luna-usb 0.1.x has been deprecated in favour of luna-usb 0.2.x
+* luna-soc 0.2.x has been deprecated in favour of luna-soc 0.3.x
+* Amaranth 0.4.x has been deprecated in favour of Amaranth 0.5.x
+
+### Fixed
+* Gateware fails to build on new oss-cad-suite releases.
+
+---
+
+## [0.1.9] - 2025-05-16
+### Added
+* Cynthion Gateware Tutorials
+* Cynthion `make assets` will now build gateware if `yowasp-yosys` and `yowasp-nextpnr-ecp5` are installed.
+### Changed
+* Support for Python 3.8 has been ended. Cynthion now requires Python 3.9 or higher.
+### Fixed
+* Facedancer endpoints set max packet size for the control endpoint to 64 irrespective of script configuration.
+
+
 ## [0.1.8] - 2024-11-25
 ### Added
 * [USB Emulation Tutorial](https://cynthion.readthedocs.io/en/latest/tutorials/emulation.html)
@@ -92,7 +128,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release
 
 
-[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.1.8...HEAD
+[Unreleased]: https://github.com/greatscottgadgets/cynthion/compare/0.2.2...HEAD
+[0.2.2]: https://github.com/greatscottgadgets/cynthion/compare/0.2.0...0.2.2
+[0.2.0]: https://github.com/greatscottgadgets/cynthion/compare/0.1.9...0.2.0
+[0.1.9]: https://github.com/greatscottgadgets/cynthion/compare/0.1.8...0.1.9
 [0.1.8]: https://github.com/greatscottgadgets/cynthion/compare/0.1.7...0.1.8
 [0.1.7]: https://github.com/greatscottgadgets/cynthion/compare/0.1.6...0.1.7
 [0.1.6]: https://github.com/greatscottgadgets/cynthion/compare/0.1.5...0.1.6

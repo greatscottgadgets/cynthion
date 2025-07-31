@@ -1,90 +1,55 @@
 #[repr(C)]
 #[doc = "Register block"]
 pub struct RegisterBlock {
-    phy_len: PHY_LEN,
-    phy_width: PHY_WIDTH,
-    phy_mask: PHY_MASK,
+    phy: PHY,
     cs: CS,
-    rxtx: RXTX,
-    tx_rdy: TX_RDY,
-    rx_rdy: RX_RDY,
+    status: STATUS,
+    _reserved3: [u8; 0x02],
+    data: DATA,
 }
 impl RegisterBlock {
-    #[doc = "0x00 - spi0 phy_len register"]
+    #[doc = "0x00 - PHY control register length : SPI transfer length in bits. width : SPI transfer bus width (1/2/4/8). mask : SPI DQ output enable mask."]
     #[inline(always)]
-    pub const fn phy_len(&self) -> &PHY_LEN {
-        &self.phy_len
+    pub const fn phy(&self) -> &PHY {
+        &self.phy
     }
-    #[doc = "0x01 - spi0 phy_width register"]
-    #[inline(always)]
-    pub const fn phy_width(&self) -> &PHY_WIDTH {
-        &self.phy_width
-    }
-    #[doc = "0x02 - spi0 phy_mask register"]
-    #[inline(always)]
-    pub const fn phy_mask(&self) -> &PHY_MASK {
-        &self.phy_mask
-    }
-    #[doc = "0x03 - spi0 cs register"]
+    #[doc = "0x04 - SPI chip select register select : SPI chip select signal."]
     #[inline(always)]
     pub const fn cs(&self) -> &CS {
         &self.cs
     }
-    #[doc = "0x04 - spi0 rxtx register"]
+    #[doc = "0x05 - Status register rx_ready : RX FIFO contains data. tx_ready : TX FIFO ready to receive data."]
     #[inline(always)]
-    pub const fn rxtx(&self) -> &RXTX {
-        &self.rxtx
+    pub const fn status(&self) -> &STATUS {
+        &self.status
     }
-    #[doc = "0x08 - spi0 tx_rdy register"]
+    #[doc = "0x08..0x10 - Data register rx : Read the next byte in the RX FIFO tx : Write the given byte to the TX FIFO"]
     #[inline(always)]
-    pub const fn tx_rdy(&self) -> &TX_RDY {
-        &self.tx_rdy
-    }
-    #[doc = "0x09 - spi0 rx_rdy register"]
-    #[inline(always)]
-    pub const fn rx_rdy(&self) -> &RX_RDY {
-        &self.rx_rdy
+    pub const fn data(&self) -> &DATA {
+        &self.data
     }
 }
-#[doc = "phy_len (rw) register accessor: spi0 phy_len register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`phy_len::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`phy_len::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@phy_len`]
+#[doc = "phy (rw) register accessor: PHY control register length : SPI transfer length in bits. width : SPI transfer bus width (1/2/4/8). mask : SPI DQ output enable mask.\n\nYou can [`read`](crate::Reg::read) this register and get [`phy::R`]. You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`phy::W`]. You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@phy`]
 module"]
-#[doc(alias = "phy_len")]
-pub type PHY_LEN = crate::Reg<phy_len::PHY_LEN_SPEC>;
-#[doc = "spi0 phy_len register"]
-pub mod phy_len;
-#[doc = "phy_width (rw) register accessor: spi0 phy_width register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`phy_width::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`phy_width::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@phy_width`]
-module"]
-#[doc(alias = "phy_width")]
-pub type PHY_WIDTH = crate::Reg<phy_width::PHY_WIDTH_SPEC>;
-#[doc = "spi0 phy_width register"]
-pub mod phy_width;
-#[doc = "phy_mask (rw) register accessor: spi0 phy_mask register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`phy_mask::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`phy_mask::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@phy_mask`]
-module"]
-#[doc(alias = "phy_mask")]
-pub type PHY_MASK = crate::Reg<phy_mask::PHY_MASK_SPEC>;
-#[doc = "spi0 phy_mask register"]
-pub mod phy_mask;
-#[doc = "cs (rw) register accessor: spi0 cs register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`cs::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`cs::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@cs`]
+#[doc(alias = "phy")]
+pub type PHY = crate::Reg<phy::PHY_SPEC>;
+#[doc = "PHY control register length : SPI transfer length in bits. width : SPI transfer bus width (1/2/4/8). mask : SPI DQ output enable mask."]
+pub mod phy;
+#[doc = "cs (rw) register accessor: SPI chip select register select : SPI chip select signal.\n\nYou can [`read`](crate::Reg::read) this register and get [`cs::R`]. You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`cs::W`]. You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@cs`]
 module"]
 #[doc(alias = "cs")]
 pub type CS = crate::Reg<cs::CS_SPEC>;
-#[doc = "spi0 cs register"]
+#[doc = "SPI chip select register select : SPI chip select signal."]
 pub mod cs;
-#[doc = "rxtx (rw) register accessor: spi0 rxtx register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`rxtx::R`].  You can [`reset`](crate::generic::Reg::reset), [`write`](crate::generic::Reg::write), [`write_with_zero`](crate::generic::Reg::write_with_zero) this register using [`rxtx::W`]. You can also [`modify`](crate::generic::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@rxtx`]
+#[doc = "status (rw) register accessor: Status register rx_ready : RX FIFO contains data. tx_ready : TX FIFO ready to receive data.\n\nYou can [`read`](crate::Reg::read) this register and get [`status::R`]. You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`status::W`]. You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@status`]
 module"]
-#[doc(alias = "rxtx")]
-pub type RXTX = crate::Reg<rxtx::RXTX_SPEC>;
-#[doc = "spi0 rxtx register"]
-pub mod rxtx;
-#[doc = "tx_rdy (r) register accessor: spi0 tx_rdy register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`tx_rdy::R`].  See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@tx_rdy`]
+#[doc(alias = "status")]
+pub type STATUS = crate::Reg<status::STATUS_SPEC>;
+#[doc = "Status register rx_ready : RX FIFO contains data. tx_ready : TX FIFO ready to receive data."]
+pub mod status;
+#[doc = "data (rw) register accessor: Data register rx : Read the next byte in the RX FIFO tx : Write the given byte to the TX FIFO\n\nYou can [`read`](crate::Reg::read) this register and get [`data::R`]. You can [`reset`](crate::Reg::reset), [`write`](crate::Reg::write), [`write_with_zero`](crate::Reg::write_with_zero) this register using [`data::W`]. You can also [`modify`](crate::Reg::modify) this register. See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@data`]
 module"]
-#[doc(alias = "tx_rdy")]
-pub type TX_RDY = crate::Reg<tx_rdy::TX_RDY_SPEC>;
-#[doc = "spi0 tx_rdy register"]
-pub mod tx_rdy;
-#[doc = "rx_rdy (r) register accessor: spi0 rx_rdy register\n\nYou can [`read`](crate::generic::Reg::read) this register and get [`rx_rdy::R`].  See [API](https://docs.rs/svd2rust/#read--modify--write-api).\n\nFor information about available fields see [`mod@rx_rdy`]
-module"]
-#[doc(alias = "rx_rdy")]
-pub type RX_RDY = crate::Reg<rx_rdy::RX_RDY_SPEC>;
-#[doc = "spi0 rx_rdy register"]
-pub mod rx_rdy;
+#[doc(alias = "data")]
+pub type DATA = crate::Reg<data::DATA_SPEC>;
+#[doc = "Data register rx : Read the next byte in the RX FIFO tx : Write the given byte to the TX FIFO"]
+pub mod data;

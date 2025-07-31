@@ -16,7 +16,7 @@ import usb
 from datetime import datetime
 from enum import IntEnum, IntFlag
 
-from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter, Mux, Array
+from amaranth                            import Signal, Elaboratable, Module, DomainRenamer, ResetInserter, C, Mux, Array
 from amaranth.build.res                  import ResourceError
 from usb_protocol.emitters               import DeviceDescriptorCollection
 from usb_protocol.types                  import USBRequestType, USBRequestRecipient
@@ -27,7 +27,6 @@ from luna                                import top_level_cli
 from luna.gateware.usb.request.control   import ControlRequestHandler
 from luna.gateware.usb.stream            import USBInStreamInterface
 from luna.gateware.stream.generator      import StreamSerializer
-from luna.gateware.utils.cdc             import synchronize
 from luna.gateware.architecture.car      import LunaECP5DomainGenerator
 from luna.gateware.architecture.flash_sn import ECP5FlashUIDStringDescriptor
 from luna.gateware.interface.ulpi        import UTMITranslator
@@ -58,6 +57,9 @@ BULK_ENDPOINT_NUMBER  = 1
 BULK_ENDPOINT_ADDRESS = 0x80 | BULK_ENDPOINT_NUMBER
 MAX_BULK_PACKET_SIZE  = 512
 
+# Minor version of the protocol supported by the analyzer.
+# The major version is specified in bInterfaceProtocol.
+MINOR_VERSION = 1
 
 class USBAnalyzerRegister(Elaboratable):
 
@@ -78,6 +80,34 @@ class USBAnalyzerVendorRequests(IntEnum):
     SET_STATE = 1
     GET_SPEEDS = 2
     SET_TEST_CONFIG = 3
+    GET_MINOR_VERSION = 4
+
+
+# Bit numbers of state register bits.
+class USBAnalyzerState:
+    # Enable capture. Used to start/stop the analyzer.
+    ENABLE = 0
+
+    # Capture speed selection.
+    # 0b00 = HS, 0b01 = FS, 0b11 = LS
+    SPEED = slice(1, 3)
+
+    # Enable VBUS passthrough from TARGET-C to TARGET-A.
+    VBUS_FROM_TARGET_C = 3
+
+    # Enable VBUS passthrough from CONTROL/HOST to TARGET-A.
+    VBUS_FROM_CONTROL_HOST = 4
+
+    # Enable VBUS passthrough from AUX to TARGET-A.
+    VBUS_FROM_AUX = 5
+
+    # Enable VBUS discharge on TARGET-A.
+    VBUS_TARGET_A_DISCHARGE = 6
+
+    # Enable power control.
+    # 0: VBUS passthrough is enabled from TARGET-C to TARGET-A.
+    # 1: VBUS distribution is controlled by bits 3-6.
+    POWER_CONTROL_ENABLE = 7
 
 
 class USBAnalyzerSupportedSpeeds(IntFlag):
@@ -116,7 +146,8 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                 (setup.request == USBAnalyzerVendorRequests.GET_STATE) |
                 (setup.request == USBAnalyzerVendorRequests.SET_STATE) |
                 (setup.request == USBAnalyzerVendorRequests.GET_SPEEDS)|
-                (setup.request == USBAnalyzerVendorRequests.SET_TEST_CONFIG))
+                (setup.request == USBAnalyzerVendorRequests.SET_TEST_CONFIG) |
+                (setup.request == USBAnalyzerVendorRequests.GET_MINOR_VERSION))
 
             with m.FSM(domain="usb"):
 
@@ -137,6 +168,8 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                                 m.next = 'GET_SPEEDS'
                             with m.Case(USBAnalyzerVendorRequests.SET_TEST_CONFIG):
                                 m.next = 'SET_TEST_CONFIG'
+                            with m.Case(USBAnalyzerVendorRequests.GET_MINOR_VERSION):
+                                m.next = 'GET_MINOR_VERSION'
 
                 # GET_STATE -- Fetch the device's state
                 with m.State('GET_STATE'):
@@ -163,6 +196,10 @@ class USBAnalyzerVendorRequestHandler(ControlRequestHandler):
                 # SET_TEST_CONFIG -- The host is trying to configure our test device
                 with m.State('SET_TEST_CONFIG'):
                     self.handle_register_write_request(m, self.test_config.next, self.test_config.write)
+
+                # GET_STATE -- Fetch the device's state
+                with m.State('GET_MINOR_VERSION'):
+                    self.handle_simple_data_request(m, transmitter, C(MINOR_VERSION), length=1)
 
         return m
 
@@ -227,7 +264,7 @@ class USBAnalyzerApplet(Elaboratable):
 
         # State register
         m.submodules.state = state = USBAnalyzerRegister()
-        speed_selection = state.current[1:3]
+        speed_selection = state.current[USBAnalyzerState.SPEED]
 
         # Test config register
         m.submodules.test_config = test_config = USBAnalyzerRegister(reset=0x01)
@@ -255,17 +292,27 @@ class USBAnalyzerApplet(Elaboratable):
             ls_event_detector.vbus_connected.eq(utmi.session_valid),
         ]
 
-        # Strap our power controls to be in VBUS passthrough by default,
-        # on the target port.
+        # Connect our power controls. The power_control_enable bit must be set
+        # to use this feature, otherwise the default pass-through is enabled.
+        power_control_enable = state.current[USBAnalyzerState.POWER_CONTROL_ENABLE]
         if platform.version >= (0, 6):
-            # On Cynthion r1.4, Target-C to Target-A VBUS passthrough is
-            # off by default and must be enabled by the gateware.
             m.d.comb += [
-                platform.request("target_c_vbus_en").o  .eq(1),
+                # Connect all the VBUS switch controls.
+                platform.request("target_c_vbus_en").o.eq(
+                    Mux(power_control_enable,
+                        state.current[USBAnalyzerState.VBUS_FROM_TARGET_C], True)),
+                platform.request("control_vbus_en").o.eq(
+                    Mux(power_control_enable,
+                        state.current[USBAnalyzerState.VBUS_FROM_CONTROL_HOST], False)),
+                platform.request("aux_vbus_en").o.eq(
+                    Mux(power_control_enable,
+                        state.current[USBAnalyzerState.VBUS_FROM_AUX], False)),
+
+                # And the TARGET-A discharge control.
+                platform.request("target_a_discharge").o.eq(
+                    Mux(power_control_enable,
+                        state.current[USBAnalyzerState.VBUS_TARGET_A_DISCHARGE], False)),
             ]
-            # On Cynthion r0.6 - r1.3 this passthrough is enabled by
-            # default, even with the hardware unpowered, but it does no
-            # harm to explicitly set it here.
 
             # Tap the D+/D- signals for speed detection.
             usb_dp = Signal()
@@ -300,12 +347,22 @@ class USBAnalyzerApplet(Elaboratable):
             ]
 
         else:
-            # On Cynthion r0.1 - r0.5, there is no `target_c_vbus_en`
-            # signal. The following two signals are needed to have
-            # the same effect:
             m.d.comb += [
-                platform.request("power_a_port").o      .eq(0),
-                platform.request("pass_through_vbus").o .eq(1),
+                # On the r0.1 to r0.5 boards, power switching is different.
+
+                # `pass_through_vbus` is equivalent to `target_c_vbus_en`
+                # and controls VBUS from TARGET-C to TARGET-A.
+                platform.request("pass_through_vbus").o.eq(
+                    Mux(power_control_enable,
+                        state.current[USBAnalyzerState.VBUS_FROM_TARGET_C], True)),
+
+                # `power_a_port` controls VBUS from HOST to TARGET-A.
+                platform.request("power_a_port").o.eq(
+                    Mux(power_control_enable,
+                        state.current[USBAnalyzerState.VBUS_FROM_CONTROL_HOST], False)),
+
+                # There is no way of powering TARGET-A from the SIDEBAND
+                # port, and no discharge capability on TARGET-A.
             ]
 
             # Speed selection is manual only.
@@ -379,7 +436,7 @@ class USBAnalyzerApplet(Elaboratable):
                 p.PropertyData       = "{88bae032-5a81-49f0-bc3d-a4ff138216d6}"
 
         # Add our standard control endpoint to the device.
-        control_endpoint = usb.add_standard_control_endpoint(descriptors, avoid_blockram=True)
+        control_endpoint = usb.add_standard_control_endpoint(descriptors)
 
         # Add handler for Microsoft descriptors.
         msft_handler = MicrosoftOS10RequestHandler(msft_descriptors, request_code=0xee)
@@ -419,7 +476,7 @@ class USBAnalyzerApplet(Elaboratable):
 
         m.d.comb += [
             # Connect enable signal to host-controlled state register.
-            analyzer.capture_enable     .eq(state.current[0]),
+            analyzer.capture_enable     .eq(state.current[USBAnalyzerState.ENABLE]),
 
             # Flush endpoint when analyzer is idle with capture disabled.
             stream_ep.flush             .eq(analyzer.idle & ~analyzer.capture_enable),
@@ -522,7 +579,6 @@ class AnalyzerTestDevice(Elaboratable):
             handler = StandardRequestHandler(
                 self.create_descriptors(speed),
                 self.EP0_MAX_SIZE[speed],
-                avoid_blockram=True,
                 blacklist=[lambda setup,speed=speed: current_speed != speed])
             control_ep.add_request_handler(handler)
 

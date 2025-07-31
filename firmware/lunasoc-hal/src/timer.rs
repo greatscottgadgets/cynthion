@@ -6,6 +6,11 @@ pub enum Event {
     TimeOut,
 }
 
+pub enum Mode {
+    OneShot,
+    Periodic,
+}
+
 #[macro_export]
 macro_rules! impl_timer {
     ($(
@@ -49,17 +54,17 @@ macro_rules! impl_timer {
             impl $TIMERX {
                 /// Current timer count
                 pub fn counter(&self) -> u32 {
-                    self.registers.ctr().read().ctr().bits()
+                    self.registers.counter().read().value().bits()
                 }
 
                 /// Disable timer
                 pub fn disable(&self) {
-                    self.registers.en().write(|w| w.en().bit(false));
+                    self.registers.enable().write(|w| w.enable().bit(false));
                 }
 
                 /// Enable timer
                 pub fn enable(&self) {
-                    self.registers.en().write(|w| w.en().bit(true));
+                    self.registers.enable().write(|w| w.enable().bit(true));
                 }
 
                 /// Set timeout using a [`core::time::Duration`]
@@ -79,21 +84,34 @@ macro_rules! impl_timer {
                     self.set_timeout_ticks(ticks.max(1));
                 }
 
+                /// Set timer mode
+                pub fn set_mode(&mut self, mode: $crate::timer::Mode) {
+                    let mode = match mode {
+                        $crate::timer::Mode::OneShot  => false,
+                        $crate::timer::Mode::Periodic => true,
+                    };
+                    self.registers.mode().write(|w| unsafe {
+                        w.periodic().bit(mode)
+                    });
+
+                }
+
                 /// Set timeout using system ticks
                 pub fn set_timeout_ticks(&mut self, ticks: u32) {
                     self.registers.reload().write(|w| unsafe {
-                        w.reload().bits(ticks)
+                        w.value().bits(ticks)
                     });
                 }
             }
 
             // interrupts
             impl $TIMERX {
+
                 /// Start listening for [`Event`]
                 pub fn listen(&mut self, event: $crate::timer::Event) {
                     match event {
                         $crate::timer::Event::TimeOut => {
-                            self.registers.ev_enable().write(|w| w.enable().bit(true));
+                            self.registers.ev_enable().write(|w| unsafe { w.mask().bit(true) });
                         }
                     }
                 }
@@ -102,20 +120,19 @@ macro_rules! impl_timer {
                 pub fn unlisten(&mut self, event: $crate::timer::Event) {
                     match event {
                         $crate::timer::Event::TimeOut => {
-                            self.registers.ev_enable().write(|w| w.enable().bit(false));
+                            self.registers.ev_enable().write(|w| unsafe { w.mask().bit(false) });
                         }
                     }
                 }
 
                 /// Check if the interrupt flag is pending
                 pub fn is_pending(&self) -> bool {
-                    self.registers.ev_pending().read().pending().bit_is_set()
+                    self.registers.ev_pending().read().mask().bit()
                 }
 
                 /// Clear the interrupt flag
                 pub fn clear_pending(&self) {
-                    let pending = self.registers.ev_pending().read().pending().bit();
-                    self.registers.ev_pending().write(|w| w.pending().bit(pending));
+                    self.registers.ev_pending().modify(|r, w| unsafe { w.mask().bit(r.mask().bit()) });
                 }
             }
 
@@ -126,16 +143,16 @@ macro_rules! impl_timer {
                 fn delay_us(&mut self, us: u32) -> Result<(), Self::Error> {
                     let ticks: u32 = self.clk / 1_000_000 * us;
 
+                    // reset timer
+                    self.registers.enable().write(|w| w.enable().bit(false));
+
                     // start timer
-                    self.registers.reload().write(|w| unsafe { w.reload().bits(0) });
-                    self.registers.ctr().write(|w| unsafe { w.ctr().bits(ticks) });
-                    self.registers.en().write(|w| w.en().bit(true));
+                    self.set_mode($crate::timer::Mode::OneShot);
+                    self.registers.reload().write(|w| unsafe { w.value().bits(ticks) });
+                    self.registers.enable().write(|w| w.enable().bit(true));
 
                     // wait for timer to hit zero
-                    while self.registers.ctr().read().ctr().bits() > 0 {}
-
-                    // reset timer
-                    self.registers.en().write(|w| w.en().bit(false));
+                    while self.registers.counter().read().value().bits() != 0 {}
 
                     Ok(())
                 }

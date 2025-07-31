@@ -1,6 +1,6 @@
 [package]
 name = "moondancer"
-version = "0.1.8"
+version = "0.2.2"
 authors = ["Great Scott Gadgets <dev@greatscottgadgets.com>"]
 license = "BSD-3-Clause"
 description = "Moondancer firmware for the Great Scott Gadgets Cynthion USB Test Instrument"
@@ -57,19 +57,21 @@ alloc = []
 # - dependencies --------------------------------------------------------------
 
 [dependencies]
-cynthion = { version = "0.1.1", path = "../../cynthion/rust" }
-ladybug = { version = "0.1.6", path = "../ladybug" }
-libgreat = { version = "0.1.1", path = "../libgreat", features = ["errno_minimal"] }
-lunasoc-hal = { version = "0.1.8", path = "../lunasoc-hal", default-features = false, features = ["usb"]}
-moondancer-pac = { version = "0.1.8", path = "../moondancer-pac", default-features = false, features = ["critical-section"]}
+cynthion = { version = "=0.1.1", path = "../../cynthion/rust" }
+ladybug = { version = "=0.1.6", path = "../ladybug" }
+libgreat = { version = "=0.2.2", path = "../libgreat", features = ["errno_minimal"] }
+lunasoc-hal = { version = "=0.2.2", path = "../lunasoc-hal", default-features = false, features = ["usb"]}
+moondancer-pac = { version = "=0.2.2", path = "../moondancer-pac", default-features = false, features = ["critical-section"]}
 
-riscv = { version = "=0.10.1", features = ["critical-section-single-hart"] }
-riscv-rt = { version = "=0.11.0" }
+riscv = { version = "0.10", features = ["critical-section-single-hart"] }
+riscv-rt = { version = "0.11" }
 
-heapless = { version = "0.8.0", default-features = false, features = ["mpmc_large"] }
-zerocopy = { version = "0.7.34", default-features = false, features = ["derive", "byteorder"] }
+heapless = { version = "0.8", default-features = false, features = ["mpmc_large"] }
+num-traits = { version = "0.2", default-features = false }
+# TODO bump to 0.8.x - see: https://github.com/google/zerocopy/discussions/1680
+zerocopy = { version = "0.7", default-features = false, features = ["derive", "byteorder"] }
 
-log = { version="=0.4.17", features = ["release_max_level_info"] }
+log = { version="0.4", features = ["release_max_level_info"] }
 
 # - binaries ------------------------------------------------------------------
 
@@ -92,6 +94,12 @@ name = "hello"
 
 [[example]]
 name = "interrupts"
+
+[[example]]
+name = "interrupts_pac"
+
+[[example]]
+name = "smollest"
 
 [[example]]
 name = "spiflash"

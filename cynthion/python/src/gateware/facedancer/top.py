@@ -1,40 +1,354 @@
 #
 # This file is part of Cynthion.
 #
-# Copyright (c) 2023 Great Scott Gadgets <info@greatscottgadgets.com>
+# Copyright (c) 2020-2025 Great Scott Gadgets <info@greatscottgadgets.com>
 # SPDX-License-Identifier: BSD-3-Clause
 
-import logging
-import os
-import sys
+import logging, os, sys
 
-from amaranth                 import Cat, DomainRenamer, Elaboratable, Module, ResetSignal, Signal, Record
-from amaranth.build           import Attrs, Pins, PinsN, Resource, Subsignal
-from amaranth.hdl.rec         import Record
+from amaranth                        import *
+from amaranth.build                  import Attrs, Pins, PinsN, Platform, Resource, Subsignal
+from amaranth.lib                    import wiring
+from amaranth.lib.wiring             import Component, In, Out, flipped
 
-from luna_soc.gateware.vendor.lambdasoc.periph         import Peripheral
-from luna_soc.gateware.vendor.lambdasoc.periph.serial  import AsyncSerialPeripheral
-from luna_soc.gateware.vendor.amaranth_stdio.serial    import AsyncSerial
-
-from luna                            import configure_default_logging, top_level_cli
-from luna.gateware.platform          import NullPin
 from luna.gateware.usb.usb2.device   import USBDevice
 
-from luna_soc.gateware.cpu.vexriscv  import VexRiscv
-from luna_soc.gateware.lunasoc       import LunaSoC
+from amaranth_soc                    import csr, gpio, wishbone
+from amaranth_soc.csr.wishbone       import WishboneCSRBridge
 
-from luna_soc.gateware.csr           import GpioPeripheral, LedPeripheral
-from luna_soc.gateware.csr           import USBDeviceController
-from luna_soc.gateware.csr           import SetupFIFOInterface, InFIFOInterface, OutFIFOInterface
-from luna_soc.gateware.wishbone      import ECP5ConfigurationFlashInterface, SPIPHYController, SPIFlashPeripheral
+from luna_soc.gateware.core          import blockram, spiflash, timer, uart, usb2
+from luna_soc.gateware.core.spiflash import ECP5ConfigurationFlashInterface, SPIPHYController
+from luna_soc.gateware.cpu           import InterruptController, VexRiscv
+from luna_soc.gateware.provider      import cynthion as provider
 
-from .advertiser import ApolloAdvertiserPeripheral
-from .info       import CynthionInformationPeripheral
+from . import advertiser, info
 
 
-# - MoondancerSoc ---------------------------------------------------------------
+# - component: Soc ------------------------------------------------------------
 
-class MoondancerSoc(Elaboratable):
+class Soc(Component):
+    def __init__(self, clock_frequency_hz, domain="sync"):
+        super().__init__({})
+
+        self.clock_frequency_hz = clock_frequency_hz
+        self.domain             = domain
+        self.firmware_start     = 0x000b0000
+
+        # configuration
+        self.blockram_base        = 0x00000000
+        self.blockram_size        = 0x00010000  # 65536 bytes
+        self.spiflash_base        = 0x10000000
+        self.spiflash_size        = 0x00400000  # 4 MiB
+        self.hyperram_base        = 0x20000000  # Winbond W956A8MBYA6I
+        self.hyperram_size        = 0x08000000  # 8 * 1024 * 1024
+
+        self.csr_base             = 0xf0000000
+        self.leds_base            = 0x00000000
+        self.gpio0_base           = 0x00000100
+        self.gpio1_base           = 0x00000200
+        self.uart0_base           = 0x00000300
+        self.uart1_base           = 0x00000400
+        self.timer0_base          = 0x00000500
+        self.timer0_irq           = 0
+        self.timer1_base          = 0x00000600
+        self.timer1_irq           = 1
+        self.spi0_base            = 0x00000700
+        self.usb0_base            = 0x00000800
+        self.usb0_irq             = 2
+        self.usb0_ep_control_base = 0x00000900
+        self.usb0_ep_control_irq  = 3
+        self.usb0_ep_in_base      = 0x00000a00
+        self.usb0_ep_in_irq       = 4
+        self.usb0_ep_out_base     = 0x00000b00
+        self.usb0_ep_out_irq      = 5
+        self.usb1_base            = 0x00000c00
+        self.usb1_irq             = 6
+        self.usb1_ep_control_base = 0x00000d00
+        self.usb1_ep_control_irq  = 7
+        self.usb1_ep_in_base      = 0x00000e00
+        self.usb1_ep_in_irq       = 8
+        self.usb1_ep_out_base     = 0x00000f00
+        self.usb1_ep_out_irq      = 9
+        self.usb2_base            = 0x00001000
+        self.usb2_irq             = 10
+        self.usb2_ep_control_base = 0x00001100
+        self.usb2_ep_control_irq  = 11
+        self.usb2_ep_in_base      = 0x00001200
+        self.usb2_ep_in_irq       = 12
+        self.usb2_ep_out_base     = 0x00001300
+        self.usb2_ep_out_irq      = 13
+        self.advertiser_base      = 0x00001400
+        self.info_base            = 0x00001500
+        self.user0_base           = 0x00001600
+
+        # cpu
+        self.cpu = VexRiscv(
+            variant="cynthion+jtag",
+            reset_addr=self.spiflash_base + self.firmware_start
+        )
+
+        # interrupt controller
+        self.interrupt_controller = InterruptController(width=len(self.cpu.irq_external))
+
+        # bus
+        self.wb_arbiter  = wishbone.Arbiter(
+            addr_width=30,
+            data_width=32,
+            granularity=8,
+            features={"cti", "bte", "err"}
+        )
+        self.wb_decoder  = wishbone.Decoder(
+            addr_width=30,
+            data_width=32,
+            granularity=8,
+            features={"cti", "bte", "err"}
+        )
+
+        # blockram
+        self.blockram = blockram.Peripheral(size=self.blockram_size)
+        self.wb_decoder.add(self.blockram.bus, addr=self.blockram_base, name="blockram")
+
+        # spiflash
+        self.spiflash_provider = provider.QSPIFlashProvider("qspi_flash")
+        self.spiflash_bus = ECP5ConfigurationFlashInterface(bus=self.spiflash_provider.pins)
+        self.spiflash_phy = SPIPHYController(pads=self.spiflash_bus, domain=self.domain, divisor=0)
+        self.spiflash = spiflash.Peripheral(
+            self.spiflash_phy,
+            with_controller = True,
+            controller_name = "spi0",
+            with_mmap       = True,
+            mmap_size       = self.spiflash_size,
+            mmap_name       = "spiflash",
+            domain          = self.domain,
+        )
+        self.wb_decoder.add(self.spiflash.bus, addr=self.spiflash_base, name="spiflash")
+
+        # csr decoder
+        self.csr_decoder = csr.Decoder(addr_width=28, data_width=8)
+
+        # spi0
+        self.csr_decoder.add(self.spiflash.csr, addr=self.spi0_base, name="spi0")
+
+        # leds
+        self.led_count = 6
+        self.leds = gpio.Peripheral(pin_count=self.led_count, addr_width=3, data_width=8)
+        self.csr_decoder.add(self.leds.bus, addr=self.leds_base, name="leds")
+
+        # gpio0
+        self.gpio0 = gpio.Peripheral(pin_count=8, addr_width=3, data_width=8)
+        self.csr_decoder.add(self.gpio0.bus, addr=self.gpio0_base, name="gpio0")
+
+        # gpio1
+        self.gpio1 = gpio.Peripheral(pin_count=8, addr_width=3, data_width=8)
+        self.csr_decoder.add(self.gpio1.bus, addr=self.gpio1_base, name="gpio1")
+
+        # uart0
+        uart_baud_rate = 115200
+        divisor = int(clock_frequency_hz // uart_baud_rate)
+        self.uart0 = uart.Peripheral(divisor=divisor)
+        self.csr_decoder.add(self.uart0.bus, addr=self.uart0_base, name="uart0")
+
+        # uart1
+        uart_baud_rate = 115200
+        divisor = int(clock_frequency_hz // uart_baud_rate)
+        self.uart1 = uart.Peripheral(divisor=divisor)
+        self.csr_decoder.add(self.uart1.bus, addr=self.uart1_base, name="uart1")
+
+        # timer0
+        self.timer0 = timer.Peripheral(width=32)
+        self.csr_decoder.add(self.timer0.bus, addr=self.timer0_base, name="timer0")
+        self.interrupt_controller.add(self.timer0, number=self.timer0_irq, name="timer0")
+
+        # timer1
+        self.timer1 = timer.Peripheral(width=32)
+        self.csr_decoder.add(self.timer1.bus, addr=self.timer1_base, name="timer1")
+        self.interrupt_controller.add(self.timer1, name="timer1", number=self.timer1_irq)
+
+        # usb0 - target_phy
+        self.usb0            = usb2.device.Peripheral()
+        self.usb0_ep_control = usb2.ep_control.Peripheral()
+        self.usb0_ep_in      = usb2.ep_in.Peripheral()
+        self.usb0_ep_out     = usb2.ep_out.Peripheral()
+        self.csr_decoder.add(self.usb0.bus,            addr=self.usb0_base,            name="usb0")
+        self.csr_decoder.add(self.usb0_ep_control.bus, addr=self.usb0_ep_control_base, name="usb0_ep_control")
+        self.csr_decoder.add(self.usb0_ep_in.bus,      addr=self.usb0_ep_in_base,      name="usb0_ep_in")
+        self.csr_decoder.add(self.usb0_ep_out.bus,     addr=self.usb0_ep_out_base,     name="usb0_ep_out")
+        self.interrupt_controller.add(self.usb0,            name="usb0",            number=self.usb0_irq)
+        self.interrupt_controller.add(self.usb0_ep_control, name="usb0_ep_control", number=self.usb0_ep_control_irq)
+        self.interrupt_controller.add(self.usb0_ep_in,      name="usb0_ep_in",      number=self.usb0_ep_in_irq)
+        self.interrupt_controller.add(self.usb0_ep_out,     name="usb0_ep_out",     number=self.usb0_ep_out_irq)
+
+        # usb1 - aux_phy
+        self.usb1            = usb2.device.Peripheral()
+        self.usb1_ep_control = usb2.ep_control.Peripheral()
+        self.usb1_ep_in      = usb2.ep_in.Peripheral()
+        self.usb1_ep_out     = usb2.ep_out.Peripheral()
+        self.csr_decoder.add(self.usb1.bus,            addr=self.usb1_base,            name="usb1")
+        self.csr_decoder.add(self.usb1_ep_control.bus, addr=self.usb1_ep_control_base, name="usb1_ep_control")
+        self.csr_decoder.add(self.usb1_ep_in.bus,      addr=self.usb1_ep_in_base,      name="usb1_ep_in")
+        self.csr_decoder.add(self.usb1_ep_out.bus,     addr=self.usb1_ep_out_base,     name="usb1_ep_out")
+        self.interrupt_controller.add(self.usb1,            name="usb1",            number=self.usb1_irq)
+        self.interrupt_controller.add(self.usb1_ep_control, name="usb1_ep_control", number=self.usb1_ep_control_irq)
+        self.interrupt_controller.add(self.usb1_ep_in,      name="usb1_ep_in",      number=self.usb1_ep_in_irq)
+        self.interrupt_controller.add(self.usb1_ep_out,     name="usb1_ep_out",     number=self.usb1_ep_out_irq)
+
+        # usb2 - control_phy
+        self.usb2            = usb2.device.Peripheral()
+        self.usb2_ep_control = usb2.ep_control.Peripheral()
+        self.usb2_ep_in      = usb2.ep_in.Peripheral()
+        self.usb2_ep_out     = usb2.ep_out.Peripheral()
+        self.csr_decoder.add(self.usb2.bus,            addr=self.usb2_base,            name="usb2")
+        self.csr_decoder.add(self.usb2_ep_control.bus, addr=self.usb2_ep_control_base, name="usb2_ep_control")
+        self.csr_decoder.add(self.usb2_ep_in.bus,      addr=self.usb2_ep_in_base,      name="usb2_ep_in")
+        self.csr_decoder.add(self.usb2_ep_out.bus,     addr=self.usb2_ep_out_base,     name="usb2_ep_out")
+        self.interrupt_controller.add(self.usb2,            name="usb2",            number=self.usb2_irq)
+        self.interrupt_controller.add(self.usb2_ep_control, name="usb2_ep_control", number=self.usb2_ep_control_irq)
+        self.interrupt_controller.add(self.usb2_ep_in,      name="usb2_ep_in",      number=self.usb2_ep_in_irq)
+        self.interrupt_controller.add(self.usb2_ep_out,     name="usb2_ep_out",     number=self.usb2_ep_out_irq)
+
+        # apollo advertiser
+        self.advertiser_provider = provider.ApolloAdvertiserProvider("int")
+        self.advertiser = advertiser.Peripheral(pad=self.advertiser_provider.pins, clk_freq_hz=clock_frequency_hz)
+        self.csr_decoder.add(self.advertiser.bus, addr=self.advertiser_base, name="advertiser")
+
+        # soc info
+        self.info = info.Peripheral()
+        self.csr_decoder.add(self.info.bus, addr=self.info_base, name="info")
+
+        # user0
+        self.user0 = gpio.Peripheral(pin_count=1, addr_width=3, data_width=8)
+        self.csr_decoder.add(self.user0.bus, addr=self.user0_base, name="user0")
+
+        # wishbone csr bridge
+        self.wb_to_csr = WishboneCSRBridge(self.csr_decoder.bus, data_width=32)
+        self.wb_decoder.add(self.wb_to_csr.wb_bus, addr=self.csr_base, sparse=False, name="wb_to_csr")
+
+    def elaborate(self, platform):
+        m = Module()
+
+        # bus
+        m.submodules += [self.wb_arbiter, self.wb_decoder]
+        wiring.connect(m, self.wb_arbiter.bus, self.wb_decoder.bus)
+
+        # cpu
+        m.submodules += self.cpu
+        self.wb_arbiter.add(self.cpu.ibus)
+        self.wb_arbiter.add(self.cpu.dbus)
+
+        # interrupt controller
+        m.submodules += self.interrupt_controller
+        m.d.comb += self.cpu.irq_external.eq(self.interrupt_controller.pending)
+
+        # blockram
+        m.submodules += self.blockram
+
+        # spiflash
+        m.submodules += [self.spiflash_provider, self.spiflash, self.spiflash_bus, self.spiflash_phy]
+
+        # csr decoder
+        m.submodules += self.csr_decoder
+
+        # leds
+        led_provider = provider.LEDProvider("led", pin_count=self.led_count)
+        m.submodules += [led_provider, self.leds]
+        for n in range(self.led_count):
+            wiring.connect(m, self.leds.pins[n], led_provider.pins[n])
+
+        # gpio0
+        gpio0_provider = provider.GPIOProvider("user_pmod", 0)
+        m.submodules += [gpio0_provider, self.gpio0]
+        for n in range(8):
+            wiring.connect(m, self.gpio0.pins[n], gpio0_provider.pins[n])
+
+        # gpio1
+        # gpio1_provider = provider.GPIOProvider("user_pmod", 1)
+        # m.submodules += [gpio1_provider, self.gpio1]
+        # for n in range(8):
+        #     wiring.connect(m, self.gpio1.pins[n], gpio1_provider.pins[n])
+
+        # uart0
+        uart0_provider = provider.UARTProvider("uart", 0)
+        m.submodules += [uart0_provider, self.uart0]
+        wiring.connect(m, self.uart0.pins, uart0_provider.pins)
+
+        # uart1
+        uart1_provider = provider.UARTProvider("uart", 1)
+        m.submodules += [uart1_provider, self.uart1]
+        wiring.connect(m, self.uart1.pins, uart1_provider.pins)
+
+        # timer0
+        m.submodules += self.timer0
+
+        # timer1
+        m.submodules += self.timer1
+
+        # usb0 - target_phy
+        ulpi0_provider = provider.ULPIProvider("target_phy")
+        usb0_device = USBDevice(bus=ulpi0_provider.bus)
+        usb0_device.add_endpoint(self.usb0_ep_control)
+        usb0_device.add_endpoint(self.usb0_ep_in)
+        usb0_device.add_endpoint(self.usb0_ep_out)
+        m.d.comb += self.usb0.attach(usb0_device)
+        m.submodules += [ulpi0_provider, self.usb0, usb0_device]
+
+        # usb1 - aux_phy
+        ulpi1_provider = provider.ULPIProvider(["aux_phy", "host_phy"])
+        usb1_device = USBDevice(bus=ulpi1_provider.bus)
+        usb1_device.add_endpoint(self.usb1_ep_control)
+        usb1_device.add_endpoint(self.usb1_ep_in)
+        usb1_device.add_endpoint(self.usb1_ep_out)
+        m.d.comb += self.usb1.attach(usb1_device)
+        m.submodules += [ulpi1_provider, self.usb1, usb1_device]
+
+        # usb2 - control_phy
+        ulpi2_provider = provider.ULPIProvider(["control_phy", "sideband_phy"])
+        usb2_device = USBDevice(bus=ulpi2_provider.bus)
+        usb2_device.add_endpoint(self.usb2_ep_control)
+        usb2_device.add_endpoint(self.usb2_ep_in)
+        usb2_device.add_endpoint(self.usb2_ep_out)
+        m.d.comb += self.usb2.attach(usb2_device)
+        m.submodules += [ulpi2_provider, self.usb2, usb2_device]
+
+        # advertiser
+        m.submodules += [self.advertiser, self.advertiser_provider]
+
+        # info
+        m.submodules += self.info
+
+        # user0
+        user0_provider = provider.ButtonProvider("button_user", 0)
+        m.submodules += [user0_provider, self.user0]
+        wiring.connect(m, self.user0.pins[0], user0_provider.pins[0])
+
+        # wishbone csr bridge
+        m.submodules += self.wb_to_csr
+
+        # wire up the cpu external reset signal
+        delay = Signal(18)
+        with m.If(~delay.all()):
+            m.d.sync += delay.eq(delay + 1)
+            m.d.comb += self.cpu.ext_reset.eq(1)
+
+        # wire up the cpu jtag signals
+        try:
+            jtag0_io = platform.request("jtag", 0)
+            m.d.comb += [
+                self.cpu.jtag_tms     .eq(jtag0_io.tms.i),
+                self.cpu.jtag_tdi     .eq(jtag0_io.tdi.i),
+                jtag0_io.tdo.o        .eq(self.cpu.jtag_tdo),
+                self.cpu.jtag_tck     .eq(jtag0_io.tck.i),
+            ]
+        except:
+            logging.warning("Platform does not support jtag")
+
+        return DomainRenamer({
+            "sync": self.domain,
+        })(m)
+
+
+# - module: Top ---------------------------------------------------------------
+
+class Top(Elaboratable):
     ADDITIONAL_RESOURCES = [
         # PMOD B: UART
         Resource("uart", 1,
@@ -45,8 +359,8 @@ class MoondancerSoc(Elaboratable):
 
         # PMOD B: DEBUG
         Resource("debug", 0,
-            Subsignal("a",  Pins("3", conn=("pmod", 1), dir="o")),
-            Subsignal("b",  Pins("4", conn=("pmod", 1), dir="o")),
+            Subsignal("a",  Pins("3", conn=("pmod", 1), dir="io")),
+            Subsignal("b",  Pins("4", conn=("pmod", 1), dir="io")),
             Attrs(IO_TYPE="LVCMOS33")
         ),
 
@@ -60,243 +374,29 @@ class MoondancerSoc(Elaboratable):
         ),
     ]
 
-    def __init__(self, clock_frequency=int(60e6), uart_baud_rate=115200):
-        # qspi flash configuration
-        spi0_flash_size  = 0x00400000
-        spi0_flash_addr  = 0x10000000
-        spi0_csr_addr    = 0xf0008000
-        firmware_start   = 0x000b0000
+    def __init__(self, clock_frequency_hz, domain="sync"):
+        self.clock_frequency_hz = clock_frequency_hz
+        self.domain = domain
 
-        # Create our SoC...
-        self.soc = LunaSoC(
-            cpu=VexRiscv(
-                variant="cynthion+jtag",
-                reset_addr=spi0_flash_addr + firmware_start,
-            ),
-            clock_frequency=clock_frequency,
-        )
-
-        # ... add some stand-ins for our uart pins ...
-        self.uart0_pins = Record([
-            ('rx', [('i', 1)]),
-            ('tx', [('o', 1)])
-        ])
-        self.uart1_pins = Record([
-            ('rx', [('i', 1)]),
-            ('tx', [('o', 1)])
-        ])
-        self.qspi0_pins = Record([
-            ('dq',  [('i', 4), ('o', 4), ('oe', 1)]),
-            ('cs',  [('o', 1)]),
-        ])
-
-        # ... add a stand-in for the INT pin ...
-        self.int_pin = Record([
-            ('o', [('o', 1)])
-        ])
-
-        # ... add core peripherals: memory, timer, uart ...
-        self.soc.add_core_peripherals(
-            uart_pins=self.uart0_pins,
-            uart_baud_rate=uart_baud_rate,
-            internal_sram_size=65536,
-            internal_sram_addr=0x40000000,
-        )
-
-        # ... add a spi flash peripheral ...
-        self.spi0_bus        = ECP5ConfigurationFlashInterface(bus=self.qspi0_pins)
-        self.spi0_phy        = SPIPHYController(pads=self.spi0_bus, domain="usb", divisor=0)
-        self.spi0 = SPIFlashPeripheral(
-            self.spi0_phy,
-            with_controller=True,
-            controller_name="spi0",
-            with_mmap=True,
-            mmap_size=spi0_flash_size,
-            mmap_name="spiflash",
-            domain="usb",
-        )
-        self.soc.add_peripheral(self.spi0, addr=spi0_flash_addr)
-        self.soc.add_peripheral(
-            self.spi0.spi_controller,
-            addr=spi0_csr_addr,
-            as_submodule=False,
-        )
-
-        # ... add our LED peripheral, for simple output ...
-        self.leds = LedPeripheral()
-        self.soc.add_peripheral(self.leds, addr=0xf0001000)
-
-        # ... add two gpio peripherals for our PMOD connectors ...
-        self.gpioa = GpioPeripheral(width=8)
-        self.gpiob = GpioPeripheral(width=8)
-        self.soc.add_peripheral(self.gpioa, addr=0xf0002000)
-        self.soc.add_peripheral(self.gpiob, addr=0xf0002100)
-
-        # ... and the core USB controllers and eptri peripherals ...
-        self.usb0 = USBDeviceController()
-        self.usb0_ep_control = SetupFIFOInterface()
-        self.usb0_ep_in = InFIFOInterface()
-        self.usb0_ep_out = OutFIFOInterface()
-        self.soc.add_peripheral(self.usb0, addr=0xf0003000)
-        self.soc.add_peripheral(self.usb0_ep_control, as_submodule=False)
-        self.soc.add_peripheral(self.usb0_ep_in, as_submodule=False)
-        self.soc.add_peripheral(self.usb0_ep_out, as_submodule=False)
-
-        self.usb1 = USBDeviceController()
-        self.usb1_ep_control = SetupFIFOInterface()
-        self.usb1_ep_in = InFIFOInterface()
-        self.usb1_ep_out = OutFIFOInterface()
-        self.soc.add_peripheral(self.usb1, addr=0xf0004000)
-        self.soc.add_peripheral(self.usb1_ep_control, as_submodule=False)
-        self.soc.add_peripheral(self.usb1_ep_in, as_submodule=False)
-        self.soc.add_peripheral(self.usb1_ep_out, as_submodule=False)
-
-        self.usb2 = USBDeviceController()
-        self.usb2_ep_control = SetupFIFOInterface()
-        self.usb2_ep_in = InFIFOInterface()
-        self.usb2_ep_out = OutFIFOInterface()
-        self.soc.add_peripheral(self.usb2, addr=0xf0005000)
-        self.soc.add_peripheral(self.usb2_ep_control, as_submodule=False)
-        self.soc.add_peripheral(self.usb2_ep_in, as_submodule=False)
-        self.soc.add_peripheral(self.usb2_ep_out, as_submodule=False)
-
-        # ... add a second uart peripheral ...
-        self.uart1 = AsyncSerialPeripheral(core=AsyncSerial(
-            data_bits = 8,
-            divisor   = int(clock_frequency // uart_baud_rate),
-            pins      = self.uart1_pins,
-        ))
-        self.soc.add_peripheral(self.uart1, addr=0xf0006000)
-
-        # ... add an ApolloAdvertiser peripheral ...
-        self.advertiser = ApolloAdvertiserPeripheral(pad=self.int_pin, clk_freq_hz=clock_frequency)
-        self.soc.add_peripheral(self.advertiser, addr=0xf0007000)
-
-        # ... add a CynthionInformation peripheral ...
-        self.info = CynthionInformationPeripheral()
-        self.soc.add_peripheral(self.info, addr=0xf0007100)
+        self.soc = Soc(clock_frequency_hz=self.clock_frequency_hz, domain=self.domain)
 
     def elaborate(self, platform):
-        m = Module()
-
         # add additional resources (only supported on platforms > r0.4)
         if platform.version not in [(0, 1), (0, 2), (0, 3), (0, 4)]:
             platform.add_resources(self.ADDITIONAL_RESOURCES)
 
+        m = Module()
+
         # generate our domain clocks/resets
         m.submodules.car = platform.clock_domain_generator()
 
-        # add SoC to design and clock it off the 60 MHz "usb" domain
-        # because VexriscV synthesis tops out at ~77 MHz
-        m.submodules.soc = DomainRenamer({"sync": "usb"})(self.soc)
-
-        # wire up the cpu external reset signal
-        try:
-            user1_io = platform.request("button_user")
-            m.d.comb += self.soc.cpu.ext_reset.eq(user1_io.i)
-        except:
-            logging.warning("Platform does not support a user button for cpu reset")
-
-        # connect QSPI0 to Cynthion's qspi flash port
-        qspi0_io = platform.request("qspi_flash", 0)
-        m.d.comb += [
-            qspi0_io.dq.oe.eq(self.qspi0_pins.dq.oe),
-            qspi0_io.dq.o.eq(self.qspi0_pins.dq.o),
-            qspi0_io.cs.o.eq(self.qspi0_pins.cs.o),
-            self.qspi0_pins.dq.i.eq(qspi0_io.dq.i),
-        ]
-        m.submodules += [self.spi0_bus, self.spi0_phy]
-
-        # connect GPIOA to Cynthion's PMOD A port
-        try:
-            pmoda_io = platform.request("user_pmod", 0)
-            m.d.comb += [
-                self.gpioa.pins.connect(pmoda_io),
-            ]
-        except:
-            logging.warning("Platform does not support a user pmod port for gpio")
-
-        # connect UART0 to Cynthion's SAMD11 uart
-        uart0_io = platform.request("uart", 0)
-        m.d.comb += [
-            uart0_io.tx.o.eq(self.uart0_pins.tx),
-            self.uart0_pins.rx.eq(uart0_io.rx)
-        ]
-        if hasattr(uart0_io.tx, 'oe'):
-            m.d.comb += uart0_io.tx.oe.eq(~self.soc.uart._phy.tx.rdy),
-
-        # connect UART1 to Cynthion's PMOD B port
-        try:
-            uart1_io = platform.request("uart", 1)
-            m.d.comb += [
-                uart1_io.tx.o.eq(self.uart1_pins.tx),
-                self.uart1_pins.rx.eq(uart1_io.rx)
-            ]
-        except:
-            logging.warning("Platform does not support a user pmod port for a second uart")
-
-        # connect INT pin to ApolloAdvertiser
-        try:
-            int_io = platform.request("int")
-            m.d.comb += [
-                int_io.o.eq(self.int_pin)
-            ]
-        except:
-            logging.warning("Platform does not support ApolloAdvertiserPeripheral")
-
-        # connect JTAG0 to Cynthion's PMOD B port
-        try:
-            jtag0_io = platform.request("jtag", 0)
-            m.d.comb += [
-                self.soc.cpu.jtag_tms  .eq(jtag0_io.tms.i),
-                self.soc.cpu.jtag_tdi  .eq(jtag0_io.tdi.i),
-                jtag0_io.tdo.o         .eq(self.soc.cpu.jtag_tdo),
-                self.soc.cpu.jtag_tck  .eq(jtag0_io.tck.i),
-                self.soc.cpu.dbg_reset .eq(self.soc.cpu.ext_reset),
-            ]
-        except:
-            logging.warning("Platform does not support a user pmod port for jtag")
-
-        # create our USB devices, connect device controllers and add eptri endpoint handlers
-
-        # target_phy
-        ulpi0 = platform.request("target_phy")
-        usb0_device = USBDevice(bus=ulpi0)
-        usb0_device.add_endpoint(self.usb0_ep_control)
-        usb0_device.add_endpoint(self.usb0_ep_in)
-        usb0_device.add_endpoint(self.usb0_ep_out)
-        m.d.comb += self.usb0.attach(usb0_device)
-        m.submodules.usb0_device = usb0_device
-
-        # aux_phy
-        try:
-            ulpi1 = platform.request("aux_phy")
-        except:
-            ulpi1 = platform.request("host_phy")
-        usb1_device = USBDevice(bus=ulpi1)
-        usb1_device.add_endpoint(self.usb1_ep_control)
-        usb1_device.add_endpoint(self.usb1_ep_in)
-        usb1_device.add_endpoint(self.usb1_ep_out)
-        m.d.comb += self.usb1.attach(usb1_device)
-        m.submodules.usb1_device = usb1_device
-
-        # control_phy
-        try:
-            ulpi2 = platform.request("control_phy")
-        except:
-            ulpi2 = platform.request("sideband_phy")
-        usb2_device = USBDevice(bus=ulpi2)
-        usb2_device.add_endpoint(self.usb2_ep_control)
-        usb2_device.add_endpoint(self.usb2_ep_in)
-        usb2_device.add_endpoint(self.usb2_ep_out)
-        m.d.comb += self.usb2.attach(usb2_device)
-        m.submodules.usb2_device = usb2_device
+        # add soc to design
+        m.submodules += self.soc
 
         return m
 
 
-
-# - main ----------------------------------------------------------------------
+# - build ---------------------------------------------------------------------
 
 if __name__ == "__main__":
     from luna                    import configure_default_logging
@@ -308,21 +408,24 @@ if __name__ == "__main__":
     logging.getLogger().setLevel(logging.DEBUG)
 
     # select platform
-    _platform = get_appropriate_platform()
-    if _platform is None:
+    platform = get_appropriate_platform()
+    if platform is None:
         logging.error("Failed to identify a supported platform")
         sys.exit(1)
 
+    # configure domain
+    domain = "usb"
+
     # configure clock frequency
-    _clock_frequency = int(_platform.DEFAULT_CLOCK_FREQUENCIES_MHZ["usb"] * 1e6)
-    logging.info(f"Building for {_platform} with clock frequency: {_clock_frequency}")
+    clock_frequency_hz = int(platform.DEFAULT_CLOCK_FREQUENCIES_MHZ[domain] * 1e6)
+    logging.info(f"Building for {platform} with domain {domain} and clock frequency: {clock_frequency_hz}")
 
     # create design
-    _design = MoondancerSoc(clock_frequency=_clock_frequency)
+    design = Top(clock_frequency_hz=clock_frequency_hz, domain=domain)
 
     # invoke cli
     _overrides = {
         "debug_verilog": False,
         "verbose": False,
     }
-    top_level_cli(_design, **_overrides)
+    top_level_cli(design, **_overrides)

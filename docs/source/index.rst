@@ -15,6 +15,7 @@ Cynthion Documentation
   getting_started_packetry
   getting_started_facedancer
   getting_started_usbproxy
+  getting_started_facedancer_user_io
   cli
 
 .. toctree::
