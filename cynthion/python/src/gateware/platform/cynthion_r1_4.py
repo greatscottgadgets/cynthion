@@ -119,6 +119,8 @@ class CynthionPlatformRev1D4(CynthionPlatform):
         Resource("target_usb_diff", 0, DiffPairs("N4", "P3", dir="i"), Attrs(IO_TYPE="LVDS", PULLMODE="NONE")),
         Resource("target_usb_dp", 0, Pins("N4", dir="i"), Attrs(IO_TYPE="LVCMOS33", PULLMODE="NONE")),
         Resource("target_usb_dm", 0, Pins("P3", dir="i"), Attrs(IO_TYPE="LVCMOS33", PULLMODE="NONE")),
+        Resource("target_usb_dp_chirp", 0, Pins("N4", dir="i"), Attrs(IO_TYPE="LVCMOS12", PULLMODE="NONE")),
+        Resource("target_usb_dm_chirp", 0, Pins("P3", dir="i"), Attrs(IO_TYPE="LVCMOS12", PULLMODE="NONE")),
 
         # USB Type-C controllers and pins
         Resource("target_type_c", 0,
