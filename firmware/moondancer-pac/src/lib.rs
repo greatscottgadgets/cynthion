@@ -45,6 +45,7 @@ pub mod clock {
 #[allow(clippy::must_use_candidate)]
 #[allow(clippy::semicolon_if_nothing_returned)]
 #[allow(clippy::needless_lifetimes)]
+#[allow(mismatched_lifetime_syntaxes)]
 mod generated;
 
 pub use generated::generic::*;

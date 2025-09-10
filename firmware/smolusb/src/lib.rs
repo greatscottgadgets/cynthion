@@ -2,6 +2,8 @@
 #![cfg_attr(feature = "nightly", feature(panic_info_message))]
 #![cfg_attr(not(test), no_std)]
 
+#![allow(mismatched_lifetime_syntaxes)]
+
 //! A simple peripheral-level USB stack designed for [`luna-soc`](https://github.com/greatscottgadgets/luna-soc/) USB peripherals.
 
 pub mod class;
