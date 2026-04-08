@@ -61,11 +61,7 @@ pipeline {
                 dir('cynthion-test') {
                     script {
                         allOff()
-                    }
-                    script {
                         reset('cyntest_tycho cyntest_greatfet cyntest_bmp')
-                    }
-                    script {
                         runCommand(3, 5, 'MINUTES', "HIL Test", 'make unattended')
                     }
                 }
