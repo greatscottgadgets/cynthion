@@ -7,11 +7,17 @@ pipeline {
     agent any
     stages {
         stage('Build Docker Image') {
+            options {
+                timeout(time: 20, unit: 'MINUTES')
+            }
             steps {
                 sh 'docker build -t cynthion-test https://github.com/greatscottgadgets/cynthion-test.git'
             }
         }
         stage('Checkout as submodule') {
+            options {
+                timeout(time: 2, unit: 'MINUTES')
+            }
             steps {
                 dir('cynthion-test') {
                     git url: 'https://github.com/greatscottgadgets/cynthion-test.git', branch: 'main'
@@ -30,6 +36,9 @@ pipeline {
                     reuseNode true
                     args '--name cynthion-test_container'
                 }
+            }
+            options {
+                timeout(time: 6, unit: 'MINUTES')
             }
             steps {
                 dir('cynthion-test') {
