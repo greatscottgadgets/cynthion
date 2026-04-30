@@ -68,10 +68,12 @@ pipeline {
             }
             steps {
                 dir('cynthion-test') {
-                    script {
-                        allOff()
-                        reset('cyntest_tycho cyntest_greatfet cyntest_bmp')
-                        runCommand(3, 5, 'MINUTES', "HIL Test", 'make unattended')
+                    lock('HIL_hubs') {
+                        script {
+                            allOff()
+                            reset('cyntest_tycho cyntest_greatfet cyntest_bmp')
+                            runCommand(3, 5, 'MINUTES', "HIL Test", 'make unattended')
+                        }
                     }
                 }
             }
