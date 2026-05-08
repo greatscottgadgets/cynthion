@@ -3,6 +3,11 @@ import org.jenkinsci.plugins.workflow.steps.FlowInterruptedException
 pipeline {
     options {
         skipDefaultCheckout true
+        throttleJobProperty(
+            categories: ['cynthion-named-container'],
+            throttleEnabled: true,
+            throttleOption: 'category',
+        )
     }
     agent any
     stages {
