@@ -57,6 +57,7 @@ pipeline {
                 docker {
                     image 'cynthion-test'
                     reuseNode true
+                    // Named pipes /tmp/req_pipe and /tmp/res_pipe for use with Jenkins HIL CI USB port power server
                     args '''
                             --name cynthion-test_container
                             --group-add=20
