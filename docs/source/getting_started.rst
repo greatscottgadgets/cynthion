@@ -9,6 +9,7 @@ Prerequisites
 To use Cynthion you will need to ensure the following software is installed:
 
     * `Python <https://wiki.python.org/moin/BeginnersGuide/Download>`__ v3.9, or later.
+    * `libusb <https://github.com/libusb/libusb/releases>`__ v1.0.24, or later.
 
 
 Cynthion Host Software Installation
@@ -133,6 +134,11 @@ If everything is working you will see the following output:
             Firmware version: v1.0.6
             USB API version: 1.1
             Flash UID: xxxxxxxxxxxxxxxx
+
+    .. note::
+
+        If the host doesn't recognize the Cynthion device, try another USB cable or port.
+        The port problem might be resolved by updating the Cynthion firmware and gateware.
 
 
 Updating Cynthion Host Software
