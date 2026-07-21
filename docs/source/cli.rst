@@ -4,7 +4,7 @@ The ``cynthion`` command line interface
 
 .. code:: text
 
-    $ apollo
+    $ cynthion
     usage: cynthion [-h] command ...
 
     Cynthion command line interface
@@ -15,6 +15,7 @@ The ``cynthion`` command line interface
         flash     overwrite the FPGA's configuration flash with the target bitstream
         update    update MCU firmware and FPGA configuration flash to the latest
                   installed versions
+        reset     reset the FPGA and reconfigure it from flash
         info      print device information
         setup     install Cynthion support files required for operation (Linux only)
 
@@ -43,8 +44,8 @@ Display Cynthion Microcontroller information:
 .. note::
 
     Once you have switched to the Cynthion Microcontroller by pressing the PROGRAM button or
-    the ``--force-offline`` option you will need to press the RESET button to return control
-    to the FPGA.
+    the ``--force-offline`` option you will need to press the RESET button or run
+    ``cynthion reset`` to return control to the FPGA.
 
 
 Set up Cynthion
@@ -89,6 +90,16 @@ Update Cynthion USB Analyzer bitstream to the latest installed factory version:
 .. code-block :: sh
 
     cynthion update --bitstream
+
+
+Reset Cynthion
+^^^^^^^^^^^^^^
+
+Reset the FPGA and reconfigure it from flash, returning control to the FPGA:
+
+.. code-block :: sh
+
+    cynthion reset
 
 
 Run bitstream

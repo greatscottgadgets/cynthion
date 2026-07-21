@@ -17,7 +17,7 @@ from apollo_fpga               import ApolloDebugger
 
 from .util                     import HelpFormatter
 
-from . import cynthion_info, cynthion_flash, cynthion_build, cynthion_run, cynthion_setup, cynthion_update
+from . import cynthion_info, cynthion_flash, cynthion_build, cynthion_reset, cynthion_run, cynthion_setup, cynthion_update
 
 
 def main():
@@ -63,6 +63,12 @@ def main():
     update_parser.set_defaults(func=cynthion_update)
     update_parser.add_argument("--mcu-firmware", action='store_true',   help="only update the MCU firmware")
     update_parser.add_argument("--bitstream", action='store_true', help="only update the FPGA bitstream")
+
+    # cynthion reset
+    reset_parser = command_parsers.add_parser("reset", help="reset the FPGA and reconfigure it from flash",
+                                              description="Reset the Cynthion FPGA and reconfigure it from the bitstream stored in configuration flash. Equivalent to pressing the RESET button.",
+                                              formatter_class=HelpFormatter)
+    reset_parser.set_defaults(func=cynthion_reset)
 
     # cynthion info
     info_parser = command_parsers.add_parser("info", help="print device information", formatter_class=HelpFormatter)

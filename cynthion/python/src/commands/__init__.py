@@ -10,6 +10,7 @@
 from .cynthion_build           import *
 from .cynthion_info            import *
 from .cynthion_flash           import *
+from .cynthion_reset           import *
 from .cynthion_run             import *
 from .cynthion_setup           import *
 from .cynthion_update          import *
